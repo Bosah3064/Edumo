@@ -1,8 +1,5 @@
 {
   "projects": {
-    "default": "edumo-dev",
-    "dev": "edumo-dev",
-    "staging": "edumo-staging",
-    "production": "edumo-prod"
+    "default": "edumo-3dfc9"
   }
 }
