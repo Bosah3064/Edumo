@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -41,6 +41,9 @@ jobs:
       - name: Create 404 fallback for Single Page Application
         run: cp web/dist/index.html web/dist/404.html
 
+      - name: Add .nojekyll
+        run: touch web/dist/.nojekyll
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
@@ -49,6 +52,13 @@ jobs:
         with:
           path: web/dist
 
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
