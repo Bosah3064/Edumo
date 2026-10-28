@@ -5,7 +5,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
-import { Sparkles, Mail, Lock, Phone, ArrowRight, ShieldCheck } from 'lucide-react';
+import { EdumoLogo } from '../components/ui/EdumoLogo';
+import { Mail, Lock, Phone, ArrowRight, ShieldCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export const Login: React.FC = () => {
@@ -58,21 +59,17 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-surface-950 text-surface-100 flex flex-col justify-center items-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-[#0B0F19] text-surface-100 flex flex-col justify-center items-center p-4 relative overflow-hidden">
       {/* Background Glow */}
-      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] bg-brand-600/15 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] bg-[#1d5f99]/15 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute top-1/2 left-1/3 w-[350px] h-[250px] bg-[#683669]/15 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="w-full max-w-md relative z-10 animate-fade-in">
         {/* Brand header */}
-        <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center gap-2.5 mb-3 group">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center text-white shadow-glow group-hover:scale-105 transition-transform">
-              <Sparkles className="w-6 h-6" />
-            </div>
-            <span className="text-2xl font-display font-bold tracking-tight text-white">
-              EDUMO
-            </span>
-          </Link>
+        <div className="text-center mb-8 flex flex-col items-center">
+          <div className="mb-4">
+            <EdumoLogo size="xl" showText={true} showSubtitle={true} showBadge={true} to="/" />
+          </div>
           <h2 className="text-xl font-display font-semibold text-white">
             {t('auth.welcomeBack')}
           </h2>
@@ -84,9 +81,9 @@ export const Login: React.FC = () => {
           <button
             type="button"
             onClick={() => setMode('email')}
-            className={`flex-1 py-2 text-xs font-medium rounded-xl transition-all ${
+            className={`flex-1 py-2 text-xs font-semibold rounded-xl transition-all ${
               mode === 'email'
-                ? 'bg-brand-600 text-white shadow-md'
+                ? 'bg-gradient-to-r from-[#1d5f99] to-[#683669] text-white shadow-md'
                 : 'text-surface-400 hover:text-white'
             }`}
           >
@@ -95,9 +92,9 @@ export const Login: React.FC = () => {
           <button
             type="button"
             onClick={() => setMode('phone')}
-            className={`flex-1 py-2 text-xs font-medium rounded-xl transition-all ${
+            className={`flex-1 py-2 text-xs font-semibold rounded-xl transition-all ${
               mode === 'phone'
-                ? 'bg-brand-600 text-white shadow-md'
+                ? 'bg-gradient-to-r from-[#1d5f99] to-[#683669] text-white shadow-md'
                 : 'text-surface-400 hover:text-white'
             }`}
           >

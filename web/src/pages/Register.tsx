@@ -8,7 +8,8 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { Card } from '../components/ui/Card';
-import { Sparkles, Building2, School, UserCheck, ArrowRight, ArrowLeft } from 'lucide-react';
+import { EdumoLogo } from '../components/ui/EdumoLogo';
+import { Building2, School, UserCheck, ArrowRight, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export const Register: React.FC = () => {
@@ -120,15 +121,10 @@ export const Register: React.FC = () => {
 
       <div className="w-full max-w-xl relative z-10 animate-fade-in my-8">
         {/* Header */}
-        <div className="text-center mb-6">
-          <Link to="/" className="inline-flex items-center gap-2.5 mb-2 group">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center text-white shadow-glow">
-              <Sparkles className="w-6 h-6" />
-            </div>
-            <span className="text-2xl font-display font-bold tracking-tight text-white">
-              EDUMO
-            </span>
-          </Link>
+        <div className="text-center mb-6 flex flex-col items-center">
+          <div className="mb-3">
+            <EdumoLogo size="xl" showText={true} showSubtitle={true} showBadge={true} to="/" />
+          </div>
           <h2 className="text-xl font-display font-semibold text-white">
             {t('register.title')}
           </h2>
@@ -146,9 +142,9 @@ export const Register: React.FC = () => {
               key={s.num}
               className={`p-2.5 rounded-2xl border text-center transition-all ${
                 step === s.num
-                  ? 'bg-brand-600/20 border-brand-500/60 text-brand-300 font-semibold'
+                  ? 'bg-gradient-to-r from-[#1d5f99]/30 to-[#683669]/30 border-[#1d5f99] text-white font-semibold shadow-md'
                   : step > s.num
-                  ? 'bg-surface-800/80 border-surface-700 text-accent-400'
+                  ? 'bg-surface-800/80 border-[#10B981]/40 text-[#10B981]'
                   : 'bg-surface-900/40 border-surface-800 text-surface-500'
               }`}
             >

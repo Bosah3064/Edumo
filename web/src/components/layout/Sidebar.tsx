@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
+import { EdumoLogo } from '../ui/EdumoLogo';
 import {
   LayoutDashboard,
   Building2,
@@ -15,7 +16,6 @@ import {
   HeartHandshake,
   Settings,
   LogOut,
-  Sparkles,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -44,25 +44,22 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
     <aside className="w-64 h-full bg-surface-900 border-r border-surface-800 flex flex-col justify-between shrink-0 select-none">
       {/* Brand Header */}
       <div>
-        <div className="h-16 px-6 flex items-center gap-3 border-b border-surface-800/80">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center text-white shadow-glow">
-            <Sparkles className="w-5 h-5" />
-          </div>
-          <div>
-            <h1 className="text-lg font-display font-bold tracking-tight text-white flex items-center gap-1.5">
-              EDUMO
-              <span className="text-2xs font-semibold px-1.5 py-0.5 rounded-md bg-brand-500/20 text-brand-300 border border-brand-500/30">
-                EA
-              </span>
-            </h1>
-            <p className="text-2xs text-surface-400 truncate max-w-[140px]">
-              {currentSchool?.name || 'Smart Multi-School'}
-            </p>
-          </div>
+        <div className="h-16 px-5 flex items-center justify-between border-b border-surface-800/80">
+          <EdumoLogo size="md" showText={true} showBadge={true} to="/dashboard" />
         </div>
+        {currentSchool && (
+          <div className="px-5 py-2 bg-surface-950/40 border-b border-surface-800/50 flex items-center justify-between">
+            <span className="text-2xs font-semibold uppercase tracking-wider text-surface-400">
+              Active School
+            </span>
+            <span className="text-2xs font-bold text-brand-300 truncate max-w-[120px]">
+              {currentSchool.name}
+            </span>
+          </div>
+        )}
 
         {/* Navigation List */}
-        <nav className="p-3 space-y-1 overflow-y-auto max-h-[calc(100vh-12rem)]">
+        <nav className="p-3 space-y-1 overflow-y-auto max-h-[calc(100vh-13rem)]">
           {navItems.map((item) => {
             const Icon = item.icon;
             return (
@@ -71,9 +68,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                 to={item.to}
                 onClick={onClose}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 ${
+                  `flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 ${
                     isActive
-                      ? 'bg-brand-600 text-white shadow-md shadow-brand-600/25'
+                      ? 'bg-gradient-to-r from-brand-500/25 to-edumoPurple-500/20 text-white border-l-2 border-edumoRed-500 shadow-sm'
                       : 'text-surface-400 hover:text-surface-100 hover:bg-surface-800/60'
                   }`
                 }
