@@ -82,4 +82,6 @@ export const router = createBrowserRouter([
     path: '*',
     element: <Navigate to="/" replace />,
   },
-]);
+], {
+  basename: import.meta.env.BASE_URL,
+});
