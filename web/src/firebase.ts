@@ -10,13 +10,13 @@ import { getStorage, connectStorageEmulator } from 'firebase/storage';
 import { getAnalytics, isSupported } from 'firebase/analytics';
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyBb_-yB9CFVg4w3b7_qoLmvzh_BY1Wj6j0',
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'edumo-3dfc9.firebaseapp.com',
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'edumo-3dfc9',
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'edumo-3dfc9.firebasestorage.app',
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '382796082326',
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:382796082326:web:512233f609ba97b89766b7',
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || 'G-Q6E12K8ECC',
 };
 
 // Initialize Firebase App
@@ -44,11 +44,10 @@ if (typeof window !== 'undefined') {
   });
 }
 
-// Connect to Local Emulators in Development
+// Connect to Local Emulators ONLY when explicitly requested (e.g. VITE_USE_EMULATORS='true')
 const useEmulators =
   typeof window !== 'undefined' &&
-  import.meta.env.DEV &&
-  (import.meta.env.VITE_USE_EMULATORS !== 'false');
+  import.meta.env.VITE_USE_EMULATORS === 'true';
 
 if (useEmulators && !window.__FIREBASE_EMULATORS_CONNECTED__) {
   try {
