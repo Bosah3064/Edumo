@@ -1,0 +1,27 @@
+{
+  "name": "edumo",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "shared",
+    "functions",
+    "web"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=web",
+    "build": "npm run build --workspace=shared && npm run build --workspace=functions && npm run build --workspace=web",
+    "lint": "npm run lint --workspace=shared && npm run lint --workspace=functions && npm run lint --workspace=web",
+    "typecheck": "npm run typecheck --workspace=shared && npm run typecheck --workspace=functions && npm run typecheck --workspace=web",
+    "test:rules": "npm run test:rules --workspace=functions",
+    "test:functions": "npm run test --workspace=functions",
+    "test": "npm run test:rules && npm run test:functions",
+    "emulators": "firebase emulators:start --import=./emulator-data --export-on-exit=./emulator-data",
+    "emulators:clean": "firebase emulators:start"
+  },
+  "devDependencies": {
+    "firebase-tools": "^13.20.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

@@ -1,0 +1,438 @@
+// ============================================================
+// EDUMO FIRESTORE SECURITY RULES
+// DENY-BY-DEFAULT — every collection explicitly allowed
+// Version: 1.0.0 (Phase 1)
+// ============================================================
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===== HELPER FUNCTIONS =====
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isPlatformAdmin() {
+      return isAuthenticated() &&
+        request.auth.token.platformAdmin == true;
+    }
+
+    function isOrgMember(orgId) {
+      return isAuthenticated() &&
+        request.auth.token.orgId == orgId;
+    }
+
+    function isOrgOwner(orgId) {
+      return isOrgMember(orgId) &&
+        request.auth.token.orgRole == 'orgOwner';
+    }
+
+    function hasSchoolAccess(orgId, schoolId) {
+      return isOrgMember(orgId) && (
+        request.auth.token.orgRole == 'orgOwner' ||
+        (request.auth.token.schoolIds != null &&
+         schoolId in request.auth.token.schoolIds)
+      );
+    }
+
+    function hasSchoolRole(orgId, schoolId, roles) {
+      return hasSchoolAccess(orgId, schoolId) && (
+        request.auth.token.orgRole == 'orgOwner' ||
+        (request.auth.token.schoolRoles != null &&
+         schoolId in request.auth.token.schoolRoles &&
+         request.auth.token.schoolRoles[schoolId] in roles)
+      );
+    }
+
+    function hasPermission(perm) {
+      return isAuthenticated() &&
+        request.auth.token.permissions != null &&
+        perm in request.auth.token.permissions;
+    }
+
+    function immutableFields(fields) {
+      return (!request.resource.data.diff(resource.data).affectedKeys()
+              .hasAny(fields));
+    }
+
+    function isValidString(field, maxLen) {
+      return field is string && field.size() > 0 && field.size() <= maxLen;
+    }
+
+    function withinSizeLimit() {
+      return request.resource.data.keys().size() <= 100;
+    }
+
+    // Guardian helper — uses deterministic doc ID: uid_orgId_schoolId_studentId
+    function isVerifiedGuardianOf(orgId, schoolId, studentId) {
+      return isAuthenticated() &&
+        request.auth.token.isGuardian == true &&
+        exists(/databases/$(database)/documents/guardianLinks/$(
+          request.auth.uid + '_' + orgId + '_' + schoolId + '_' + studentId
+        ));
+    }
+
+    function isGuardianInSchool(orgId, schoolId) {
+      return isAuthenticated() &&
+        request.auth.token.isGuardian == true &&
+        request.auth.token.orgId == orgId;
+    }
+
+    // ===== DENY ALL BY DEFAULT =====
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ===== ORGANIZATIONS =====
+    match /organizations/{orgId} {
+      allow read: if isOrgMember(orgId) || isPlatformAdmin();
+      allow create: if false; // Via callable only
+      allow update: if (isOrgOwner(orgId) || isPlatformAdmin()) &&
+        immutableFields(['createdAt', 'createdBy', 'ownerId']) &&
+        withinSizeLimit();
+      allow delete: if false;
+
+      // ===== SCHOOLS (BRANCHES) =====
+      match /schools/{schoolId} {
+        allow read: if hasSchoolAccess(orgId, schoolId) || isPlatformAdmin();
+        allow create: if false; // Via callable only
+        allow update: if hasSchoolRole(orgId, schoolId,
+          ['principal', 'deputy', 'admin']) &&
+          immutableFields(['createdAt', 'createdBy']) &&
+          withinSizeLimit();
+        allow delete: if false;
+
+        // ===== ACADEMIC YEARS =====
+        match /academicYears/{yearId} {
+          allow read: if hasSchoolAccess(orgId, schoolId);
+          allow create: if hasSchoolRole(orgId, schoolId,
+            ['principal', 'deputy', 'admin']);
+          allow update: if hasSchoolRole(orgId, schoolId,
+            ['principal', 'deputy', 'admin']);
+          allow delete: if false;
+
+          match /terms/{termId} {
+            allow read: if hasSchoolAccess(orgId, schoolId);
+            allow create, update: if hasSchoolRole(orgId, schoolId,
+              ['principal', 'deputy', 'admin']);
+            allow delete: if false;
+          }
+        }
+
+        // ===== STUDENTS =====
+        match /students/{studentId} {
+          allow read: if hasSchoolAccess(orgId, schoolId) ||
+            isVerifiedGuardianOf(orgId, schoolId, studentId);
+          allow create: if hasSchoolRole(orgId, schoolId,
+            ['principal', 'deputy', 'admin']) &&
+            withinSizeLimit();
+          allow update: if hasSchoolRole(orgId, schoolId,
+            ['principal', 'deputy', 'admin']) &&
+            immutableFields(['createdAt', 'createdBy', 'admissionNumber']) &&
+            withinSizeLimit();
+          allow delete: if false;
+
+          // Medical records — strictly restricted
+          match /medical/{docId} {
+            allow read: if hasSchoolRole(orgId, schoolId,
+              ['principal']) || hasPermission('students.medical.read');
+            allow write: if hasPermission('students.medical.write');
+          }
+        }
+
+        // ===== GUARDIANS =====
+        match /guardians/{guardianId} {
+          allow read: if hasSchoolAccess(orgId, schoolId);
+          allow create: if hasSchoolRole(orgId, schoolId,
+            ['principal', 'deputy', 'admin']);
+          allow update: if hasSchoolRole(orgId, schoolId,
+            ['principal', 'deputy', 'admin']) &&
+            immutableFields(['createdAt']);
+          allow delete: if false;
+        }
+
+        // ===== STAFF =====
+        match /staff/{staffId} {
+          allow read: if hasSchoolAccess(orgId, schoolId) ||
+            (isAuthenticated() && resource.data.uid == request.auth.uid);
+          allow create: if hasSchoolRole(orgId, schoolId,
+            ['principal', 'deputy', 'admin']);
+          allow update: if hasSchoolRole(orgId, schoolId,
+            ['principal', 'deputy', 'admin']) &&
+            immutableFields(['createdAt', 'uid']);
+          allow delete: if false;
+        }
+
+        // ===== CLASSES =====
+        match /classes/{classId} {
+          allow read: if hasSchoolAccess(orgId, schoolId);
+          allow create, update: if hasSchoolRole(orgId, schoolId,
+            ['principal', 'deputy', 'admin']);
+          allow delete: if false;
+
+          match /streams/{streamId} {
+            allow read: if hasSchoolAccess(orgId, schoolId);
+            allow create, update: if hasSchoolRole(orgId, schoolId,
+              ['principal', 'deputy', 'admin']);
+            allow delete: if false;
+          }
+
+          match /subjects/{subjectId} {
+            allow read: if hasSchoolAccess(orgId, schoolId);
+            allow create, update: if hasSchoolRole(orgId, schoolId,
+              ['principal', 'deputy', 'admin']);
+            allow delete: if false;
+          }
+        }
+
+        // ===== ATTENDANCE =====
+        match /attendance/{recordId} {
+          allow read: if hasSchoolAccess(orgId, schoolId);
+          allow create: if hasSchoolAccess(orgId, schoolId) &&
+            (hasPermission('attendance.write') ||
+             hasSchoolRole(orgId, schoolId, ['principal', 'deputy', 'admin', 'teacher'])) &&
+            withinSizeLimit();
+          allow update: if hasSchoolAccess(orgId, schoolId) &&
+            (hasPermission('attendance.write') ||
+             hasSchoolRole(orgId, schoolId, ['principal', 'deputy', 'admin', 'teacher'])) &&
+            immutableFields(['createdAt', 'classId', 'date']);
+          allow delete: if false;
+        }
+
+        // ===== ASSESSMENTS =====
+        match /assessments/{assessmentId} {
+          allow read: if hasSchoolAccess(orgId, schoolId);
+          allow create: if hasSchoolAccess(orgId, schoolId) &&
+            (hasPermission('academics.write') ||
+             hasSchoolRole(orgId, schoolId, ['principal', 'deputy', 'teacher']));
+          allow update: if hasSchoolAccess(orgId, schoolId) &&
+            (hasPermission('academics.write') ||
+             hasSchoolRole(orgId, schoolId, ['principal', 'deputy', 'teacher'])) &&
+            immutableFields(['createdAt', 'createdBy']);
+          allow delete: if false;
+
+          match /marks/{markId} {
+            allow read: if hasSchoolAccess(orgId, schoolId);
+            allow create: if hasSchoolAccess(orgId, schoolId) &&
+              (hasPermission('academics.write') ||
+               hasSchoolRole(orgId, schoolId, ['principal', 'deputy', 'teacher'])) &&
+              withinSizeLimit();
+            allow update: if hasSchoolAccess(orgId, schoolId) &&
+              (hasPermission('academics.write') ||
+               hasSchoolRole(orgId, schoolId, ['principal', 'deputy', 'teacher'])) &&
+              immutableFields(['studentId']);
+            allow delete: if false;
+          }
+        }
+
+        // ===== REPORT CARDS =====
+        match /reportCards/{reportCardId} {
+          allow read: if hasSchoolAccess(orgId, schoolId) ||
+            isVerifiedGuardianOf(orgId, schoolId, resource.data.studentId);
+          allow create, update: if hasSchoolRole(orgId, schoolId,
+            ['principal', 'deputy']) ||
+            hasPermission('academics.publish');
+          allow delete: if false;
+        }
+
+        // ===== FEES =====
+        match /feeStructures/{id} {
+          allow read: if hasSchoolAccess(orgId, schoolId);
+          allow create, update: if hasSchoolRole(orgId, schoolId,
+            ['principal', 'bursar']) || hasPermission('fees.write');
+          allow delete: if false;
+        }
+
+        match /invoices/{invoiceId} {
+          allow read: if hasSchoolAccess(orgId, schoolId) ||
+            isVerifiedGuardianOf(orgId, schoolId, resource.data.studentId);
+          allow create, update: if hasSchoolRole(orgId, schoolId,
+            ['principal', 'bursar']) || hasPermission('fees.write');
+          allow delete: if false;
+        }
+
+        match /payments/{paymentId} {
+          allow read: if hasSchoolAccess(orgId, schoolId) ||
+            isVerifiedGuardianOf(orgId, schoolId, resource.data.studentId);
+          allow create, update, delete: if false; // Via callable only
+        }
+
+        // ===== ANNOUNCEMENTS =====
+        match /announcements/{announcementId} {
+          allow read: if hasSchoolAccess(orgId, schoolId) ||
+            isGuardianInSchool(orgId, schoolId);
+          allow create: if hasSchoolAccess(orgId, schoolId) &&
+            (hasPermission('comms.send') ||
+             hasSchoolRole(orgId, schoolId, ['principal', 'deputy', 'admin']));
+          allow update: if hasSchoolAccess(orgId, schoolId) &&
+            (hasPermission('comms.send') ||
+             hasSchoolRole(orgId, schoolId, ['principal', 'deputy', 'admin'])) &&
+            immutableFields(['createdAt', 'createdBy']);
+          allow delete: if hasSchoolRole(orgId, schoolId,
+            ['principal', 'deputy']);
+        }
+
+        // ===== SUMMARIES (written by Cloud Functions only) =====
+        match /summaries/{summaryId} {
+          allow read: if hasSchoolAccess(orgId, schoolId);
+          allow create, update, delete: if false;
+        }
+
+        // ===== IMPORT/EXPORT JOBS =====
+        match /importJobs/{jobId} {
+          allow read: if hasSchoolAccess(orgId, schoolId);
+          allow create, update, delete: if false; // Via callable only
+        }
+
+        match /exportJobs/{jobId} {
+          allow read: if hasSchoolAccess(orgId, schoolId) &&
+            (hasPermission('reports.generate') ||
+             resource.data.requestedBy == request.auth.uid);
+          allow create, update, delete: if false;
+        }
+
+        // ===== TIMETABLES =====
+        match /timetables/{id} {
+          allow read: if hasSchoolAccess(orgId, schoolId);
+          allow create, update: if hasSchoolRole(orgId, schoolId,
+            ['principal', 'deputy', 'admin']);
+          allow delete: if false;
+        }
+
+        // ===== BEHAVIOUR =====
+        match /behaviour/{id} {
+          allow read: if hasSchoolAccess(orgId, schoolId) &&
+            (hasPermission('behaviour.read') ||
+             hasSchoolRole(orgId, schoolId, ['principal', 'deputy', 'teacher']));
+          allow create, update: if hasSchoolAccess(orgId, schoolId) &&
+            (hasPermission('behaviour.write') ||
+             hasSchoolRole(orgId, schoolId, ['principal', 'deputy', 'teacher']));
+          allow delete: if false;
+        }
+
+        // ===== HEALTH (restricted) =====
+        match /health/{id} {
+          allow read: if hasPermission('health.read');
+          allow create, update: if hasPermission('health.write');
+          allow delete: if false;
+        }
+
+        // ===== WELFARE / COUNSELLING (strictly restricted) =====
+        match /welfare/{id} {
+          allow read: if hasPermission('welfare.read');
+          allow create, update: if hasPermission('welfare.write');
+          allow delete: if false;
+        }
+
+        // ===== OPERATIONS =====
+        match /transport/{id} {
+          allow read: if hasSchoolAccess(orgId, schoolId);
+          allow create, update: if hasPermission('transport.manage');
+          allow delete: if false;
+        }
+
+        match /library/{id} {
+          allow read: if hasSchoolAccess(orgId, schoolId);
+          allow create, update: if hasPermission('library.manage');
+          allow delete: if false;
+        }
+
+        match /events/{id} {
+          allow read: if hasSchoolAccess(orgId, schoolId) ||
+            isGuardianInSchool(orgId, schoolId);
+          allow create, update: if hasPermission('comms.send') ||
+            hasSchoolRole(orgId, schoolId, ['principal', 'deputy', 'admin']);
+          allow delete: if false;
+        }
+
+        match /admissions/{id} {
+          allow read: if hasSchoolAccess(orgId, schoolId) ||
+            (isAuthenticated() && resource.data.applicantUid == request.auth.uid);
+          allow create: if isAuthenticated(); // Public application
+          allow update: if hasSchoolRole(orgId, schoolId,
+            ['principal', 'deputy', 'admin']) ||
+            hasPermission('admissions.write');
+          allow delete: if false;
+        }
+
+        match /messages/{id} {
+          allow read: if hasSchoolAccess(orgId, schoolId) &&
+            (resource.data.senderId == request.auth.uid ||
+             resource.data.recipientId == request.auth.uid);
+          allow create: if hasSchoolAccess(orgId, schoolId) &&
+            request.resource.data.senderId == request.auth.uid;
+          allow update, delete: if false;
+        }
+
+        match /leave/{id} {
+          allow read: if hasSchoolAccess(orgId, schoolId) &&
+            (resource.data.staffUid == request.auth.uid ||
+             hasSchoolRole(orgId, schoolId, ['principal', 'deputy', 'admin']));
+          allow create: if hasSchoolAccess(orgId, schoolId);
+          allow update: if hasSchoolRole(orgId, schoolId,
+            ['principal', 'deputy']);
+          allow delete: if false;
+        }
+
+        match /expenses/{id} {
+          allow read: if hasPermission('fees.reports') ||
+            hasSchoolRole(orgId, schoolId, ['principal', 'bursar']);
+          allow create, update: if hasPermission('fees.write') ||
+            hasSchoolRole(orgId, schoolId, ['principal', 'bursar']);
+          allow delete: if false;
+        }
+
+        match /reportTemplates/{id} {
+          allow read: if hasSchoolAccess(orgId, schoolId);
+          allow create, update: if hasPermission('reports.custom') ||
+            hasSchoolRole(orgId, schoolId, ['principal', 'deputy']);
+          allow delete: if hasSchoolRole(orgId, schoolId, ['principal']);
+        }
+      }
+    }
+
+    // ===== USERS (global) =====
+    match /users/{uid} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == uid || isPlatformAdmin()
+      );
+      allow create: if isAuthenticated() && request.auth.uid == uid;
+      allow update: if isAuthenticated() && request.auth.uid == uid &&
+        immutableFields(['createdAt', 'memberships']);
+      allow delete: if false;
+    }
+
+    // ===== GUARDIAN LINKS =====
+    match /guardianLinks/{linkId} {
+      allow read: if isAuthenticated() &&
+        resource.data.guardianUid == request.auth.uid;
+      allow create, update, delete: if false; // Via callable only
+    }
+
+    // ===== INVITES =====
+    match /invites/{inviteId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if false; // Via callable only
+    }
+
+    // ===== COUNTRY PACKS =====
+    match /countryPacks/{code} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if false; // Platform admin via callable only
+    }
+
+    // ===== AUDIT LOGS =====
+    match /auditLogs/{logId} {
+      // NEVER writable or readable from client
+      // Read access provided via callable functions
+      allow read, write: if false;
+    }
+
+    // ===== PLATFORM =====
+    match /platform/{docId} {
+      allow read: if isPlatformAdmin();
+      allow write: if false;
+    }
+  }
+}
