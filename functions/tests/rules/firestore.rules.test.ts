@@ -105,11 +105,11 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await testEnv.cleanup();
+  if (testEnv) await testEnv.cleanup();
 });
 
 beforeEach(async () => {
-  await testEnv.clearFirestore();
+  if (testEnv) await testEnv.clearFirestore();
 });
 
 // Helper: seed test data using admin context
