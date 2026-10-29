@@ -58,13 +58,15 @@ export const createAssignment = onCall({ cors: true }, async (request) => {
       version: (assignmentSnapshot.data()?.version || 0) + 1,
     });
 
-    transaction.set(assignmentRef.collection('_private').doc('answers'), {
-      orgId,
-      schoolId: data.schoolId,
-      questions: data.questions,
-      createdBy: assignmentSnapshot.exists ? assignmentSnapshot.data()?.createdBy : authCtx.uid,
-      updatedAt: FieldValue.serverTimestamp(),
-    });
+    if (data.questions.length > 0) {
+      transaction.set(assignmentRef.collection('_private').doc('answers'), {
+        orgId,
+        schoolId: data.schoolId,
+        questions: data.questions,
+        createdBy: assignmentSnapshot.exists ? assignmentSnapshot.data()?.createdBy : authCtx.uid,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    }
   });
 
   await writeAuditLog({

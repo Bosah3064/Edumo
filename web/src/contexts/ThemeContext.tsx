@@ -14,7 +14,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [theme, setThemeState] = useState<Theme>(() => {
     const saved = localStorage.getItem('edumo_theme');
     if (saved === 'dark' || saved === 'light') return saved;
-    return 'dark'; // Default to sleek dark mode
+    return 'light'; // Default to the readable school light interface
   });
 
   useEffect(() => {

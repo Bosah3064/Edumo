@@ -284,7 +284,7 @@ export const createAssignmentSchema = z.object({
     options: z.array(z.string().min(1).max(1000)).length(4),
     correctAnswer: z.number().int().min(0).max(3),
     points: z.number().int().min(1).max(1000),
-  })).min(1).max(200),
+  })).max(200).default([]),
 }).refine((data) => new Date(data.expiresAt) > new Date(data.startsAt), {
   message: 'Expiry time must be after start time',
   path: ['expiresAt'],

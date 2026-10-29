@@ -49,6 +49,7 @@ export const Settings: React.FC = () => {
     ]
   );
   const [applyGradingToAllBranches, setApplyGradingToAllBranches] = useState(false);
+  const [brandingSaved, setBrandingSaved] = useState(false);
 
   useEffect(() => {
     if (!currentSchool) return;
@@ -77,6 +78,15 @@ export const Settings: React.FC = () => {
     { name: 'School Burgundy', primary: '#7f1d1d', secondary: '#a5243d' },
     { name: 'Teal Academy', primary: '#0f766e', secondary: '#0891b2' },
     { name: 'Purple Crest', primary: '#5b21b6', secondary: '#7c3aed' },
+    { name: 'Ocean Blue', primary: '#0369a1', secondary: '#06b6d4' },
+    { name: 'Emerald Gold', primary: '#047857', secondary: '#d97706' },
+    { name: 'Rose Academy', primary: '#be123c', secondary: '#db2777' },
+    { name: 'Sunset Orange', primary: '#c2410c', secondary: '#eab308' },
+    { name: 'Indigo Sky', primary: '#3730a3', secondary: '#6366f1' },
+    { name: 'Slate Mint', primary: '#334155', secondary: '#10b981' },
+    { name: 'Charcoal Crimson', primary: '#1f2937', secondary: '#dc2626' },
+    { name: 'Cobalt Coral', primary: '#1d4ed8', secondary: '#f97316' },
+    { name: 'Plum Violet', primary: '#701a75', secondary: '#8b5cf6' },
   ];
 
   const handleSave = async (e: React.FormEvent) => {
@@ -119,8 +129,9 @@ export const Settings: React.FC = () => {
         setLogoUrl(savedLogoUrl);
         setLogoFile(null);
         setLogoPreviewUrl(savedLogoUrl);
+        setBrandingSaved(true);
       }
-      toast.success('Settings updated successfully!');
+      toast.success(`${currentSchool?.name || 'School'} settings and branding saved successfully!`);
     } catch (error) {
       console.error('Failed to save settings:', error);
       toast.error('Failed to save settings');
@@ -137,7 +148,7 @@ export const Settings: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto animate-fade-in">
+    <div className="space-y-6 max-w-7xl mx-auto animate-fade-in">
       <div>
         <h1 className="text-2xl font-display font-bold text-gray-900 tracking-tight">
           Institution & Campus Settings
@@ -195,16 +206,19 @@ export const Settings: React.FC = () => {
 
         {/* School Branding */}
         <Card className="space-y-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Sliders className="w-4 h-4 text-brand-700" />
-            <h3 className="text-sm font-semibold text-gray-900">School Branding & Colours</h3>
+          <div className="flex items-center justify-between gap-3 mb-2">
+            <div className="flex items-center gap-2">
+              <Sliders className="w-4 h-4 text-brand-700" />
+              <h3 className="text-sm font-semibold text-gray-900">School Branding & Colours</h3>
+            </div>
+            {brandingSaved && <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 border border-emerald-200">Saved for this school</span>}
           </div>
 
           <p className="text-xs text-gray-500">
             Choose a ready-made theme or customise colours for this school branch only.
           </p>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
             {colorPresets.map((preset) => {
               const isSelected = primaryColor === preset.primary && secondaryColor === preset.secondary;
               return (
@@ -214,36 +228,52 @@ export const Settings: React.FC = () => {
                   onClick={() => {
                     setPrimaryColor(preset.primary);
                     setSecondaryColor(preset.secondary);
+                    setBrandingSaved(false);
                   }}
                   className={`rounded-xl border p-3 text-left transition-all ${
                     isSelected ? 'border-brand-500 ring-2 ring-brand-500/20' : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <div className="h-8 rounded-lg mb-2" style={{ background: `linear-gradient(135deg, ${preset.primary}, ${preset.secondary})` }} />
-                  <span className="text-xs font-semibold text-gray-700">{preset.name}</span>
+                <div className="h-10 rounded-lg mb-2" style={{ background: `linear-gradient(135deg, ${preset.primary}, ${preset.secondary})` }} />
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-semibold text-gray-700">{preset.name}</span>
+                    {isSelected && <span className="text-[11px] font-bold text-emerald-700">Selected</span>}
+                  </div>
                 </button>
               );
             })}
           </div>
 
-          <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">Live school preview</p>
-            <div className="flex items-center gap-3 rounded-xl bg-white border border-gray-200 px-3 py-3">
-              <div
-                className="w-11 h-11 rounded-xl shrink-0 overflow-hidden flex items-center justify-center text-white font-bold shadow-sm"
-                style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}
-              >
-                {logoPreviewUrl ? (
-                  <img src={logoPreviewUrl} alt="School logo preview" className="w-full h-full object-cover" />
-                ) : logoUrl ? (
-                  <img src={logoUrl} alt="School logo preview" className="w-full h-full object-cover" />
-                ) : (
-                  (currentSchool?.name || 'S').charAt(0).toUpperCase()
-                )}
+          <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-bold uppercase tracking-wider text-gray-600">Live school preview</p>
+              <span className="text-xs font-semibold text-gray-500">Updates while choosing colours</span>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-3">
+              <div className="rounded-xl border border-gray-200 bg-white p-3">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-11 h-11 rounded-xl shrink-0 overflow-hidden flex items-center justify-center text-white font-bold shadow-sm" style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}>
+                    {logoPreviewUrl ? <img src={logoPreviewUrl} alt="School logo preview" className="w-full h-full object-cover" /> : logoUrl ? <img src={logoUrl} alt="School logo preview" className="w-full h-full object-cover" /> : (currentSchool?.name || 'S').charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-gray-900 truncate">{currentSchool?.name || 'School Name'}</p>
+                    <p className="text-xs text-gray-500 truncate">{schoolMotto || 'School motto'}</p>
+                  </div>
+                </div>
+                <div className="space-y-2 text-xs font-semibold">
+                  <div className="rounded-lg px-3 py-2 text-white" style={{ background: primaryColor }}>Dashboard</div>
+                  <div className="rounded-lg px-3 py-2 border border-gray-200 text-gray-700">Students</div>
+                  <div className="rounded-lg px-3 py-2 border border-gray-200 text-gray-700">Assignments</div>
+                </div>
               </div>
-              <div className="min-w-0">
-                <p className="text-sm font-bold text-gray-900 truncate">{currentSchool?.name || 'School Name'}</p>
-                <p className="text-xs text-gray-500 truncate">{schoolMotto || 'School motto'}</p>
+              <div className="rounded-xl border border-gray-200 bg-white p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div><p className="text-sm font-bold text-gray-900">School overview</p><p className="text-xs text-gray-500">Branded dashboard preview</p></div>
+                  <button type="button" className="rounded-lg px-3 py-2 text-xs font-bold text-white" style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}>Add Student</button>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  {[['Students', '1,248'], ['Teachers', '86'], ['Attendance', '96%']].map(([label, value]) => <div key={label} className="rounded-xl border border-gray-200 p-3"><p className="text-xs text-gray-500">{label}</p><p className="text-xl font-bold mt-1" style={{ color: primaryColor }}>{value}</p></div>)}
+                </div>
               </div>
             </div>
           </div>
@@ -251,21 +281,43 @@ export const Settings: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
               Primary Colour
-              <input
-                type="color"
-                value={primaryColor}
-                onChange={(e) => setPrimaryColor(e.target.value)}
-                className="mt-1.5 block w-full h-11 rounded-xl border border-gray-200 bg-white p-1"
-              />
+              <div className="mt-1.5 flex gap-2">
+                <input
+                  type="color"
+                  value={primaryColor}
+                  onChange={(e) => { setPrimaryColor(e.target.value); setBrandingSaved(false); }}
+                  aria-label="Choose primary school colour"
+                  className="block h-11 w-20 rounded-xl border border-gray-200 bg-white p-1"
+                />
+                <input
+                  type="text"
+                  value={primaryColor.toUpperCase()}
+                  maxLength={7}
+                  onChange={(e) => { if (/^#[0-9a-fA-F]{6}$/.test(e.target.value)) { setPrimaryColor(e.target.value); setBrandingSaved(false); } }}
+                  aria-label="Primary colour hex code"
+                  className="block h-11 min-w-0 flex-1 rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold text-gray-900"
+                />
+              </div>
             </label>
             <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
               Secondary Colour
-              <input
-                type="color"
-                value={secondaryColor}
-                onChange={(e) => setSecondaryColor(e.target.value)}
-                className="mt-1.5 block w-full h-11 rounded-xl border border-gray-200 bg-white p-1"
-              />
+              <div className="mt-1.5 flex gap-2">
+                <input
+                  type="color"
+                  value={secondaryColor}
+                  onChange={(e) => { setSecondaryColor(e.target.value); setBrandingSaved(false); }}
+                  aria-label="Choose secondary school colour"
+                  className="block h-11 w-20 rounded-xl border border-gray-200 bg-white p-1"
+                />
+                <input
+                  type="text"
+                  value={secondaryColor.toUpperCase()}
+                  maxLength={7}
+                  onChange={(e) => { if (/^#[0-9a-fA-F]{6}$/.test(e.target.value)) { setSecondaryColor(e.target.value); setBrandingSaved(false); } }}
+                  aria-label="Secondary colour hex code"
+                  className="block h-11 min-w-0 flex-1 rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold text-gray-900"
+                />
+              </div>
             </label>
           </div>
 
