@@ -273,6 +273,25 @@ service cloud.firestore {
             ['principal', 'deputy']);
         }
 
+        // ===== ASSIGNMENTS =====
+        match /assignments/{assignmentId} {
+          allow read: if hasSchoolAccess(orgId, schoolId);
+          allow create, update, delete: if false; // Via create/update callable only
+
+          // Answer keys and marking metadata are never readable from clients
+          match /_private/{documentId} {
+            allow read, write: if false;
+          }
+
+          match /submissions/{submissionId} {
+            allow read: if hasSchoolAccess(orgId, schoolId) && (
+              resource.data.studentUid == request.auth.uid ||
+              hasSchoolRole(orgId, schoolId, ['principal', 'deputy', 'admin', 'teacher'])
+            );
+            allow create, update, delete: if false; // Via submission callable only
+          }
+        }
+
         // ===== SUMMARIES (written by Cloud Functions only) =====
         match /summaries/{summaryId} {
           allow read: if hasSchoolAccess(orgId, schoolId);

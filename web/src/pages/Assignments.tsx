@@ -18,11 +18,11 @@ interface Submission { studentUid: string; studentName: string; answers: Record<
 interface Assignment {
   id: string; title: string; className: string; description: string; fileUrl?: string;
   startsAt: string; expiresAt: string; questions: Question[]; reviewAllowed: boolean;
-  status: string; teacherName: string; submissions?: Submission[];
+  status: string; teacherName: string; resultReleaseMode?: 'immediate' | 'afterExpiry' | 'manual'; submissions?: Submission[];
 }
 
 export const Assignments: React.FC = () => {
-  const { organization, currentSchool } = useTenant();
+  const { organization, currentSchool, currentRole } = useTenant();
   const { currentUser } = useAuth();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
@@ -34,10 +34,12 @@ export const Assignments: React.FC = () => {
   const [startsAt, setStartsAt] = useState('');
   const [expiresAt, setExpiresAt] = useState('');
   const [reviewAllowed, setReviewAllowed] = useState(true);
+  const [maxAttempts, setMaxAttempts] = useState(1);
+  const [resultReleaseMode, setResultReleaseMode] = useState<'immediate' | 'afterExpiry' | 'manual'>('immediate');
   const [attachment, setAttachment] = useState<File | null>(null);
   const [questions, setQuestions] = useState<Question[]>([{ id: `q-${Date.now()}`, text: '', options: ['', '', '', ''], correctAnswer: 0, points: 1 }]);
   const [saving, setSaving] = useState(false);
-  const teacherView = true;
+  const teacherView = currentRole !== null && ['orgOwner', 'principal', 'deputy', 'admin', 'teacher'].includes(currentRole);
 
   useEffect(() => {
     if (!organization || !currentSchool) return;
@@ -58,7 +60,7 @@ export const Assignments: React.FC = () => {
     try {
       let fileUrl = '';
       if (attachment) {
-        const fileRef = ref(storage, `organizations/${organization.id}/schools/${currentSchool.id}/assignments/${Date.now()}-${attachment.name}`);
+        const fileRef = ref(storage, `${organization.id}/${currentSchool.id}/assignments/${Date.now()}-${attachment.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`);
         await uploadBytes(fileRef, attachment, { contentType: attachment.type });
         fileUrl = await getDownloadURL(fileRef);
       }
@@ -71,8 +73,8 @@ export const Assignments: React.FC = () => {
         fileUrl,
         startsAt: new Date(startsAt).toISOString(),
         expiresAt: new Date(expiresAt).toISOString(),
-        maxAttempts: 1,
-        resultReleaseMode: 'immediate',
+        maxAttempts,
+        resultReleaseMode,
         reviewAllowed,
         questions: questions.map((question) => ({ ...question, type: 'objective' })),
       });
@@ -94,9 +96,25 @@ export const Assignments: React.FC = () => {
     const submit = httpsCallable(functions, 'submitAssignment');
     const operationId = crypto.randomUUID();
     const response = await submit({ schoolId: currentSchool.id, assignmentId: takeAssignment.id, answers, operationId });
-    const result = response.data as { score: number; total: number };
-    toast.success(`Submitted. Score: ${result.score}/${result.total}`);
+    const result = response.data as { score?: number; total?: number; released?: boolean; reviewAllowed?: boolean; duplicate?: boolean };
+    if (result.released && typeof result.score === 'number' && typeof result.total === 'number') {
+      toast.success(`Submitted. Score: ${result.score}/${result.total}${result.reviewAllowed ? ' — answer review is available' : ''}`);
+    } else {
+      toast.success(result.duplicate ? 'Submission already recorded. Results are pending release.' : 'Submitted. Results will be released according to teacher settings.');
+    }
     setTakeAssignment(null); setAnswers({});
+  };
+
+  const releaseResults = async (assignmentId: string) => {
+    if (!currentSchool) return;
+    try {
+      const release = httpsCallable(functions, 'releaseAssignmentResults');
+      await release({ schoolId: currentSchool.id, assignmentId });
+      toast.success('Assignment results released');
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to release results');
+    }
   };
 
   const activeExpired = (assignment: Assignment) => new Date() > new Date(assignment.expiresAt);
@@ -117,7 +135,8 @@ export const Assignments: React.FC = () => {
             <div className="text-2xs text-gray-500 flex items-center gap-1"><Clock3 className="w-3.5 h-3.5" /> Opens {new Date(assignment.startsAt).toLocaleString()}<br />Expires {new Date(assignment.expiresAt).toLocaleString()}</div>
             <div className="flex gap-2">
               {assignment.fileUrl && <Button size="sm" variant="secondary" onClick={() => window.open(assignment.fileUrl, '_blank')}><Eye className="w-4 h-4 mr-1" />Resources</Button>}
-              <Button size="sm" variant="primary" onClick={() => { setTakeAssignment(assignment); setAnswers({}); }}>Open Quiz</Button>
+              {assignment.resultReleaseMode === 'manual' && teacherView && <Button size="sm" variant="secondary" onClick={() => releaseResults(assignment.id)}>Release Results</Button>}
+              {!teacherView && <Button size="sm" variant="primary" onClick={() => { setTakeAssignment(assignment); setAnswers({}); }}>Open Quiz</Button>}
             </div>
           </Card>
         ))}
@@ -132,7 +151,19 @@ export const Assignments: React.FC = () => {
           <label className="block text-xs font-semibold text-gray-600"><span>Upload assignment, question paper or answer sheet</span><input type="file" accept=".pdf,.doc,.docx,.xlsx,.xls,.ppt,.pptx,image/*" onChange={(e) => setAttachment(e.target.files?.[0] || null)} className="mt-1.5 block w-full rounded-xl border border-gray-200 p-2 text-xs" /></label>
           <div className="rounded-2xl border border-gray-200 p-4 space-y-3"><div className="flex justify-between"><h3 className="text-sm font-semibold text-gray-900">Private Marking Answers</h3><Button type="button" size="sm" variant="secondary" onClick={() => setQuestions((q) => [...q, { id: `q-${Date.now()}-${q.length}`, text: '', options: ['', '', '', ''], correctAnswer: 0, points: 1 }])}><Plus className="w-4 h-4" />Add Question</Button></div>
           {questions.map((q, qi) => <div key={q.id} className="rounded-xl bg-gray-50 border border-gray-200 p-3 space-y-2"><div className="flex gap-2"><Input label={`Question ${qi + 1}`} value={q.text} onChange={(e) => updateQuestion(qi, { text: e.target.value })} /><Input label="Marks" type="number" min="1" value={q.points} onChange={(e) => updateQuestion(qi, { points: Number(e.target.value) || 1 })} /></div><div className="grid grid-cols-1 sm:grid-cols-2 gap-2">{q.options.map((option, oi) => <label key={oi} className="flex items-center gap-2 text-xs"><input type="radio" checked={q.correctAnswer === oi} onChange={() => updateQuestion(qi, { correctAnswer: oi })} /><Input aria-label={`Option ${String.fromCharCode(65 + oi)}`} value={option} placeholder={`Option ${String.fromCharCode(65 + oi)}`} onChange={(e) => updateOption(qi, oi, e.target.value)} /></label>)}</div><p className="text-[10px] text-gray-500">Select the radio button beside the correct private answer.</p></div>)}</div>
-          <label className="flex items-center gap-2 text-xs font-semibold text-gray-700"><input type="checkbox" checked={reviewAllowed} onChange={(e) => setReviewAllowed(e.target.checked)} />Allow students to review questions and answers after marking</label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <label className="text-xs font-semibold text-gray-700">Maximum attempts
+              <input type="number" min="1" max="10" value={maxAttempts} onChange={(e) => setMaxAttempts(Math.max(1, Math.min(10, Number(e.target.value) || 1)))} className="mt-1.5 block w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900" />
+            </label>
+            <label className="text-xs font-semibold text-gray-700">Results release
+              <select value={resultReleaseMode} onChange={(e) => setResultReleaseMode(e.target.value as 'immediate' | 'afterExpiry' | 'manual')} className="mt-1.5 block w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900">
+                <option value="immediate">Immediately after submission</option>
+                <option value="afterExpiry">After the assignment expires</option>
+                <option value="manual">Manually by the teacher</option>
+              </select>
+            </label>
+          </div>
+          <label className="flex items-center gap-2 text-xs font-semibold text-gray-700"><input type="checkbox" checked={reviewAllowed} onChange={(e) => setReviewAllowed(e.target.checked)} />Allow students to review their selected and correct answers after results are released</label>
           <div className="flex justify-end gap-3"><Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>Cancel</Button><Button type="submit" isLoading={saving}>{saving ? 'Publishing...' : 'Publish Assignment'}</Button></div>
         </form>
       </Modal>

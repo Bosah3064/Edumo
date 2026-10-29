@@ -114,6 +114,14 @@ service firebase.storage {
       allow write: if false;
     }
 
+    // Assignment attachments and question papers
+    match /{orgId}/{schoolId}/assignments/{filename} {
+      allow read: if hasSchoolAccess(orgId, schoolId);
+      allow write: if hasSchoolAccess(orgId, schoolId) &&
+        isDocumentType() &&
+        isUnderDocLimit();
+    }
+
     // Announcement attachments
     match /{orgId}/{schoolId}/announcements/{announcementId}/{filename} {
       allow read: if hasSchoolAccess(orgId, schoolId);

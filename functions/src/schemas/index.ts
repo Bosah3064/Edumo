@@ -269,6 +269,7 @@ export const createAssignmentSchema = z.object({
   assignmentId: z.string().min(1).max(100).optional(),
   title: z.string().min(1).max(200),
   className: z.string().min(1).max(100),
+  classId: z.string().min(1).max(100).optional(),
   description: z.string().max(5000).default(''),
   fileUrl: z.string().url().max(1000).optional().or(z.literal('')),
   startsAt: z.string().min(1).max(100).refine((value) => !Number.isNaN(new Date(value).getTime()), 'Invalid start time'),
@@ -294,6 +295,11 @@ export const submitAssignmentSchema = z.object({
   assignmentId: z.string().min(1).max(100),
   answers: z.record(z.string().min(1).max(100), z.number().int().min(0).max(3)),
   operationId: z.string().min(8).max(100).optional(),
+});
+
+export const releaseAssignmentSchema = z.object({
+  schoolId: z.string().min(1).max(100),
+  assignmentId: z.string().min(1).max(100),
 });
 
 // ===== Import / Export =====
