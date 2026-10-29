@@ -318,6 +318,28 @@ export const confirmImportSchema = z.object({
   jobId: z.string().min(1),
 });
 
+export const bulkImportSchema = z.object({
+  schoolId: z.string().min(1).max(100),
+  entityType: z.enum(['students', 'staff']),
+  rows: z.array(z.object({
+    rowNum: z.number().int().min(2).max(100000),
+    name: z.string().max(300).optional(),
+    admissionNumber: z.string().max(100).optional(),
+    schoolId: z.string().max(100).optional(),
+    className: z.string().max(100).optional(),
+    guardianPhone: z.string().max(30).optional(),
+    phone: z.string().max(30).optional(),
+    email: z.string().max(255).optional(),
+    gender: z.string().max(30).optional(),
+    role: z.string().max(30).optional(),
+  })).min(1).max(400),
+});
+
+export const rollbackImportSchema = z.object({
+  schoolId: z.string().min(1).max(100),
+  batchId: z.string().min(1).max(100),
+});
+
 export const requestExportSchema = z.object({
   orgId: z.string().min(1),
   schoolId: z.string().min(1),

@@ -30,3 +30,4 @@ export {
 export { onUserCreate } from './triggers/onUserCreate';
 
 export { createAssignment, releaseAssignmentResults, submitAssignment } from './callable/assignment';
+export { bulkImport, rollbackImport } from './callable/import';

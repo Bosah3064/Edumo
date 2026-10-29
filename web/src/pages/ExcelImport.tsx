@@ -15,6 +15,8 @@ import {
   FileCheck,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '../firebase';
 
 interface DryRunRow {
   rowNum: number;
@@ -22,96 +24,148 @@ interface DryRunRow {
   name: string;
   className: string;
   guardianPhone: string;
+  gender?: string;
+  email?: string;
+  schoolId?: string;
+  role?: string;
   isValid: boolean;
   error?: string;
 }
 
 export const ExcelImport: React.FC = () => {
-  const { currentSchool } = useTenant();
-
+  const { organization, currentSchool } = useTenant();
   const [entityType, setEntityType] = useState<'students' | 'staff'>('students');
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   const [isDryRunComplete, setIsDryRunComplete] = useState(false);
   const [committing, setCommitting] = useState(false);
   const [recentBatchId, setRecentBatchId] = useState<string | null>(null);
+  const [dryRunRows, setDryRunRows] = useState<DryRunRow[]>([]);
 
-  // Mock parsed dry-run data demonstrating validation and formula sanitization
-  const [dryRunRows, setDryRunRows] = useState<DryRunRow[]>([
-    {
-      rowNum: 2,
-      admissionNo: 'ADM-2026-101',
-      name: 'Dennis Kiptoo',
-      className: 'Grade 4 East',
-      guardianPhone: '+254711998877',
-      isValid: true,
-    },
-    {
-      rowNum: 3,
-      admissionNo: 'ADM-2026-102',
-      name: 'Mercy Chepkirui',
-      className: 'Grade 4 East',
-      guardianPhone: '+254722887766',
-      isValid: true,
-    },
-    {
-      rowNum: 4,
-      admissionNo: 'ADM-2026-103',
-      name: "'+cmd|' /C calc'!A0", // Sanitized formula injection!
-      className: 'Grade 4 East',
-      guardianPhone: '+254733776655',
-      isValid: true, // Sanitized safely with leading single quote!
-    },
-    {
-      rowNum: 5,
-      admissionNo: 'ADM-2026-104',
-      name: 'John Doe',
-      className: 'Grade 99', // Invalid class
-      guardianPhone: 'invalid-phone',
-      isValid: false,
-      error: 'Invalid class level and phone format must be international (e.g. +254...)',
-    },
-  ]);
+  const cleanCell = (value: unknown) => {
+    const text = value == null ? '' : String(value).trim();
+    if (/^[=+@\t\r\n]|^-[^\s]/.test(text)) return text.replace(/^[=+@\t\r\n-]+/, '').trim();
+    return text.replace(/^'/, '').trim();
+  };
 
-  const handleFileDrop = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const downloadTemplate = async () => {
+    const { default: ExcelJS } = await import('exceljs');
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet(entityType === 'students' ? 'Students' : 'Staff');
+    if (entityType === 'students') {
+      sheet.addRow(['Name', 'Admission Number', 'Class', 'Guardian Phone', 'Gender']);
+      sheet.addRow(['Amina Kariuki', '', 'Grade 4 East', '+254712345678', 'female']);
+    } else {
+      sheet.addRow(['Name', 'Role', 'School ID', 'Email', 'Phone']);
+      sheet.addRow(['Peter Kamau', 'teacher', '', '', '+254722334455']);
+    }
+    sheet.getRow(1).font = { bold: true };
+    sheet.columns.forEach((column) => { column.width = 24; });
+    const data = await workbook.xlsx.writeBuffer();
+    const url = URL.createObjectURL(new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${entityType}_import_template.xlsx`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleFileDrop = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setSelectedFileName(file.name);
-      toast.loading('Analyzing spreadsheet & neutralizing formula injections...', {
-        id: 'parse-toast',
-      });
-      setTimeout(() => {
-        setIsDryRunComplete(true);
-        toast.success('Dry-run complete: 3 valid rows, 1 validation flag', {
-          id: 'parse-toast',
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) return toast.error('Spreadsheet must be 10MB or smaller');
+    setSelectedFileName(file.name);
+    const toastId = toast.loading('Analyzing spreadsheet and checking formulas...');
+    try {
+      const { default: ExcelJS } = await import('exceljs');
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(await file.arrayBuffer());
+      const sheet = workbook.worksheets[0];
+      if (!sheet) throw new Error('Workbook has no worksheet');
+      const headers = sheet.getRow(1).values as unknown[];
+      const normalized = headers.slice(1).map((value) => cleanCell(value).toLowerCase().replace(/[^a-z0-9]/g, ''));
+      const rows: DryRunRow[] = [];
+      sheet.eachRow((row, rowNumber) => {
+        if (rowNumber === 1) return;
+        if (rowNumber > 401) return;
+        const values = row.values as unknown[];
+        const record: Record<string, string> = {};
+        normalized.forEach((header, index) => { record[header] = cleanCell(values[index + 1]); });
+        const name = record.name || '';
+        const phone = entityType === 'students' ? record.guardianphone : record.phone;
+        const validPhone = !phone || /^\+[1-9]\d{7,14}$/.test(phone);
+        const error = !name ? 'Name is required.' : !validPhone ? 'Phone must be in international format, e.g. +254712345678.' : undefined;
+        rows.push({
+          rowNum: rowNumber,
+          admissionNo: entityType === 'students' ? record.admissionnumber || 'Generated automatically' : record.schoolid || 'Generated automatically',
+          name,
+          className: entityType === 'students' ? record.class || '' : record.role || '',
+          guardianPhone: phone || '',
+          gender: entityType === 'students' ? record.gender : undefined,
+          email: entityType === 'staff' ? record.email : undefined,
+          schoolId: entityType === 'staff' ? record.schoolid : undefined,
+          role: entityType === 'staff' ? record.role : undefined,
+          isValid: !error,
+          error,
         });
-      }, 1000);
+      });
+      if (!rows.length) throw new Error('No data rows found below the header');
+      setDryRunRows(rows);
+      setIsDryRunComplete(true);
+      const valid = rows.filter((row) => row.isValid).length;
+      toast.success(`Dry-run complete: ${valid} valid, ${rows.length - valid} flagged`, { id: toastId });
+    } catch (error) {
+      console.error(error);
+      toast.error(error instanceof Error ? error.message : 'Could not read the spreadsheet', { id: toastId });
     }
   };
 
   const handleCommit = async () => {
+    if (!organization || !currentSchool) return toast.error('Select a school first');
+    const validRows = dryRunRows.filter((row) => row.isValid);
+    if (!validRows.length) return toast.error('No valid rows to import');
     setCommitting(true);
-    const toastId = toast.loading('Committing valid learners to campus database...');
-    setTimeout(() => {
-      const batchId = `BATCH-${Date.now().toString(36).toUpperCase()}`;
-      setRecentBatchId(batchId);
-      setCommitting(false);
+    const toastId = toast.loading(`Importing valid ${entityType}...`);
+    try {
+      const rows = await Promise.all(validRows.map(async (row) => ({
+        rowNum: row.rowNum,
+        name: row.name,
+        admissionNumber: row.admissionNo === 'Generated automatically' ? undefined : row.admissionNo,
+        className: entityType === 'students' ? row.className : undefined,
+        guardianPhone: entityType === 'students' ? row.guardianPhone : undefined,
+        phone: entityType === 'staff' ? row.guardianPhone : undefined,
+        email: entityType === 'staff' ? row.email : undefined,
+        schoolId: entityType === 'staff' ? row.schoolId : undefined,
+        role: entityType === 'staff' ? (row.role || row.className) : undefined,
+        gender: entityType === 'students' ? row.gender : undefined,
+      })));
+      const commit = httpsCallable(functions, 'bulkImport');
+      const response = await commit({ schoolId: currentSchool.id, entityType, rows });
+      const result = response.data as { batchId: string; importedRows: number; errorCount: number };
+      setRecentBatchId(result.batchId);
       setIsDryRunComplete(false);
       setSelectedFileName(null);
-      toast.success(`Successfully imported 3 learners! (Batch ID: ${batchId})`, {
-        id: toastId,
-      });
-    }, 1200);
+      toast.success(`Imported ${result.importedRows} ${entityType}. ${result.errorCount ? `${result.errorCount} rows flagged.` : ''}`, { id: toastId });
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to commit the import', { id: toastId });
+    } finally {
+      setCommitting(false);
+    }
   };
 
-  const handleRollback = () => {
-    if (!recentBatchId) return;
+  const handleRollback = async () => {
+    if (!organization || !currentSchool || !recentBatchId) return;
     const toastId = toast.loading(`Rolling back batch ${recentBatchId}...`);
-    setTimeout(() => {
+    try {
+      const rollback = httpsCallable(functions, 'rollbackImport');
+      const response = await rollback({ schoolId: currentSchool.id, batchId: recentBatchId });
+      const result = response.data as { removedRows: number };
+      toast.success(`Rollback complete. Removed ${result.removedRows} records.`, { id: toastId });
       setRecentBatchId(null);
-      toast.success(`Batch ${recentBatchId} safely rolled back. All records removed.`, {
-        id: toastId,
-      });
-    }, 1000);
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to rollback the batch', { id: toastId });
+    }
   };
 
   return (
@@ -129,7 +183,7 @@ export const ExcelImport: React.FC = () => {
         <Button
           variant="secondary"
           size="sm"
-          onClick={() => toast.success(`Downloading ${entityType}_template.xlsx`)}
+          onClick={downloadTemplate}
           leftIcon={<Download className="w-4 h-4 text-brand-700" />}
         >
           Download Official Template (.xlsx)
@@ -167,7 +221,7 @@ export const ExcelImport: React.FC = () => {
           <div className="border-2 border-dashed border-surface-700 hover:border-brand-500 rounded-2xl p-6 text-center transition-all bg-white/50">
             <UploadCloud className="w-10 h-10 text-gray-500 mx-auto mb-2" />
             <p className="text-xs font-semibold text-gray-900">
-              {selectedFileName || 'Upload .xlsx or .csv File'}
+              {selectedFileName || 'Upload .xlsx File'}
             </p>
             <p className="text-2xs text-gray-600 mt-1">
               Supports standard Excel 2016+ (.xlsx) up to 10MB
@@ -176,7 +230,7 @@ export const ExcelImport: React.FC = () => {
             <label className="inline-block mt-4">
               <input
                 type="file"
-                accept=".xlsx,.csv"
+                accept=".xlsx"
                 onChange={handleFileDrop}
                 className="hidden"
               />
@@ -203,10 +257,10 @@ export const ExcelImport: React.FC = () => {
               {isDryRunComplete && (
                 <div className="flex items-center gap-2">
                   <Badge variant="accent" size="sm">
-                    3 Valid
+                    {dryRunRows.filter((row) => row.isValid).length} Valid
                   </Badge>
                   <Badge variant="danger" size="sm">
-                    1 Flagged
+                    {dryRunRows.filter((row) => !row.isValid).length} Flagged
                   </Badge>
                 </div>
               )}
@@ -295,7 +349,7 @@ export const ExcelImport: React.FC = () => {
               <Badge variant="brand" size="sm">
                 Active Batch: {recentBatchId}
               </Badge>
-              <span className="text-2xs text-gray-500">Imported 3 learners</span>
+              <span className="text-2xs text-gray-500">Tenant-scoped import batch</span>
             </div>
             <p className="text-xs text-gray-700 mt-1">
               Made a mistake? You can instantly rollback this import batch. All created student documents will be cleanly removed.
