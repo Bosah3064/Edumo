@@ -41,10 +41,10 @@ export const Settings: React.FC = () => {
   return (
     <div className="space-y-6 max-w-5xl mx-auto animate-fade-in">
       <div>
-        <h1 className="text-2xl font-display font-bold text-white tracking-tight">
+        <h1 className="text-2xl font-display font-bold text-gray-900 tracking-tight">
           Institution & Campus Settings
         </h1>
-        <p className="text-xs text-surface-400 mt-1">
+        <p className="text-xs text-gray-500 mt-1">
           Configure country curriculum pack, branding, and offline cache
         </p>
       </div>
@@ -52,12 +52,12 @@ export const Settings: React.FC = () => {
       <form onSubmit={handleSave} className="space-y-6">
         {/* Country Pack Notice */}
         <div className="p-4 rounded-2xl bg-warning-500/10 border border-warning-500/20 flex items-start gap-3 text-xs">
-          <ShieldAlert className="w-5 h-5 text-warning-400 shrink-0 mt-0.5" />
+          <ShieldAlert className="w-5 h-5 text-warning-800 shrink-0 mt-0.5" />
           <div>
-            <h4 className="font-semibold text-white">
+            <h4 className="font-semibold text-gray-900">
               VERIFY WITH OFFICIAL SOURCE: Country Pack Parameters
             </h4>
-            <p className="text-surface-300 mt-0.5 leading-relaxed text-2xs">
+            <p className="text-gray-700 mt-0.5 leading-relaxed text-2xs">
               All regional grading scales (e.g., KICD CBC rubric levels, UNEB O-Level aggregates,
               NECTA division boundaries) are seeded defaults. They remain completely editable in accordance
               with your Ministry of Education official circulars.
@@ -68,8 +68,8 @@ export const Settings: React.FC = () => {
         {/* Institution Profile */}
         <Card className="space-y-4">
           <div className="flex items-center gap-2 mb-2">
-            <Sliders className="w-4 h-4 text-brand-400" />
-            <h3 className="text-sm font-semibold text-white">
+            <Sliders className="w-4 h-4 text-brand-700" />
+            <h3 className="text-sm font-semibold text-gray-900">
               Organization & Branding
             </h3>
           </div>
@@ -91,8 +91,8 @@ export const Settings: React.FC = () => {
         {/* Country Pack & Curricula */}
         <Card className="space-y-4">
           <div className="flex items-center gap-2 mb-2">
-            <Globe className="w-4 h-4 text-accent-400" />
-            <h3 className="text-sm font-semibold text-white">
+            <Globe className="w-4 h-4 text-accent-700" />
+            <h3 className="text-sm font-semibold text-gray-900">
               Curriculum & Regional Regulations
             </h3>
           </div>
@@ -142,16 +142,16 @@ export const Settings: React.FC = () => {
         {/* PWA & Cache management */}
         <Card className="space-y-4">
           <div className="flex items-center gap-2 mb-2">
-            <Smartphone className="w-4 h-4 text-brand-400" />
-            <h3 className="text-sm font-semibold text-white">
+            <Smartphone className="w-4 h-4 text-brand-700" />
+            <h3 className="text-sm font-semibold text-gray-900">
               Progressive Web App (PWA) & Offline Cache
             </h3>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-2xl bg-surface-900/60 border border-surface-800 text-xs">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-2xl bg-white/60 border border-surface-800 text-xs">
             <div>
-              <p className="font-semibold text-white">Local Offline Storage</p>
-              <p className="text-2xs text-surface-400 mt-0.5">
+              <p className="font-semibold text-gray-900">Local Offline Storage</p>
+              <p className="text-2xs text-gray-500 mt-0.5">
                 Edumo uses IndexedDB and localStorage to buffer marks and daily attendance while offline.
               </p>
             </div>
@@ -160,7 +160,7 @@ export const Settings: React.FC = () => {
               variant="outline"
               size="sm"
               onClick={handleClearOfflineCache}
-              leftIcon={<Trash2 className="w-3.5 h-3.5 text-danger-400" />}
+              leftIcon={<Trash2 className="w-3.5 h-3.5 text-danger-700" />}
             >
               Clear Local Cache
             </Button>

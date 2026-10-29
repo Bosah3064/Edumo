@@ -27,7 +27,7 @@ export const Spinner: React.FC<SpinnerProps> = ({
           className
         )}
       />
-      {label && <p className="text-xs text-surface-400 font-medium">{label}</p>}
+      {label && <p className="text-xs text-gray-500 font-medium">{label}</p>}
     </div>
   );
 };

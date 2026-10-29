@@ -104,10 +104,10 @@ export const Classes: React.FC = () => {
     <div className="space-y-6 max-w-7xl mx-auto animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-display font-bold text-white tracking-tight">
+          <h1 className="text-2xl font-display font-bold text-gray-900 tracking-tight">
             Classes, Streams & Curriculum
           </h1>
-          <p className="text-xs text-surface-400 mt-1">
+          <p className="text-xs text-gray-500 mt-1">
             Academic structure for {currentSchool?.name || 'Main Campus'} (
             {currentSchool?.curriculumType || 'CBC'})
           </p>
@@ -130,12 +130,12 @@ export const Classes: React.FC = () => {
             <div>
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-brand-500/15 border border-brand-500/25 flex items-center justify-center text-brand-400">
+                  <div className="w-10 h-10 rounded-2xl bg-brand-500/15 border border-brand-500/25 flex items-center justify-center text-brand-700">
                     <BookOpen className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-base font-semibold text-white">{cls.name}</h3>
-                    <p className="text-2xs text-surface-400">{cls.level}</p>
+                    <h3 className="text-base font-semibold text-gray-900">{cls.name}</h3>
+                    <p className="text-2xs text-gray-500">{cls.level}</p>
                   </div>
                 </div>
 
@@ -145,7 +145,7 @@ export const Classes: React.FC = () => {
               </div>
 
               {/* Progress bar */}
-              <div className="w-full bg-surface-800 rounded-full h-1.5 mb-4 overflow-hidden">
+              <div className="w-full bg-gray-100 rounded-full h-1.5 mb-4 overflow-hidden">
                 <div
                   className="bg-brand-500 h-1.5 rounded-full transition-all duration-500"
                   style={{ width: `${Math.min(100, (cls.enrolled / cls.capacity) * 100)}%` }}
@@ -153,18 +153,18 @@ export const Classes: React.FC = () => {
               </div>
 
               <div className="space-y-2 text-xs">
-                <div className="flex justify-between text-surface-300">
-                  <span className="text-surface-500">Class Teacher:</span>
-                  <span className="font-medium text-white">{cls.classTeacher}</span>
+                <div className="flex justify-between text-gray-700">
+                  <span className="text-gray-600">Class Teacher:</span>
+                  <span className="font-medium text-gray-900">{cls.classTeacher}</span>
                 </div>
 
-                <div className="flex justify-between text-surface-300">
-                  <span className="text-surface-500">Active Streams:</span>
+                <div className="flex justify-between text-gray-700">
+                  <span className="text-gray-600">Active Streams:</span>
                   <div className="flex gap-1">
                     {cls.streams.map((stream) => (
                       <span
                         key={stream}
-                        className="px-2 py-0.5 rounded-md bg-surface-800 text-brand-300 border border-surface-700/60 font-medium text-2xs"
+                        className="px-2 py-0.5 rounded-md bg-gray-100 text-brand-700 border border-surface-700/60 font-medium text-2xs"
                       >
                         {stream}
                       </span>
@@ -173,14 +173,14 @@ export const Classes: React.FC = () => {
                 </div>
 
                 <div className="pt-2">
-                  <span className="text-2xs font-semibold text-surface-500 uppercase tracking-wider block mb-1">
+                  <span className="text-2xs font-semibold text-gray-600 uppercase tracking-wider block mb-1">
                     Learning Areas / Subjects ({cls.learningAreas.length})
                   </span>
                   <div className="flex flex-wrap gap-1">
                     {cls.learningAreas.map((subj) => (
                       <span
                         key={subj}
-                        className="text-2xs px-2 py-0.5 rounded-md bg-surface-900 text-surface-300 border border-surface-800"
+                        className="text-2xs px-2 py-0.5 rounded-md bg-white text-gray-700 border border-surface-800"
                       >
                         {subj}
                       </span>

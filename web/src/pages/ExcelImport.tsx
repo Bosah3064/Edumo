@@ -118,10 +118,10 @@ export const ExcelImport: React.FC = () => {
     <div className="space-y-6 max-w-7xl mx-auto animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-display font-bold text-white tracking-tight">
+          <h1 className="text-2xl font-display font-bold text-gray-900 tracking-tight">
             Excel Bulk Import & Rollback
           </h1>
-          <p className="text-xs text-surface-400 mt-1">
+          <p className="text-xs text-gray-500 mt-1">
             Safe spreadsheet ingestion for {currentSchool?.name || 'Main Campus'}
           </p>
         </div>
@@ -130,7 +130,7 @@ export const ExcelImport: React.FC = () => {
           variant="secondary"
           size="sm"
           onClick={() => toast.success(`Downloading ${entityType}_template.xlsx`)}
-          leftIcon={<Download className="w-4 h-4 text-brand-400" />}
+          leftIcon={<Download className="w-4 h-4 text-brand-700" />}
         >
           Download Official Template (.xlsx)
         </Button>
@@ -138,14 +138,14 @@ export const ExcelImport: React.FC = () => {
 
       {/* Security Banner: Formula Injection Defense */}
       <div className="p-4 rounded-2xl bg-brand-500/10 border border-brand-500/20 flex items-start gap-3 text-xs">
-        <ShieldCheck className="w-5 h-5 text-brand-400 shrink-0 mt-0.5" />
+        <ShieldCheck className="w-5 h-5 text-brand-700 shrink-0 mt-0.5" />
         <div>
-          <h4 className="font-semibold text-white">
+          <h4 className="font-semibold text-gray-900">
             Active Security: Bi-Directional Spreadsheet Sanitizer
           </h4>
-          <p className="text-surface-300 mt-0.5 leading-relaxed text-2xs">
+          <p className="text-gray-700 mt-0.5 leading-relaxed text-2xs">
             Per the Edumo Security Standard, all imported cells are scanned before parsing. Any
-            potentially malicious formulas starting with <code className="text-brand-300 font-mono">= + - @ \t \r</code>{' '}
+            potentially malicious formulas starting with <code className="text-brand-700 font-mono">= + - @ \t \r</code>{' '}
             are automatically neutralized with safe character escapes, preventing DDE and code injection.
           </p>
         </div>
@@ -164,12 +164,12 @@ export const ExcelImport: React.FC = () => {
             ]}
           />
 
-          <div className="border-2 border-dashed border-surface-700 hover:border-brand-500 rounded-2xl p-6 text-center transition-all bg-surface-900/50">
-            <UploadCloud className="w-10 h-10 text-surface-400 mx-auto mb-2" />
-            <p className="text-xs font-semibold text-white">
+          <div className="border-2 border-dashed border-surface-700 hover:border-brand-500 rounded-2xl p-6 text-center transition-all bg-white/50">
+            <UploadCloud className="w-10 h-10 text-gray-500 mx-auto mb-2" />
+            <p className="text-xs font-semibold text-gray-900">
               {selectedFileName || 'Upload .xlsx or .csv File'}
             </p>
-            <p className="text-2xs text-surface-500 mt-1">
+            <p className="text-2xs text-gray-600 mt-1">
               Supports standard Excel 2016+ (.xlsx) up to 10MB
             </p>
 
@@ -180,7 +180,7 @@ export const ExcelImport: React.FC = () => {
                 onChange={handleFileDrop}
                 className="hidden"
               />
-              <span className="px-4 py-2 rounded-xl bg-surface-800 hover:bg-surface-700 text-xs font-medium text-surface-200 cursor-pointer border border-surface-700">
+              <span className="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-xs font-medium text-gray-800 cursor-pointer border border-gray-200">
                 Choose File
               </span>
             </label>
@@ -192,10 +192,10 @@ export const ExcelImport: React.FC = () => {
           <div>
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-base font-semibold text-white">
+                <h3 className="text-base font-semibold text-gray-900">
                   Dry-Run Verification Preview
                 </h3>
-                <p className="text-2xs text-surface-400">
+                <p className="text-2xs text-gray-500">
                   Pre-commit audit: validates phone formats, admission numbers & escapes formulas
                 </p>
               </div>
@@ -216,7 +216,7 @@ export const ExcelImport: React.FC = () => {
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
-                    <tr className="border-b border-surface-800 text-surface-400 text-2xs uppercase tracking-wider">
+                    <tr className="border-b border-surface-800 text-gray-500 text-2xs uppercase tracking-wider">
                       <th className="py-2 px-3">Row</th>
                       <th className="py-2 px-3">Learner Name</th>
                       <th className="py-2 px-3">Adm No.</th>
@@ -226,27 +226,27 @@ export const ExcelImport: React.FC = () => {
                   </thead>
                   <tbody className="divide-y divide-surface-800/60">
                     {dryRunRows.map((row) => (
-                      <tr key={row.rowNum} className="hover:bg-surface-800/30">
-                        <td className="py-2.5 px-3 font-mono text-surface-500">
+                      <tr key={row.rowNum} className="hover:bg-gray-100/30">
+                        <td className="py-2.5 px-3 font-mono text-gray-600">
                           #{row.rowNum}
                         </td>
-                        <td className="py-2.5 px-3 font-medium text-white">
+                        <td className="py-2.5 px-3 font-medium text-gray-900">
                           {row.name}
                         </td>
-                        <td className="py-2.5 px-3 font-mono text-surface-300">
+                        <td className="py-2.5 px-3 font-mono text-gray-700">
                           {row.admissionNo}
                         </td>
-                        <td className="py-2.5 px-3 text-surface-400">
+                        <td className="py-2.5 px-3 text-gray-500">
                           {row.className}
                         </td>
                         <td className="py-2.5 px-3">
                           {row.isValid ? (
-                            <span className="inline-flex items-center gap-1 text-2xs font-semibold text-accent-400">
+                            <span className="inline-flex items-center gap-1 text-2xs font-semibold text-accent-700">
                               <CheckCircle2 className="w-3 h-3" />
                               Ready
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 text-2xs font-semibold text-danger-400" title={row.error}>
+                            <span className="inline-flex items-center gap-1 text-2xs font-semibold text-danger-700" title={row.error}>
                               <AlertOctagon className="w-3 h-3" />
                               Error Flag
                             </span>
@@ -258,7 +258,7 @@ export const ExcelImport: React.FC = () => {
                 </table>
               </div>
             ) : (
-              <div className="p-8 text-center text-surface-500 text-xs border border-dashed border-surface-800 rounded-2xl">
+              <div className="p-8 text-center text-gray-600 text-xs border border-dashed border-surface-800 rounded-2xl">
                 Upload a spreadsheet to trigger dry-run analysis and preview records before writing to Firestore.
               </div>
             )}
@@ -289,15 +289,15 @@ export const ExcelImport: React.FC = () => {
 
       {/* Rollback Batch Management */}
       {recentBatchId && (
-        <Card className="border border-brand-500/30 bg-surface-900/80 p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <Card className="border border-brand-500/30 bg-gray-50 p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
               <Badge variant="brand" size="sm">
                 Active Batch: {recentBatchId}
               </Badge>
-              <span className="text-2xs text-surface-400">Imported 3 learners</span>
+              <span className="text-2xs text-gray-500">Imported 3 learners</span>
             </div>
-            <p className="text-xs text-surface-300 mt-1">
+            <p className="text-xs text-gray-700 mt-1">
               Made a mistake? You can instantly rollback this import batch. All created student documents will be cleanly removed.
             </p>
           </div>

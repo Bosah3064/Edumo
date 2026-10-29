@@ -47,7 +47,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({ onOpenMore }) => {
 
       <button
         onClick={onOpenMore}
-        className="flex flex-col items-center justify-center py-1 px-3 rounded-xl text-surface-400 hover:text-surface-200 transition-all"
+        className="flex flex-col items-center justify-center py-1 px-3 rounded-xl text-gray-500 hover:text-gray-800 transition-all"
       >
         <MoreHorizontal className="w-5 h-5 mb-0.5" />
         <span className="text-2xs">More</span>

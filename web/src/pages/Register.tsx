@@ -354,11 +354,11 @@ export const Register: React.FC = () => {
           )}
         </Card>
 
-        <div className="text-center mt-6 text-xs text-surface-400">
+        <div className="text-center mt-6 text-xs text-gray-500">
           <span>Already have an account? </span>
           <Link
             to="/login"
-            className="text-brand-400 hover:text-brand-300 font-semibold underline underline-offset-4"
+            className="text-brand-700 hover:text-brand-700 font-semibold underline underline-offset-4"
           >
             Sign In
           </Link>

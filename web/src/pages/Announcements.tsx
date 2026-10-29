@@ -98,10 +98,10 @@ export const Announcements: React.FC = () => {
     <div className="space-y-6 max-w-7xl mx-auto animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-display font-bold text-white tracking-tight">
+          <h1 className="text-2xl font-display font-bold text-gray-900 tracking-tight">
             Announcements & Parent Alerts
           </h1>
-          <p className="text-xs text-surface-400 mt-1">
+          <p className="text-xs text-gray-500 mt-1">
             Broadcast emergency alerts and circulars for {currentSchool?.name || 'Main Campus'}
           </p>
         </div>
@@ -129,8 +129,8 @@ export const Announcements: React.FC = () => {
                 <div
                   className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
                     ann.priority === 'urgent'
-                      ? 'bg-danger-500/15 text-danger-400 border border-danger-500/30'
-                      : 'bg-brand-500/15 text-brand-400 border border-brand-500/30'
+                      ? 'bg-danger-500/15 text-danger-700 border border-danger-500/30'
+                      : 'bg-brand-500/15 text-brand-700 border border-brand-500/30'
                   }`}
                 >
                   {ann.priority === 'urgent' ? (
@@ -140,8 +140,8 @@ export const Announcements: React.FC = () => {
                   )}
                 </div>
                 <div>
-                  <h3 className="text-base font-semibold text-white">{ann.title}</h3>
-                  <p className="text-2xs text-surface-400">
+                  <h3 className="text-base font-semibold text-gray-900">{ann.title}</h3>
+                  <p className="text-2xs text-gray-500">
                     By {ann.senderName} • {ann.createdAt}
                   </p>
                 </div>
@@ -160,16 +160,16 @@ export const Announcements: React.FC = () => {
               </div>
             </div>
 
-            <p className="text-xs text-surface-300 leading-relaxed pl-11 mb-4">
+            <p className="text-xs text-gray-700 leading-relaxed pl-11 mb-4">
               {ann.body}
             </p>
 
-            <div className="pl-11 pt-3 border-t border-surface-800/80 flex flex-wrap items-center justify-between gap-2 text-2xs text-surface-500">
+            <div className="pl-11 pt-3 border-t border-surface-800/80 flex flex-wrap items-center justify-between gap-2 text-2xs text-gray-600">
               <div className="flex items-center gap-2">
-                <Radio className="w-3.5 h-3.5 text-accent-400" />
+                <Radio className="w-3.5 h-3.5 text-accent-700" />
                 <span>Channels: {ann.channels.join(' • ')}</span>
               </div>
-              <span className="text-accent-400 font-medium">Delivered to Guardians</span>
+              <span className="text-accent-700 font-medium">Delivered to Guardians</span>
             </div>
           </Card>
         ))}
@@ -219,7 +219,7 @@ export const Announcements: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-surface-300 uppercase tracking-wider mb-1.5">
+            <label className="block text-xs font-medium text-gray-700 uppercase tracking-wider mb-1.5">
               Message Content
             </label>
             <textarea
@@ -227,23 +227,23 @@ export const Announcements: React.FC = () => {
               value={body}
               onChange={(e) => setBody(e.target.value)}
               placeholder="Write circular details here..."
-              className="w-full rounded-xl bg-surface-900 border border-surface-700 text-surface-100 text-xs p-3 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
+              className="w-full rounded-xl bg-white border border-gray-200 text-gray-900 text-xs p-3 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
               required
             />
           </div>
 
           {/* Delivery Channels */}
-          <div className="p-3 rounded-2xl bg-surface-800/40 border border-surface-700/60 space-y-2">
-            <span className="text-2xs font-semibold text-surface-400 uppercase tracking-wider block">
+          <div className="p-3 rounded-2xl bg-gray-100/40 border border-surface-700/60 space-y-2">
+            <span className="text-2xs font-semibold text-gray-500 uppercase tracking-wider block">
               Multi-Channel Dispatch
             </span>
-            <div className="flex items-center gap-6 text-xs text-surface-200">
+            <div className="flex items-center gap-6 text-xs text-gray-800">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={pushChannel}
                   onChange={(e) => setPushChannel(e.target.checked)}
-                  className="rounded bg-surface-900 border-surface-700 text-brand-600 focus:ring-0"
+                  className="rounded bg-white border-surface-700 text-brand-600 focus:ring-0"
                 />
                 <span>PWA Push Notification</span>
               </label>
@@ -253,7 +253,7 @@ export const Announcements: React.FC = () => {
                   type="checkbox"
                   checked={smsChannel}
                   onChange={(e) => setSmsChannel(e.target.checked)}
-                  className="rounded bg-surface-900 border-surface-700 text-brand-600 focus:ring-0"
+                  className="rounded bg-white border-surface-700 text-brand-600 focus:ring-0"
                 />
                 <span>SMS Alert (Africa's Talking / Telco)</span>
               </label>

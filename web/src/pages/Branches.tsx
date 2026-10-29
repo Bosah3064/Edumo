@@ -76,10 +76,10 @@ export const Branches: React.FC = () => {
     <div className="space-y-6 max-w-7xl mx-auto animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-display font-bold text-white tracking-tight">
+          <h1 className="text-2xl font-display font-bold text-gray-900 tracking-tight">
             Campus Branches
           </h1>
-          <p className="text-xs text-surface-400 mt-1">
+          <p className="text-xs text-gray-500 mt-1">
             Manage multi-campus operations for {organization?.name || 'your institution'}
           </p>
         </div>
@@ -107,7 +107,7 @@ export const Branches: React.FC = () => {
             >
               <div>
                 <div className="flex items-start justify-between gap-3 mb-4">
-                  <div className="w-12 h-12 rounded-2xl bg-brand-500/15 border border-brand-500/25 flex items-center justify-center text-brand-400 shrink-0">
+                  <div className="w-12 h-12 rounded-2xl bg-brand-500/15 border border-brand-500/25 flex items-center justify-center text-brand-700 shrink-0">
                     <Building2 className="w-6 h-6" />
                   </div>
                   <div className="flex flex-col items-end gap-1">
@@ -115,7 +115,7 @@ export const Branches: React.FC = () => {
                       {school.code || 'MAIN'}
                     </Badge>
                     {isActive && (
-                      <span className="text-2xs font-semibold text-accent-400 flex items-center gap-1">
+                      <span className="text-2xs font-semibold text-accent-700 flex items-center gap-1">
                         <CheckCircle2 className="w-3 h-3" />
                         Active Workspace
                       </span>
@@ -123,22 +123,22 @@ export const Branches: React.FC = () => {
                   </div>
                 </div>
 
-                <h3 className="text-lg font-semibold text-white tracking-tight">
+                <h3 className="text-lg font-semibold text-gray-900 tracking-tight">
                   {school.name}
                 </h3>
-                <p className="text-xs text-surface-400 capitalize mt-0.5">
+                <p className="text-xs text-gray-500 capitalize mt-0.5">
                   Level: {school.type || 'Combined K-12'}
                 </p>
 
-                <div className="mt-4 pt-4 border-t border-surface-800 space-y-2 text-xs text-surface-300">
-                  <div className="flex items-center gap-2 text-surface-400">
+                <div className="mt-4 pt-4 border-t border-surface-800 space-y-2 text-xs text-gray-700">
+                  <div className="flex items-center gap-2 text-gray-500">
                     <MapPin className="w-3.5 h-3.5 shrink-0" />
                     <span className="truncate">
                       {school.address?.city || 'East Africa'}, {school.country || 'KE'}
                     </span>
                   </div>
                   {school.contacts?.phone && (
-                    <div className="flex items-center gap-2 text-surface-400">
+                    <div className="flex items-center gap-2 text-gray-500">
                       <Phone className="w-3.5 h-3.5 shrink-0" />
                       <span>{school.contacts.phone}</span>
                     </div>

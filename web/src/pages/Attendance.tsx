@@ -188,7 +188,7 @@ export const Attendance: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-display font-bold text-white tracking-tight">
+            <h1 className="text-2xl font-display font-bold text-gray-900 tracking-tight">
               Daily Attendance Register
             </h1>
             {!isOnline && (
@@ -197,7 +197,7 @@ export const Attendance: React.FC = () => {
               </Badge>
             )}
           </div>
-          <p className="text-xs text-surface-400 mt-1">
+          <p className="text-xs text-gray-500 mt-1">
             Fast tap-to-mark daily attendance for {currentSchool?.name || 'Main Campus'}
           </p>
         </div>
@@ -207,7 +207,7 @@ export const Attendance: React.FC = () => {
             variant="secondary"
             size="sm"
             onClick={() => setAllStatus('present')}
-            leftIcon={<CheckCheck className="w-4 h-4 text-accent-400" />}
+            leftIcon={<CheckCheck className="w-4 h-4 text-accent-700" />}
           >
             Mark All Present
           </Button>
@@ -227,13 +227,13 @@ export const Attendance: React.FC = () => {
       {/* Class and Date Selectors + Stats bar */}
       <Card className="grid grid-cols-1 md:grid-cols-4 gap-4 !p-4">
         <div>
-          <label className="block text-2xs font-semibold uppercase text-surface-400 mb-1">
+          <label className="block text-2xs font-semibold uppercase text-gray-500 mb-1">
             Class Stream
           </label>
           <select
             value={selectedClass}
             onChange={(e) => setSelectedClass(e.target.value)}
-            className="w-full bg-surface-900 border border-surface-700 rounded-xl px-3 py-2 text-xs text-white"
+            className="w-full bg-white border border-surface-700 rounded-xl px-3 py-2 text-xs text-gray-900"
           >
             <option value="Grade 1">Grade 1 - CBC</option>
             <option value="Grade 2">Grade 2 - CBC</option>
@@ -246,36 +246,36 @@ export const Attendance: React.FC = () => {
         </div>
 
         <div>
-          <label className="block text-2xs font-semibold uppercase text-surface-400 mb-1">
+          <label className="block text-2xs font-semibold uppercase text-gray-500 mb-1">
             Register Date
           </label>
           <input
             type="date"
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
-            className="w-full bg-surface-900 border border-surface-700 rounded-xl px-3 py-2 text-xs text-white"
+            className="w-full bg-white border border-surface-700 rounded-xl px-3 py-2 text-xs text-gray-900"
           />
         </div>
 
-        <div className="md:col-span-2 flex items-center justify-around p-2 rounded-xl bg-surface-900/60 border border-surface-800 text-center">
+        <div className="md:col-span-2 flex items-center justify-around p-2 rounded-xl bg-white/60 border border-surface-800 text-center">
           <div>
-            <span className="text-2xs text-accent-400 font-semibold block">Present</span>
-            <span className="text-lg font-bold text-white">{counts.present}</span>
+            <span className="text-2xs text-accent-700 font-semibold block">Present</span>
+            <span className="text-lg font-bold text-gray-900">{counts.present}</span>
           </div>
-          <div className="w-px h-8 bg-surface-800" />
+          <div className="w-px h-8 bg-gray-100" />
           <div>
-            <span className="text-2xs text-danger-400 font-semibold block">Absent</span>
-            <span className="text-lg font-bold text-white">{counts.absent}</span>
+            <span className="text-2xs text-danger-700 font-semibold block">Absent</span>
+            <span className="text-lg font-bold text-gray-900">{counts.absent}</span>
           </div>
-          <div className="w-px h-8 bg-surface-800" />
+          <div className="w-px h-8 bg-gray-100" />
           <div>
-            <span className="text-2xs text-warning-400 font-semibold block">Late</span>
-            <span className="text-lg font-bold text-white">{counts.late}</span>
+            <span className="text-2xs text-warning-800 font-semibold block">Late</span>
+            <span className="text-lg font-bold text-gray-900">{counts.late}</span>
           </div>
-          <div className="w-px h-8 bg-surface-800" />
+          <div className="w-px h-8 bg-gray-100" />
           <div>
-            <span className="text-2xs text-brand-400 font-semibold block">Excused</span>
-            <span className="text-lg font-bold text-white">{counts.excused}</span>
+            <span className="text-2xs text-brand-700 font-semibold block">Excused</span>
+            <span className="text-lg font-bold text-gray-900">{counts.excused}</span>
           </div>
         </div>
       </Card>
@@ -285,7 +285,7 @@ export const Attendance: React.FC = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="border-b border-surface-800 bg-surface-900/60 text-surface-400 uppercase tracking-wider text-2xs font-semibold">
+              <tr className="border-b border-surface-800 bg-white/60 text-gray-500 uppercase tracking-wider text-2xs font-semibold">
                 <th className="py-3 px-4">#</th>
                 <th className="py-3 px-4">Learner Name</th>
                 <th className="py-3 px-4">Admission No.</th>
@@ -294,14 +294,14 @@ export const Attendance: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-surface-800/60">
               {roster.map((student, idx) => (
-                <tr key={student.studentId} className="hover:bg-surface-800/30 transition-colors">
-                  <td className="py-3 px-4 text-surface-500 font-mono text-2xs">
+                <tr key={student.studentId} className="hover:bg-gray-100/30 transition-colors">
+                  <td className="py-3 px-4 text-gray-600 font-mono text-2xs">
                     {idx + 1}
                   </td>
                   <td className="py-3 px-4">
-                    <p className="font-semibold text-white">{student.name}</p>
+                    <p className="font-semibold text-gray-900">{student.name}</p>
                   </td>
-                  <td className="py-3 px-4 font-mono text-surface-400">
+                  <td className="py-3 px-4 font-mono text-gray-500">
                     {student.admissionNo}
                   </td>
                   <td className="py-3 px-4">
@@ -312,7 +312,7 @@ export const Attendance: React.FC = () => {
                         className={`px-3 py-1.5 rounded-xl font-medium text-xs transition-all flex items-center gap-1 ${
                           student.status === 'present'
                             ? 'bg-accent-600 text-white shadow-md shadow-accent-600/25 ring-2 ring-accent-400'
-                            : 'bg-surface-800 text-surface-400 hover:text-white'
+                            : 'bg-gray-100 text-gray-500 hover:text-gray-900'
                         }`}
                       >
                         <Check className="w-3.5 h-3.5" />
@@ -325,7 +325,7 @@ export const Attendance: React.FC = () => {
                         className={`px-3 py-1.5 rounded-xl font-medium text-xs transition-all flex items-center gap-1 ${
                           student.status === 'absent'
                             ? 'bg-danger-600 text-white shadow-md shadow-danger-600/25 ring-2 ring-danger-400'
-                            : 'bg-surface-800 text-surface-400 hover:text-white'
+                            : 'bg-gray-100 text-gray-500 hover:text-gray-900'
                         }`}
                       >
                         <X className="w-3.5 h-3.5" />
@@ -338,7 +338,7 @@ export const Attendance: React.FC = () => {
                         className={`px-3 py-1.5 rounded-xl font-medium text-xs transition-all flex items-center gap-1 ${
                           student.status === 'late'
                             ? 'bg-warning-600 text-white shadow-md shadow-warning-600/25 ring-2 ring-warning-400'
-                            : 'bg-surface-800 text-surface-400 hover:text-white'
+                            : 'bg-gray-100 text-gray-500 hover:text-gray-900'
                         }`}
                       >
                         <Clock className="w-3.5 h-3.5" />
@@ -351,7 +351,7 @@ export const Attendance: React.FC = () => {
                         className={`px-3 py-1.5 rounded-xl font-medium text-xs transition-all flex items-center gap-1 ${
                           student.status === 'excused'
                             ? 'bg-brand-600 text-white shadow-md shadow-brand-600/25 ring-2 ring-brand-400'
-                            : 'bg-surface-800 text-surface-400 hover:text-white'
+                            : 'bg-gray-100 text-gray-500 hover:text-gray-900'
                         }`}
                       >
                         <Shield className="w-3.5 h-3.5" />
