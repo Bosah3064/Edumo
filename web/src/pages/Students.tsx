@@ -6,6 +6,7 @@ import {
   doc,
   setDoc,
   serverTimestamp,
+  runTransaction,
   DocumentData,
 } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -28,6 +29,13 @@ import {
   Sparkles,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import {
+  formatAdmissionNumber,
+  getCurrentAdmissionYear,
+  getNextAdmissionNumber,
+  getSchoolEmailDomain,
+  getSchoolEmailForAdmission,
+} from '../utils/admission';
 
 interface StudentRecord {
   id: string;
@@ -40,6 +48,7 @@ interface StudentRecord {
   boardingStatus?: 'day' | 'boarding';
   status: string;
   guardianPhone?: string;
+  schoolEmail?: string;
   createdAt?: unknown;
 }
 
@@ -91,7 +100,7 @@ export const Students: React.FC = () => {
           const sampleList: StudentRecord[] = [
             {
               id: 'demo-1',
-              admissionNumber: 'ADM-2026-001',
+              admissionNumber: '26/0001',
               firstName: 'Amina',
               lastName: 'Kariuki',
               currentClassId: 'Grade 4',
@@ -103,7 +112,7 @@ export const Students: React.FC = () => {
             },
             {
               id: 'demo-2',
-              admissionNumber: 'ADM-2026-002',
+              admissionNumber: '26/0002',
               firstName: 'Brian',
               lastName: 'Omondi',
               currentClassId: 'Grade 4',
@@ -115,7 +124,7 @@ export const Students: React.FC = () => {
             },
             {
               id: 'demo-3',
-              admissionNumber: 'ADM-2026-003',
+              admissionNumber: '26/0003',
               firstName: 'Chantal',
               lastName: 'Uwase',
               currentClassId: 'Grade 5',
@@ -153,6 +162,35 @@ export const Students: React.FC = () => {
     const toastId = toast.loading('Enrolling learner...');
 
     try {
+      const year = getCurrentAdmissionYear();
+      const yearPrefix = String(year).slice(-2);
+      const fallbackAdmission = getNextAdmissionNumber(students, year);
+      const fallbackSequence = Number(fallbackAdmission.split('/')[1]);
+      const counterRef = doc(
+        db,
+        'organizations', organization.id,
+        'schools', currentSchool.id,
+        'counters', `admissions-${yearPrefix}`
+      );
+
+      const generatedAdmission = await runTransaction(db, async (transaction) => {
+        const counterSnapshot = await transaction.get(counterRef);
+        const counterSequence = counterSnapshot.exists()
+          ? Number(counterSnapshot.data().lastSequence || 0)
+          : 0;
+        const sequence = Math.max(counterSequence, fallbackSequence - 1) + 1;
+        const nextAdmission = formatAdmissionNumber(year, sequence);
+
+        transaction.set(counterRef, {
+          lastSequence: sequence,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+
+        return nextAdmission;
+      });
+
+      const schoolEmailDomain = getSchoolEmailDomain(currentSchool);
+      const schoolEmail = getSchoolEmailForAdmission(generatedAdmission, schoolEmailDomain);
       const studentDocRef = doc(
         collection(
           db,
@@ -166,7 +204,8 @@ export const Students: React.FC = () => {
 
       // Save Student Document
       await setDoc(studentDocRef, {
-        admissionNumber: admissionNo.trim(),
+        admissionNumber: generatedAdmission,
+        schoolEmail: schoolEmail || null,
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         currentClassId: className,
@@ -235,8 +274,7 @@ export const Students: React.FC = () => {
           variant="primary"
           size="sm"
           onClick={() => {
-            const nextAdm = `ADM-2026-${String(students.length + 1).padStart(3, '0')}`;
-            setAdmissionNo(nextAdm);
+            setAdmissionNo(getNextAdmissionNumber(students, getCurrentAdmissionYear()));
             setIsEnrollModalOpen(true);
           }}
           leftIcon={<UserPlus className="w-4 h-4" />}
@@ -368,8 +406,8 @@ export const Students: React.FC = () => {
             <Input
               label="Admission No."
               value={admissionNo}
-              onChange={(e) => setAdmissionNo(e.target.value)}
-              placeholder="e.g. ADM-2026-042"
+              readOnly
+              helperText="Generated automatically for the current year"
               required
             />
             <Select
@@ -390,6 +428,20 @@ export const Students: React.FC = () => {
               ]}
             />
           </div>
+
+          <Input
+            label="School Email"
+            value={getSchoolEmailForAdmission(
+              admissionNo,
+              getSchoolEmailDomain(currentSchool)
+            )}
+            readOnly
+            helperText={
+              getSchoolEmailDomain(currentSchool)
+                ? 'Generated from the admission number and school email domain'
+                : 'Set a school email domain in Institution Settings'
+            }
+          />
 
           <div className="grid grid-cols-2 gap-4">
             <Input

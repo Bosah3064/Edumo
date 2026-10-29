@@ -17,6 +17,7 @@ import type {
 /** Student profile */
 export interface Student extends DocMeta {
   admissionNumber: string;
+  schoolEmail?: string | null;
   nationalId?: string;
   firstName: string;
   middleName?: string;

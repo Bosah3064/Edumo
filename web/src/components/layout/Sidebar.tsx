@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
+import enTranslations from '../../i18n/en.json';
+import swTranslations from '../../i18n/sw.json';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
 import { EdumoLogo } from '../ui/EdumoLogo';
@@ -16,6 +17,7 @@ import {
   HeartHandshake,
   Settings,
   LogOut,
+  ClipboardCheck,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -23,21 +25,34 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
-  const { t } = useTranslation();
   const { signOut, currentUser } = useAuth();
   const { currentRole, currentSchool } = useTenant();
+  const [sidebarLanguage, setSidebarLanguage] = useState<'en' | 'sw'>(() =>
+    localStorage.getItem('edumo_sidebar_language') === 'sw' ? 'sw' : 'en'
+  );
 
+  useEffect(() => {
+    const handleLanguageChange = (event: Event) => {
+      const detail = (event as CustomEvent<'en' | 'sw'>).detail;
+      if (detail) setSidebarLanguage(detail);
+    };
+    window.addEventListener('edumo-sidebar-language-change', handleLanguageChange);
+    return () => window.removeEventListener('edumo-sidebar-language-change', handleLanguageChange);
+  }, []);
+
+  const navTranslations = sidebarLanguage === 'sw' ? swTranslations.nav : enTranslations.nav;
   const navItems = [
-    { to: '/dashboard', label: t('nav.dashboard'), icon: LayoutDashboard },
-    { to: '/branches', label: t('nav.branches'), icon: Building2 },
-    { to: '/students', label: t('nav.students'), icon: Users },
-    { to: '/attendance', label: t('nav.attendance'), icon: CalendarCheck2 },
-    { to: '/classes', label: t('nav.classes'), icon: BookOpen },
-    { to: '/staff', label: t('nav.staff'), icon: GraduationCap },
-    { to: '/announcements', label: t('nav.announcements'), icon: Megaphone },
-    { to: '/excel-import', label: t('nav.excelImport'), icon: FileSpreadsheet },
-    { to: '/parent-portal', label: t('nav.parentPortal'), icon: HeartHandshake },
-    { to: '/settings', label: t('nav.settings'), icon: Settings },
+    { to: '/dashboard', label: navTranslations.dashboard, icon: LayoutDashboard },
+    { to: '/branches', label: navTranslations.branches, icon: Building2 },
+    { to: '/students', label: navTranslations.students, icon: Users },
+    { to: '/attendance', label: navTranslations.attendance, icon: CalendarCheck2 },
+    { to: '/classes', label: navTranslations.classes, icon: BookOpen },
+    { to: '/staff', label: navTranslations.staff, icon: GraduationCap },
+    { to: '/announcements', label: navTranslations.announcements, icon: Megaphone },
+    { to: '/assignments', label: sidebarLanguage === 'sw' ? 'Kazi za Darasa' : 'Assignments', icon: ClipboardCheck },
+    { to: '/excel-import', label: navTranslations.excelImport, icon: FileSpreadsheet },
+    { to: '/parent-portal', label: navTranslations.parentPortal, icon: HeartHandshake },
+    { to: '/settings', label: navTranslations.settings, icon: Settings },
   ];
 
   return (
@@ -45,7 +60,23 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
       {/* Brand Header */}
       <div>
         <div className="h-16 px-5 flex items-center justify-between border-b border-gray-200 bg-white">
-          <EdumoLogo size="md" showText={true} showBadge={true} to="/dashboard" />
+          {currentSchool?.branding?.logo ? (
+            <NavLink to="/dashboard" className="flex items-center gap-3 min-w-0">
+              <img
+                src={currentSchool.branding.logo}
+                alt={currentSchool.name}
+                className="w-10 h-10 rounded-xl object-cover border border-gray-200 shadow-sm"
+              />
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-gray-900 truncate">{currentSchool.name}</p>
+                {currentSchool.branding.motto && (
+                  <p className="text-[9px] text-gray-500 truncate max-w-[150px]">{currentSchool.branding.motto}</p>
+                )}
+              </div>
+            </NavLink>
+          ) : (
+            <EdumoLogo size="md" showText={true} showBadge={true} to="/dashboard" />
+          )}
         </div>
         {currentSchool && (
           <div className="px-5 py-2.5 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
@@ -70,10 +101,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 ${
                     isActive
-                      ? 'bg-gradient-to-r from-[#1d5f99]/15 to-[#683669]/10 text-[#1d5f99] border-l-4 border-[#a5243d] shadow-sm'
-                      : 'text-[#4b5563] hover:text-[#1d5f99] hover:bg-[#f3f4f6]'
+                      ? 'border-l-4 shadow-sm'
+                      : 'text-[#4b5563] hover:bg-[#f3f4f6]'
                   }`
                 }
+                style={({ isActive }) => isActive ? {
+                  background: 'linear-gradient(90deg, color-mix(in srgb, var(--school-primary) 15%, white), color-mix(in srgb, var(--school-secondary) 10%, white))',
+                  color: 'var(--school-primary)',
+                  borderLeftColor: 'var(--school-secondary)',
+                } : {}}
               >
                 <Icon className="w-4 h-4 shrink-0" />
                 <span className="truncate">{item.label}</span>
@@ -87,7 +123,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
       <div className="p-3 border-t border-gray-200 bg-gray-50">
         <div className="flex items-center justify-between p-2 rounded-xl bg-white border border-gray-200 shadow-xs">
           <div className="flex items-center gap-2.5 truncate">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#1d5f99] to-[#683669] text-white flex items-center justify-center text-xs font-bold uppercase shrink-0 shadow-xs">
+            <div className="w-8 h-8 rounded-full text-white flex items-center justify-center text-xs font-bold uppercase shrink-0 shadow-xs" style={{ background: 'var(--school-brand-gradient)' }}>
               {currentUser?.displayName ? currentUser.displayName.charAt(0) : 'U'}
             </div>
             <div className="truncate text-left">
@@ -101,7 +137,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
           </div>
           <button
             onClick={() => signOut()}
-            title={t('nav.signOut')}
+            title={navTranslations.signOut}
             className="p-1.5 rounded-lg text-gray-400 hover:text-[#a5243d] hover:bg-red-50 transition-colors"
           >
             <LogOut className="w-4 h-4" />

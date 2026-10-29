@@ -28,3 +28,5 @@ export {
 
 // === Auth Triggers ===
 export { onUserCreate } from './triggers/onUserCreate';
+
+export { submitAssignment } from './callable/assignment';

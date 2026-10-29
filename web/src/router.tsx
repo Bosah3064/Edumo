@@ -14,6 +14,7 @@ import { Announcements } from './pages/Announcements';
 import { ExcelImport } from './pages/ExcelImport';
 import { ParentPortal } from './pages/ParentPortal';
 import { Settings } from './pages/Settings';
+import { Assignments } from './pages/Assignments';
 
 export const router = createBrowserRouter([
   // Public routes
@@ -65,6 +66,10 @@ export const router = createBrowserRouter([
       {
         path: '/excel-import',
         element: <ExcelImport />,
+      },
+      {
+        path: '/assignments',
+        element: <Assignments />,
       },
       {
         path: '/parent-portal',

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTenant } from '../contexts/TenantContext';
 import { httpsCallable } from 'firebase/functions';
 import { functions, db } from '../firebase';
-import { collection, onSnapshot, DocumentData } from 'firebase/firestore';
+import { collection, onSnapshot, doc, runTransaction, serverTimestamp, setDoc, DocumentData } from 'firebase/firestore';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
@@ -20,6 +20,8 @@ import {
   Search,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { formatSchoolId, getNextSchoolId, getSchoolEmail } from '../utils/schoolId';
+import { getSchoolEmailDomain } from '../utils/admission';
 
 interface StaffMember {
   id: string;
@@ -30,6 +32,8 @@ interface StaffMember {
   tscNumber?: string;
   assignedClasses: string[];
   status: string;
+  schoolId?: string;
+  schoolEmail?: string;
 }
 
 export const Staff: React.FC = () => {
@@ -43,6 +47,7 @@ export const Staff: React.FC = () => {
       email: 'principal@academy.ac.ke',
       phone: '+254711223344',
       tscNumber: 'TSC/482910',
+      schoolId: '26/A0001',
       assignedClasses: ['All Classes'],
       status: 'active',
     },
@@ -53,6 +58,7 @@ export const Staff: React.FC = () => {
       email: 'p.kamau@academy.ac.ke',
       phone: '+254722334455',
       tscNumber: 'TSC/519302',
+      schoolId: '26/T0001',
       assignedClasses: ['Grade 4 East', 'Grade 5'],
       status: 'active',
     },
@@ -62,6 +68,7 @@ export const Staff: React.FC = () => {
       role: 'bursar',
       email: 'm.achieng@academy.ac.ke',
       phone: '+254733445566',
+      schoolId: '26/W0001',
       assignedClasses: ['Finance Office'],
       status: 'active',
     },
@@ -76,6 +83,7 @@ export const Staff: React.FC = () => {
   const [invitePhone, setInvitePhone] = useState('+254700000000');
   const [inviteRole, setInviteRole] = useState('teacher');
   const [generatedInviteCode, setGeneratedInviteCode] = useState<string | null>(null);
+  const [generatedSchoolId, setGeneratedSchoolId] = useState<string>('');
 
   const handleSendInvite = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,12 +93,31 @@ export const Staff: React.FC = () => {
     const toastId = toast.loading('Generating secure single-use staff invite...');
 
     try {
+      const roleKey = inviteRole === 'teacher' ? 'teacher' : inviteRole === 'principal' || inviteRole === 'deputy' || inviteRole === 'admin' ? 'admin' : 'staff';
+      const year = new Date().getFullYear();
+      const yearPrefix = String(year).slice(-2);
+      const counterRef = doc(db, 'organizations', organization.id, 'schools', currentSchool.id, 'counters', `staff-${roleKey}-${yearPrefix}`);
+      const fallbackId = getNextSchoolId(staffList, roleKey as 'teacher' | 'staff' | 'admin', year);
+      const fallbackSequence = Number(fallbackId.match(/\d{4}$/)?.[0] || 1);
+
+      const schoolId = await runTransaction(db, async (transaction) => {
+        const snapshot = await transaction.get(counterRef);
+        const last = snapshot.exists() ? Number(snapshot.data().lastSequence || 0) : 0;
+        const sequence = Math.max(last, fallbackSequence - 1) + 1;
+        const id = formatSchoolId(roleKey as 'teacher' | 'staff' | 'admin', sequence, year);
+        transaction.set(counterRef, { lastSequence: sequence, updatedAt: serverTimestamp() }, { merge: true });
+        return id;
+      });
+      setGeneratedSchoolId(schoolId);
+
       const createInviteFn = httpsCallable(functions, 'createInvite');
       const res = await createInviteFn({
         orgId: organization.id,
         schoolId: currentSchool.id,
         role: inviteRole,
-        email: inviteEmail || undefined,
+        staffSchoolId: schoolId,
+        schoolEmail: getSchoolEmail(schoolId, getSchoolEmailDomain(currentSchool)),
+        email: inviteEmail || getSchoolEmail(schoolId, getSchoolEmailDomain(currentSchool)) || undefined,
         phone: invitePhone || undefined,
       });
 
@@ -158,6 +185,11 @@ export const Staff: React.FC = () => {
               </div>
 
               <h3 className="text-base font-semibold text-gray-900">{member.name}</h3>
+              {member.schoolId && (
+                <p className="text-2xs font-mono font-semibold text-brand-700 mt-0.5">
+                  School ID: {member.schoolId} • Role: {member.role}
+                </p>
+              )}
               {member.tscNumber && (
                 <p className="text-2xs font-mono text-brand-600 mt-0.5">
                   {member.tscNumber}
@@ -259,6 +291,18 @@ export const Staff: React.FC = () => {
             <p className="text-xs text-gray-500 max-w-xs mx-auto">
               Share this code with the staff member to activate their account in {currentSchool?.name}.
             </p>
+
+            {generatedSchoolId && (
+              <div className="p-3 bg-brand-50 rounded-2xl border border-brand-200 text-center">
+                <p className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">School ID</p>
+                <p className="font-mono text-base font-bold text-brand-700">{generatedSchoolId}</p>
+                {getSchoolEmail(generatedSchoolId, getSchoolEmailDomain(currentSchool)) && (
+                  <p className="text-xs text-gray-600 mt-1">
+                    {getSchoolEmail(generatedSchoolId, getSchoolEmailDomain(currentSchool))}
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="p-3 bg-gray-50 rounded-2xl border border-brand-500/30 flex items-center justify-between font-mono text-base font-bold text-brand-600">
               <span>{generatedInviteCode}</span>

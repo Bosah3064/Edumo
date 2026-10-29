@@ -15,6 +15,10 @@ import {
   Trash2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { collection, doc, getDocs, updateDoc } from 'firebase/firestore';
+import { db, storage } from '../firebase';
+import { sanitizeSchoolEmailDomain } from '../utils/admission';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 
 export const Settings: React.FC = () => {
   const { organization, currentSchool } = useTenant();
@@ -23,10 +27,82 @@ export const Settings: React.FC = () => {
   const [curriculum, setCurriculum] = useState<string>(currentSchool?.curriculumType || 'CBC');
   const [gradingMode, setGradingMode] = useState<string>(currentSchool?.gradingMode || 'cbc_no_aggregate');
   const [currency, setCurrency] = useState(organization?.country === 'UG' ? 'UGX' : 'KES');
+  const currentEmailDomain = (currentSchool?.settings as Record<string, unknown> | undefined)?.emailDomain;
+  const [emailDomain, setEmailDomain] = useState<string>(
+    typeof currentEmailDomain === 'string'
+      ? currentEmailDomain
+      : currentSchool?.contacts?.website?.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0] || ''
+  );
+  const [primaryColor, setPrimaryColor] = useState(currentSchool?.branding?.primaryColor || '#1d5f99');
+  const [secondaryColor, setSecondaryColor] = useState(currentSchool?.branding?.secondaryColor || '#683669');
+  const [schoolMotto, setSchoolMotto] = useState(currentSchool?.branding?.motto || '');
+  const [logoUrl, setLogoUrl] = useState(currentSchool?.branding?.logo || '');
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const existingScale = (currentSchool?.gradingConfig as { scale?: Array<{ label: string; min: number; max: number }> } | undefined)?.scale;
+  const [gradingScale, setGradingScale] = useState<Array<{ label: string; min: number; max: number }>>(
+    existingScale?.length ? existingScale : [
+      { label: 'Exceeding Expectations', min: 75, max: 100 },
+      { label: 'Meeting Expectations', min: 50, max: 74 },
+      { label: 'Approaching Expectations', min: 25, max: 49 },
+      { label: 'Below Expectations', min: 0, max: 24 },
+    ]
+  );
+  const [applyGradingToAllBranches, setApplyGradingToAllBranches] = useState(false);
 
-  const handleSave = (e: React.FormEvent) => {
+  const colorPresets = [
+    { name: 'Edumo Blue', primary: '#1d5f99', secondary: '#683669' },
+    { name: 'Forest Green', primary: '#166534', secondary: '#15803d' },
+    { name: 'Royal Navy', primary: '#1e3a8a', secondary: '#2563eb' },
+    { name: 'School Burgundy', primary: '#7f1d1d', secondary: '#a5243d' },
+    { name: 'Teal Academy', primary: '#0f766e', secondary: '#0891b2' },
+    { name: 'Purple Crest', primary: '#5b21b6', secondary: '#7c3aed' },
+  ];
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success('Settings updated successfully!');
+    if (!organization) return;
+
+    try {
+      await updateDoc(doc(db, 'organizations', organization.id), { name: orgName.trim() });
+      if (currentSchool) {
+        let savedLogoUrl = logoUrl;
+        if (logoFile) {
+          const logoRef = ref(storage, `organizations/${organization.id}/schools/${currentSchool.id}/logo-${Date.now()}.${logoFile.name.split('.').pop() || 'png'}`);
+          await uploadBytes(logoRef, logoFile, { contentType: logoFile.type });
+          savedLogoUrl = await getDownloadURL(logoRef);
+        }
+        await updateDoc(doc(db, 'organizations', organization.id, 'schools', currentSchool.id), {
+          curriculumType: curriculum,
+          gradingMode,
+          'settings.emailDomain': sanitizeSchoolEmailDomain(emailDomain),
+          branding: {
+            primaryColor,
+            secondaryColor,
+            motto: schoolMotto.trim(),
+            logo: savedLogoUrl,
+          },
+          gradingConfig: { ...currentSchool.gradingConfig, scale: gradingScale },
+        });
+
+        if (applyGradingToAllBranches) {
+          const schoolsSnapshot = await getDocs(
+            collection(db, 'organizations', organization.id, 'schools')
+          );
+          await Promise.all(schoolsSnapshot.docs.map((schoolDoc) =>
+            updateDoc(schoolDoc.ref, {
+              gradingMode,
+              gradingConfig: { scale: gradingScale },
+            })
+          ));
+        }
+        setLogoUrl(savedLogoUrl);
+        setLogoFile(null);
+      }
+      toast.success('Settings updated successfully!');
+    } catch (error) {
+      console.error('Failed to save settings:', error);
+      toast.error('Failed to save settings');
+    }
   };
 
   const handleClearOfflineCache = () => {
@@ -74,7 +150,7 @@ export const Settings: React.FC = () => {
             </h3>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Input
               label="Organization Name"
               value={orgName}
@@ -85,6 +161,86 @@ export const Settings: React.FC = () => {
               value={currentSchool?.name || 'Main Campus'}
               disabled
             />
+            <Input
+              label="School Email Domain"
+              placeholder="nyambaria.co.ke"
+              value={emailDomain}
+              onChange={(e) => setEmailDomain(e.target.value)}
+              helperText="Used for automatic learner email addresses"
+            />
+          </div>
+        </Card>
+
+        {/* School Branding */}
+        <Card className="space-y-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Sliders className="w-4 h-4 text-brand-700" />
+            <h3 className="text-sm font-semibold text-gray-900">School Branding & Colours</h3>
+          </div>
+
+          <p className="text-xs text-gray-500">
+            Choose a ready-made theme or customise colours for this school branch only.
+          </p>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {colorPresets.map((preset) => {
+              const isSelected = primaryColor === preset.primary && secondaryColor === preset.secondary;
+              return (
+                <button
+                  key={preset.name}
+                  type="button"
+                  onClick={() => {
+                    setPrimaryColor(preset.primary);
+                    setSecondaryColor(preset.secondary);
+                  }}
+                  className={`rounded-xl border p-3 text-left transition-all ${
+                    isSelected ? 'border-brand-500 ring-2 ring-brand-500/20' : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="h-8 rounded-lg mb-2" style={{ background: `linear-gradient(135deg, ${preset.primary}, ${preset.secondary})` }} />
+                  <span className="text-xs font-semibold text-gray-700">{preset.name}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+              Primary Colour
+              <input
+                type="color"
+                value={primaryColor}
+                onChange={(e) => setPrimaryColor(e.target.value)}
+                className="mt-1.5 block w-full h-11 rounded-xl border border-gray-200 bg-white p-1"
+              />
+            </label>
+            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+              Secondary Colour
+              <input
+                type="color"
+                value={secondaryColor}
+                onChange={(e) => setSecondaryColor(e.target.value)}
+                className="mt-1.5 block w-full h-11 rounded-xl border border-gray-200 bg-white p-1"
+              />
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              label="School Motto"
+              placeholder="Knowledge, Discipline and Service"
+              value={schoolMotto}
+              onChange={(e) => setSchoolMotto(e.target.value)}
+            />
+            <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider">
+              School Logo
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
+                className="mt-1.5 w-full rounded-xl border border-gray-200 bg-white text-xs text-gray-600 file:mr-3 file:border-0 file:bg-gray-100 file:px-3 file:py-2.5 file:text-gray-700"
+              />
+            </label>
           </div>
         </Card>
 
@@ -137,6 +293,70 @@ export const Settings: React.FC = () => {
               ]}
             />
           </div>
+        </Card>
+
+        {/* Editable grading scale */}
+        <Card className="space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900">Grading Scale</h3>
+              <p className="text-xs text-gray-500 mt-0.5">Edit grade bands for this school or every campus branch.</p>
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => setGradingScale((scale) => [...scale, { label: 'New Grade', min: 0, max: 0 }])}
+            >
+              Add Grade
+            </Button>
+          </div>
+
+          <div className="space-y-2">
+            {gradingScale.map((grade, index) => (
+              <div key={index} className="grid grid-cols-[1fr_100px_100px_auto] gap-2 items-center">
+                <Input
+                  aria-label="Grade label"
+                  value={grade.label}
+                  onChange={(e) => setGradingScale((scale) => scale.map((item, i) => i === index ? { ...item, label: e.target.value } : item))}
+                />
+                <Input
+                  aria-label="Minimum percentage"
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={grade.min}
+                  onChange={(e) => setGradingScale((scale) => scale.map((item, i) => i === index ? { ...item, min: Number(e.target.value) } : item))}
+                />
+                <Input
+                  aria-label="Maximum percentage"
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={grade.max}
+                  onChange={(e) => setGradingScale((scale) => scale.map((item, i) => i === index ? { ...item, max: Number(e.target.value) } : item))}
+                />
+                <button
+                  type="button"
+                  onClick={() => setGradingScale((scale) => scale.filter((_, i) => i !== index))}
+                  className="p-2 rounded-xl text-red-600 hover:bg-red-50"
+                  title="Remove grade"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <label className="flex items-center gap-2 text-xs font-semibold text-gray-700">
+            <input
+              type="checkbox"
+              checked={applyGradingToAllBranches}
+              onChange={(e) => setApplyGradingToAllBranches(e.target.checked)}
+              className="rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+            />
+            Apply this grading mode and scale to all school branches
+          </label>
         </Card>
 
         {/* PWA & Cache management */}

@@ -1,12 +1,29 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import { MobileNav } from './MobileNav';
 import { OfflineBanner } from '../ui/OfflineBanner';
+import { useTenant } from '../../contexts/TenantContext';
 
 export const AppShell: React.FC = () => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const { currentSchool } = useTenant();
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const primary = currentSchool?.branding?.primaryColor || '#1d5f99';
+    const secondary = currentSchool?.branding?.secondaryColor || '#683669';
+    root.style.setProperty('--school-primary', primary);
+    root.style.setProperty('--school-secondary', secondary);
+    root.style.setProperty('--school-brand-gradient', `linear-gradient(135deg, ${primary}, ${secondary})`);
+
+    return () => {
+      root.style.removeProperty('--school-primary');
+      root.style.removeProperty('--school-secondary');
+      root.style.removeProperty('--school-brand-gradient');
+    };
+  }, [currentSchool]);
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#f3f4f6] text-[#1f2937]">
