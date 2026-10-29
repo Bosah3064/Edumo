@@ -99,7 +99,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar }) => {
             className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-2 py-1.5 hover:bg-gray-50 transition-colors"
             title="Open profile menu"
           >
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#1d5f99] to-[#683669] text-white flex items-center justify-center text-xs font-bold">
+            <div className="w-8 h-8 rounded-lg text-white flex items-center justify-center text-xs font-bold" style={{ background: 'var(--school-brand-gradient)' }}>
               {currentUser?.photoURL ? (
                 <img src={currentUser.photoURL} alt="Profile" className="w-full h-full rounded-lg object-cover" />
               ) : (

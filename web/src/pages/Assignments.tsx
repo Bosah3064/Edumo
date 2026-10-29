@@ -62,15 +62,20 @@ export const Assignments: React.FC = () => {
         await uploadBytes(fileRef, attachment, { contentType: attachment.type });
         fileUrl = await getDownloadURL(fileRef);
       }
-      const assignmentRef = doc(collection(db, 'organizations', organization.id, 'schools', currentSchool.id, 'assignments'));
-      await setDoc(assignmentRef, {
-        title: title.trim(), className, description: description.trim(), fileUrl, startsAt, expiresAt,
-        questions: questions.map(({ id, text, options, points }) => ({ id, text, options, points })),
-        reviewAllowed, status: new Date() < new Date(startsAt) ? 'scheduled' : 'open',
-        teacherName: currentUser?.displayName || 'Teacher', createdAt: serverTimestamp(),
+      const create = httpsCallable(functions, 'createAssignment');
+      await create({
+        schoolId: currentSchool.id,
+        title: title.trim(),
+        className,
+        description: description.trim(),
+        fileUrl,
+        startsAt: new Date(startsAt).toISOString(),
+        expiresAt: new Date(expiresAt).toISOString(),
+        maxAttempts: 1,
+        resultReleaseMode: 'immediate',
+        reviewAllowed,
+        questions: questions.map((question) => ({ ...question, type: 'objective' })),
       });
-      const privateAnswersRef = doc(db, assignmentRef.path, '_private', 'answers');
-      await setDoc(privateAnswersRef, { questions });
       toast.success('Assignment published');
       setCreateOpen(false); setTitle(''); setDescription(''); setAttachment(null);
       setQuestions([{ id: `q-${Date.now()}`, text: '', options: ['', '', '', ''], correctAnswer: 0, points: 1 }]);
@@ -87,7 +92,8 @@ export const Assignments: React.FC = () => {
     if (missing.length) return toast.error(`Answer all ${takeAssignment.questions.length} questions before submitting`);
 
     const submit = httpsCallable(functions, 'submitAssignment');
-    const response = await submit({ orgId: organization.id, schoolId: currentSchool.id, assignmentId: takeAssignment.id, answers });
+    const operationId = crypto.randomUUID();
+    const response = await submit({ schoolId: currentSchool.id, assignmentId: takeAssignment.id, answers, operationId });
     const result = response.data as { score: number; total: number };
     toast.success(`Submitted. Score: ${result.score}/${result.total}`);
     setTakeAssignment(null); setAnswers({});

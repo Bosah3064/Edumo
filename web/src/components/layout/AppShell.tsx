@@ -17,11 +17,15 @@ export const AppShell: React.FC = () => {
     root.style.setProperty('--school-primary', primary);
     root.style.setProperty('--school-secondary', secondary);
     root.style.setProperty('--school-brand-gradient', `linear-gradient(135deg, ${primary}, ${secondary})`);
+    root.style.setProperty('--color-blue', primary);
+    root.style.setProperty('--color-purple', secondary);
 
     return () => {
       root.style.removeProperty('--school-primary');
       root.style.removeProperty('--school-secondary');
       root.style.removeProperty('--school-brand-gradient');
+      root.style.removeProperty('--color-blue');
+      root.style.removeProperty('--color-purple');
     };
   }, [currentSchool]);
 

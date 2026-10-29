@@ -262,6 +262,40 @@ export const createAnnouncementSchema = z.object({
 
 export type CreateAnnouncementInput = z.infer<typeof createAnnouncementSchema>;
 
+// ===== Assignments =====
+
+export const createAssignmentSchema = z.object({
+  schoolId: z.string().min(1).max(100),
+  assignmentId: z.string().min(1).max(100).optional(),
+  title: z.string().min(1).max(200),
+  className: z.string().min(1).max(100),
+  description: z.string().max(5000).default(''),
+  fileUrl: z.string().url().max(1000).optional().or(z.literal('')),
+  startsAt: z.string().min(1).max(100).refine((value) => !Number.isNaN(new Date(value).getTime()), 'Invalid start time'),
+  expiresAt: z.string().min(1).max(100).refine((value) => !Number.isNaN(new Date(value).getTime()), 'Invalid expiry time'),
+  maxAttempts: z.number().int().min(1).max(10).default(1),
+  resultReleaseMode: z.enum(['immediate', 'afterExpiry', 'manual']).default('immediate'),
+  reviewAllowed: z.boolean(),
+  questions: z.array(z.object({
+    id: z.string().min(1).max(100),
+    text: z.string().min(1).max(5000),
+    type: z.enum(['objective']).default('objective'),
+    options: z.array(z.string().min(1).max(1000)).length(4),
+    correctAnswer: z.number().int().min(0).max(3),
+    points: z.number().int().min(1).max(1000),
+  })).min(1).max(200),
+}).refine((data) => new Date(data.expiresAt) > new Date(data.startsAt), {
+  message: 'Expiry time must be after start time',
+  path: ['expiresAt'],
+});
+
+export const submitAssignmentSchema = z.object({
+  schoolId: z.string().min(1).max(100),
+  assignmentId: z.string().min(1).max(100),
+  answers: z.record(z.string().min(1).max(100), z.number().int().min(0).max(3)),
+  operationId: z.string().min(8).max(100).optional(),
+});
+
 // ===== Import / Export =====
 
 export const requestImportSchema = z.object({

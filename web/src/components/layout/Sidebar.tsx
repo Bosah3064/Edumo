@@ -83,7 +83,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
             <span className="text-[10px] font-bold uppercase tracking-wider text-[#4b5563]">
               Active School
             </span>
-            <span className="text-xs font-bold text-[#1d5f99] truncate max-w-[120px]">
+            <span className="text-xs font-bold truncate max-w-[120px]" style={{ color: 'var(--school-primary)' }}>
               {currentSchool.name}
             </span>
           </div>
@@ -130,7 +130,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
               <p className="text-xs font-bold text-[#1f2937] truncate">
                 {currentUser?.displayName || currentUser?.email || 'User'}
               </p>
-              <p className="text-[10px] text-[#683669] font-semibold capitalize truncate">
+              <p className="text-[10px] font-semibold capitalize truncate" style={{ color: 'var(--school-secondary)' }}>
                 {currentRole || 'Staff Member'}
               </p>
             </div>

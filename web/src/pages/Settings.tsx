@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTenant } from '../contexts/TenantContext';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -38,6 +38,7 @@ export const Settings: React.FC = () => {
   const [schoolMotto, setSchoolMotto] = useState(currentSchool?.branding?.motto || '');
   const [logoUrl, setLogoUrl] = useState(currentSchool?.branding?.logo || '');
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState('');
   const existingScale = (currentSchool?.gradingConfig as { scale?: Array<{ label: string; min: number; max: number }> } | undefined)?.scale;
   const [gradingScale, setGradingScale] = useState<Array<{ label: string; min: number; max: number }>>(
     existingScale?.length ? existingScale : [
@@ -48,6 +49,26 @@ export const Settings: React.FC = () => {
     ]
   );
   const [applyGradingToAllBranches, setApplyGradingToAllBranches] = useState(false);
+
+  useEffect(() => {
+    if (!currentSchool) return;
+    setCurriculum(currentSchool.curriculumType || 'CBC');
+    setGradingMode(currentSchool.gradingMode || 'cbc_no_aggregate');
+    setPrimaryColor(currentSchool.branding?.primaryColor || '#1d5f99');
+    setSecondaryColor(currentSchool.branding?.secondaryColor || '#683669');
+    setSchoolMotto(currentSchool.branding?.motto || '');
+    setLogoUrl(currentSchool.branding?.logo || '');
+    setLogoFile(null);
+    setLogoPreviewUrl('');
+    const domain = (currentSchool.settings as Record<string, unknown> | undefined)?.emailDomain;
+    setEmailDomain(typeof domain === 'string' ? domain : currentSchool.contacts?.website?.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0] || '');
+  }, [currentSchool?.id]);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--school-primary', primaryColor);
+    document.documentElement.style.setProperty('--school-secondary', secondaryColor);
+    document.documentElement.style.setProperty('--school-brand-gradient', `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`);
+  }, [primaryColor, secondaryColor]);
 
   const colorPresets = [
     { name: 'Edumo Blue', primary: '#1d5f99', secondary: '#683669' },
@@ -67,7 +88,7 @@ export const Settings: React.FC = () => {
       if (currentSchool) {
         let savedLogoUrl = logoUrl;
         if (logoFile) {
-          const logoRef = ref(storage, `organizations/${organization.id}/schools/${currentSchool.id}/logo-${Date.now()}.${logoFile.name.split('.').pop() || 'png'}`);
+          const logoRef = ref(storage, `${organization.id}/${currentSchool.id}/branding/logo-${Date.now()}.${logoFile.name.split('.').pop() || 'png'}`);
           await uploadBytes(logoRef, logoFile, { contentType: logoFile.type });
           savedLogoUrl = await getDownloadURL(logoRef);
         }
@@ -97,6 +118,7 @@ export const Settings: React.FC = () => {
         }
         setLogoUrl(savedLogoUrl);
         setLogoFile(null);
+        setLogoPreviewUrl(savedLogoUrl);
       }
       toast.success('Settings updated successfully!');
     } catch (error) {
@@ -204,6 +226,28 @@ export const Settings: React.FC = () => {
             })}
           </div>
 
+          <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">Live school preview</p>
+            <div className="flex items-center gap-3 rounded-xl bg-white border border-gray-200 px-3 py-3">
+              <div
+                className="w-11 h-11 rounded-xl shrink-0 overflow-hidden flex items-center justify-center text-white font-bold shadow-sm"
+                style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}
+              >
+                {logoPreviewUrl ? (
+                  <img src={logoPreviewUrl} alt="School logo preview" className="w-full h-full object-cover" />
+                ) : logoUrl ? (
+                  <img src={logoUrl} alt="School logo preview" className="w-full h-full object-cover" />
+                ) : (
+                  (currentSchool?.name || 'S').charAt(0).toUpperCase()
+                )}
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-gray-900 truncate">{currentSchool?.name || 'School Name'}</p>
+                <p className="text-xs text-gray-500 truncate">{schoolMotto || 'School motto'}</p>
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
               Primary Colour
@@ -236,8 +280,18 @@ export const Settings: React.FC = () => {
               School Logo
               <input
                 type="file"
-                accept="image/png,image/jpeg,image/svg+xml,image/webp"
-                onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
+                accept="image/png,image/jpeg,image/webp"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] || null;
+                  setLogoFile(file);
+                  if (!file) {
+                    setLogoPreviewUrl('');
+                    return;
+                  }
+                  const reader = new FileReader();
+                  reader.onload = () => setLogoPreviewUrl(typeof reader.result === 'string' ? reader.result : '');
+                  reader.readAsDataURL(file);
+                }}
                 className="mt-1.5 w-full rounded-xl border border-gray-200 bg-white text-xs text-gray-600 file:mr-3 file:border-0 file:bg-gray-100 file:px-3 file:py-2.5 file:text-gray-700"
               />
             </label>
