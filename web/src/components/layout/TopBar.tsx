@@ -27,11 +27,11 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar }) => {
   };
 
   return (
-    <header className="h-16 px-4 sm:px-6 bg-surface-900/90 backdrop-blur-md border-b border-surface-800 flex items-center justify-between sticky top-0 z-30">
+    <header className="h-16 px-4 sm:px-6 bg-white/95 backdrop-blur-md border-b border-gray-200 flex items-center justify-between sticky top-0 z-30 shadow-xs">
       <div className="flex items-center gap-3">
         <button
           onClick={onToggleSidebar}
-          className="lg:hidden p-2 rounded-xl text-surface-400 hover:text-white hover:bg-surface-800 transition-colors"
+          className="lg:hidden p-2 rounded-xl text-gray-500 hover:text-[#1d5f99] hover:bg-gray-100 transition-colors"
         >
           <Menu className="w-5 h-5" />
         </button>
@@ -42,20 +42,20 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar }) => {
       <div className="flex items-center gap-2 sm:gap-3">
         {/* Offline / Online indicator pill */}
         <div
-          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-2xs font-semibold border ${
+          className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${
             isOnline
-              ? 'bg-accent-500/10 text-accent-400 border-accent-500/20'
-              : 'bg-warning-500/10 text-warning-400 border-warning-500/25 animate-pulse'
+              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+              : 'bg-amber-50 text-amber-700 border-amber-300 animate-pulse'
           }`}
         >
           {isOnline ? (
             <>
-              <Wifi className="w-3 h-3" />
+              <Wifi className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Online</span>
             </>
           ) : (
             <>
-              <WifiOff className="w-3 h-3" />
+              <WifiOff className="w-3.5 h-3.5" />
               <span>Offline Mode</span>
             </>
           )}
@@ -64,11 +64,11 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar }) => {
         {/* Language switch */}
         <button
           onClick={toggleLanguage}
-          className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-surface-800/80 hover:bg-surface-700/80 border border-surface-700/60 text-xs text-surface-200 font-medium transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-gray-50 border border-gray-200 text-xs text-[#1f2937] font-bold transition-colors shadow-xs"
           title="Toggle English / Kiswahili"
         >
-          <Globe className="w-3.5 h-3.5 text-surface-400" />
-          <span className="uppercase font-semibold">
+          <Globe className="w-3.5 h-3.5 text-[#1d5f99]" />
+          <span className="uppercase">
             {i18n.language.startsWith('sw') ? 'SW' : 'EN'}
           </span>
         </button>
@@ -76,10 +76,10 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar }) => {
         {/* Theme toggle */}
         <button
           onClick={toggleTheme}
-          className="p-2 rounded-xl bg-surface-800/80 hover:bg-surface-700/80 border border-surface-700/60 text-surface-300 hover:text-white transition-colors"
-          title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} mode`}
+          className="p-2 rounded-xl bg-white hover:bg-gray-50 border border-gray-200 text-gray-600 hover:text-[#1d5f99] transition-colors shadow-xs"
+          title={`Switch theme mode`}
         >
-          {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-500" /> : <Moon className="w-4 h-4 text-[#683669]" />}
         </button>
       </div>
     </header>

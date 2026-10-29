@@ -9,7 +9,7 @@ export const AppShell: React.FC = () => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-surface-950 text-surface-100">
+    <div className="flex h-screen w-screen overflow-hidden bg-[#f3f4f6] text-[#1f2937]">
       {/* Desktop Sidebar */}
       <div className="hidden lg:block h-full">
         <Sidebar />
@@ -19,7 +19,7 @@ export const AppShell: React.FC = () => {
       {isMobileSidebarOpen && (
         <div className="fixed inset-0 z-50 lg:hidden flex">
           <div
-            className="fixed inset-0 bg-surface-950/80 backdrop-blur-sm animate-fade-in"
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm animate-fade-in"
             onClick={() => setIsMobileSidebarOpen(false)}
           />
           <div className="relative z-10 w-64 h-full animate-slide-in-right">

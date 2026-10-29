@@ -115,9 +115,9 @@ export const Register: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-surface-950 text-surface-100 flex flex-col justify-center items-center p-4 relative overflow-hidden">
-      {/* Glow */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-brand-600/15 rounded-full blur-[120px] pointer-events-none" />
+    <div className="min-h-screen bg-[#f3f4f6] text-[#1f2937] flex flex-col justify-center items-center p-4 relative overflow-hidden">
+      {/* Subtle Glow */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-[#1d5f99]/10 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="w-full max-w-xl relative z-10 animate-fade-in my-8">
         {/* Header */}
@@ -125,10 +125,10 @@ export const Register: React.FC = () => {
           <div className="mb-3">
             <EdumoLogo size="xl" showText={true} showSubtitle={true} showBadge={true} to="/" />
           </div>
-          <h2 className="text-xl font-display font-semibold text-white">
+          <h2 className="text-2xl font-display font-bold text-[#1f2937]">
             {t('register.title')}
           </h2>
-          <p className="text-xs text-surface-400 mt-1">{t('register.subtitle')}</p>
+          <p className="text-xs text-[#4b5563] mt-1 font-medium">{t('register.subtitle')}</p>
         </div>
 
         {/* Stepper Indicator */}
@@ -142,19 +142,19 @@ export const Register: React.FC = () => {
               key={s.num}
               className={`p-2.5 rounded-2xl border text-center transition-all ${
                 step === s.num
-                  ? 'bg-gradient-to-r from-[#1d5f99]/30 to-[#683669]/30 border-[#1d5f99] text-white font-semibold shadow-md'
+                  ? 'bg-white border-2 border-[#1d5f99] text-[#1d5f99] font-bold shadow-md'
                   : step > s.num
-                  ? 'bg-surface-800/80 border-[#10B981]/40 text-[#10B981]'
-                  : 'bg-surface-900/40 border-surface-800 text-surface-500'
+                  ? 'bg-white border border-emerald-500/40 text-emerald-600 font-semibold'
+                  : 'bg-white/60 border border-gray-200 text-gray-400'
               }`}
             >
-              <div className="text-2xs uppercase tracking-wider font-semibold">Step {s.num}</div>
-              <div className="text-xs font-medium truncate">{s.label}</div>
+              <div className="text-[10px] uppercase tracking-wider font-bold">Step {s.num}</div>
+              <div className="text-xs font-semibold truncate">{s.label}</div>
             </div>
           ))}
         </div>
 
-        <Card className="glass-card shadow-2xl">
+        <Card className="bg-white border border-gray-200 shadow-xl rounded-2xl p-6 sm:p-8">
           {/* STEP 1: Organization details */}
           {step === 1 && (
             <div className="space-y-4">
@@ -328,6 +328,7 @@ export const Register: React.FC = () => {
                 value={adminPassword}
                 onChange={(e) => setAdminPassword(e.target.value)}
                 helperText="Minimum 8 characters. You will use this to sign in."
+                showStrength={true}
                 required
               />
 

@@ -8,7 +8,6 @@ interface EdumoLogoProps {
   showBadge?: boolean;
   to?: string;
   className?: string;
-  variant?: 'emblem' | 'image' | 'horizontal';
 }
 
 export const EdumoLogo: React.FC<EdumoLogoProps> = ({
@@ -18,23 +17,23 @@ export const EdumoLogo: React.FC<EdumoLogoProps> = ({
   showBadge = false,
   to,
   className = '',
-  variant = 'emblem',
 }) => {
   const sizeMap = {
-    sm: { icon: 'w-7 h-7', text: 'text-base', sub: 'text-[9px]', badge: 'text-[9px]' },
-    md: { icon: 'w-9 h-9', text: 'text-lg', sub: 'text-[10px]', badge: 'text-[10px]' },
-    lg: { icon: 'w-12 h-12', text: 'text-2xl', sub: 'text-xs', badge: 'text-xs' },
-    xl: { icon: 'w-16 h-16', text: 'text-3xl', sub: 'text-sm', badge: 'text-xs' },
+    sm: { icon: 'w-8 h-8', text: 'text-base', sub: 'text-[9px]', badge: 'text-[9px]' },
+    md: { icon: 'w-10 h-10', text: 'text-xl', sub: 'text-[10px]', badge: 'text-[10px]' },
+    lg: { icon: 'w-14 h-14', text: 'text-2xl', sub: 'text-xs', badge: 'text-xs' },
+    xl: { icon: 'w-20 h-20', text: 'text-3xl', sub: 'text-sm', badge: 'text-xs' },
   };
 
   const currentSize = sizeMap[size];
 
+  // Official EDUMO Emblem (Open Book + Graduation Cap + Rising Sun Wings)
   const EmblemIcon = () => (
     <div
-      className={`${currentSize.icon} relative rounded-xl flex items-center justify-center shrink-0 overflow-hidden shadow-lg transition-transform hover:scale-105`}
+      className={`${currentSize.icon} relative rounded-2xl flex items-center justify-center shrink-0 overflow-hidden shadow-md transition-transform hover:scale-105`}
       style={{
         background: 'linear-gradient(135deg, #1d5f99 0%, #683669 50%, #a5243d 100%)',
-        boxShadow: '0 4px 18px rgba(29, 95, 153, 0.4), 0 2px 8px rgba(165, 36, 61, 0.3)',
+        boxShadow: '0 4px 16px rgba(29, 95, 153, 0.3), 0 2px 6px rgba(165, 36, 61, 0.25)',
       }}
     >
       <svg
@@ -92,39 +91,24 @@ export const EdumoLogo: React.FC<EdumoLogoProps> = ({
     </div>
   );
 
-  const ImageLogo = () => (
-    <div
-      className={`${currentSize.icon} relative rounded-xl overflow-hidden shrink-0 shadow-lg border border-white/10`}
-      style={{
-        boxShadow: '0 4px 20px rgba(29, 95, 153, 0.4), 0 2px 10px rgba(104, 54, 105, 0.3)',
-      }}
-    >
-      <img
-        src={`${import.meta.env.BASE_URL}logo.png`}
-        alt="EDUMO Logo"
-        className="w-full h-full object-cover object-center"
-      />
-    </div>
-  );
-
   const content = (
     <div className={`flex items-center gap-3 select-none ${className}`}>
-      {variant === 'image' ? <ImageLogo /> : <EmblemIcon />}
+      <EmblemIcon />
 
       {showText && (
-        <div className="flex flex-col">
+        <div className="flex flex-col text-left">
           <div className="flex items-center gap-1.5">
             <span
               className={`font-display font-black tracking-tight ${currentSize.text} bg-clip-text text-transparent`}
               style={{
-                backgroundImage: 'linear-gradient(to right, #1d5f99, #683669, #a5243d)',
+                backgroundImage: 'linear-gradient(to right, #1d5f99 0%, #683669 50%, #a5243d 100%)',
               }}
             >
               EDUMO
             </span>
             {showBadge && (
               <span
-                className={`${currentSize.badge} font-bold px-1.5 py-0.5 rounded-full text-white shadow-sm`}
+                className={`${currentSize.badge} font-bold px-2 py-0.5 rounded-full text-white shadow-xs`}
                 style={{
                   background: 'linear-gradient(to right, #1d5f99, #a5243d)',
                 }}
@@ -135,9 +119,9 @@ export const EdumoLogo: React.FC<EdumoLogoProps> = ({
           </div>
           {showSubtitle && (
             <span
-              className={`${currentSize.sub} font-semibold uppercase tracking-wider text-surface-400`}
+              className={`${currentSize.sub} font-semibold uppercase tracking-wider text-[#4b5563]`}
             >
-              School Management System
+              School Management
             </span>
           )}
         </div>
