@@ -24,7 +24,7 @@ export const Button: React.FC<ButtonProps> = ({
   ...props
 }) => {
   const baseStyles =
-    'relative inline-flex items-center justify-center font-semibold transition-all duration-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface-900 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none disabled:active:scale-100';
+    'relative inline-flex items-center justify-center font-semibold transition-all duration-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none disabled:active:scale-100';
 
   const sizeStyles = {
     sm: 'text-xs px-3.5 py-1.5 gap-1.5',
@@ -38,13 +38,13 @@ export const Button: React.FC<ButtonProps> = ({
     tricolor:
       'bg-gradient-to-r from-[#1d5f99] via-[#683669] to-[#a5243d] hover:opacity-95 text-white shadow-lg shadow-[#1d5f99]/30 hover:-translate-y-0.5 focus:ring-[#683669] border border-white/10',
     secondary:
-      'bg-surface-800 hover:bg-surface-700 text-surface-100 border border-surface-700/60 focus:ring-surface-500',
+      'bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200 focus:ring-gray-400',
     accent:
       'bg-accent-600 hover:bg-accent-500 text-white shadow-lg shadow-accent-500/20 focus:ring-accent-400 border border-accent-500/30',
     outline:
-      'bg-transparent hover:bg-surface-800/80 text-surface-200 border border-surface-700 focus:ring-[#1d5f99]',
+      'bg-transparent hover:bg-gray-50 text-gray-700 border border-gray-300 focus:ring-[#1d5f99]',
     ghost:
-      'bg-transparent hover:bg-surface-800/60 text-surface-300 hover:text-white focus:ring-surface-600',
+      'bg-transparent hover:bg-gray-100 text-gray-600 hover:text-gray-900 focus:ring-gray-400',
     danger:
       'bg-[#a5243d] hover:bg-[#891b30] text-white shadow-lg shadow-[#a5243d]/30 focus:ring-[#a5243d] border border-white/10',
   };

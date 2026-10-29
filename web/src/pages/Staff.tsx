@@ -122,10 +122,10 @@ export const Staff: React.FC = () => {
     <div className="space-y-6 max-w-7xl mx-auto animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-display font-bold text-white tracking-tight">
+          <h1 className="text-2xl font-display font-bold text-gray-900 tracking-tight">
             Staff & Educators
           </h1>
-          <p className="text-xs text-surface-400 mt-1">
+          <p className="text-xs text-gray-500 mt-1">
             Faculty and administrators at {currentSchool?.name || 'Main Campus'}
           </p>
         </div>
@@ -149,7 +149,7 @@ export const Staff: React.FC = () => {
           <Card key={member.id} className="flex flex-col justify-between">
             <div>
               <div className="flex items-start justify-between gap-3 mb-4">
-                <div className="w-12 h-12 rounded-2xl bg-indigo-500/15 border border-indigo-500/25 flex items-center justify-center text-indigo-400 font-bold text-sm">
+                <div className="w-12 h-12 rounded-2xl bg-edumoPurple-500/10 border border-edumoPurple-500/20 flex items-center justify-center text-edumoPurple-500 font-bold text-sm">
                   {member.name.charAt(0)}
                 </div>
                 <Badge variant={roleColors[member.role] || 'neutral'} size="sm">
@@ -157,19 +157,19 @@ export const Staff: React.FC = () => {
                 </Badge>
               </div>
 
-              <h3 className="text-base font-semibold text-white">{member.name}</h3>
+              <h3 className="text-base font-semibold text-gray-900">{member.name}</h3>
               {member.tscNumber && (
-                <p className="text-2xs font-mono text-brand-400 mt-0.5">
+                <p className="text-2xs font-mono text-brand-600 mt-0.5">
                   {member.tscNumber}
                 </p>
               )}
 
-              <div className="mt-4 pt-3 border-t border-surface-800 space-y-1.5 text-xs text-surface-300">
-                <div className="flex items-center gap-2 text-surface-400">
+              <div className="mt-4 pt-3 border-t border-gray-200 space-y-1.5 text-xs text-gray-600">
+                <div className="flex items-center gap-2 text-gray-500">
                   <Mail className="w-3.5 h-3.5 shrink-0" />
                   <span className="truncate">{member.email}</span>
                 </div>
-                <div className="flex items-center gap-2 text-surface-400">
+                <div className="flex items-center gap-2 text-gray-500">
                   <Phone className="w-3.5 h-3.5 shrink-0" />
                   <span>{member.phone}</span>
                 </div>
@@ -179,7 +179,7 @@ export const Staff: React.FC = () => {
                 {member.assignedClasses.map((cls) => (
                   <span
                     key={cls}
-                    className="text-2xs px-2 py-0.5 rounded-md bg-surface-800 text-surface-300 border border-surface-700/60"
+                    className="text-2xs px-2 py-0.5 rounded-md bg-gray-100 text-gray-600 border border-gray-200"
                   >
                     {cls}
                   </span>
@@ -187,9 +187,9 @@ export const Staff: React.FC = () => {
               </div>
             </div>
 
-            <div className="mt-5 pt-3 border-t border-surface-800 flex justify-between items-center text-2xs text-surface-500">
+            <div className="mt-5 pt-3 border-t border-gray-200 flex justify-between items-center text-2xs text-gray-500">
               <span>Status: Active</span>
-              <span className="text-accent-400 font-medium">Verified Credentials</span>
+              <span className="text-accent-600 font-medium">Verified Credentials</span>
             </div>
           </Card>
         ))}
@@ -234,7 +234,7 @@ export const Staff: React.FC = () => {
               helperText="For SMS delivery of invite code"
             />
 
-            <div className="pt-4 flex justify-end gap-3 border-t border-surface-800">
+            <div className="pt-4 flex justify-end gap-3 border-t border-gray-200">
               <Button
                 type="button"
                 variant="ghost"
@@ -249,18 +249,18 @@ export const Staff: React.FC = () => {
           </form>
         ) : (
           <div className="text-center py-4 space-y-4">
-            <div className="w-12 h-12 rounded-full bg-accent-500/20 text-accent-400 flex items-center justify-center mx-auto">
+            <div className="w-12 h-12 rounded-full bg-accent-500/10 text-accent-600 flex items-center justify-center mx-auto">
               <Check className="w-6 h-6" />
             </div>
 
-            <h4 className="text-base font-semibold text-white">
+            <h4 className="text-base font-semibold text-gray-900">
               Single-Use Invite Code Ready
             </h4>
-            <p className="text-xs text-surface-400 max-w-xs mx-auto">
+            <p className="text-xs text-gray-500 max-w-xs mx-auto">
               Share this code with the staff member to activate their account in {currentSchool?.name}.
             </p>
 
-            <div className="p-3 bg-surface-950 rounded-2xl border border-brand-500/30 flex items-center justify-between font-mono text-base font-bold text-brand-300">
+            <div className="p-3 bg-gray-50 rounded-2xl border border-brand-500/30 flex items-center justify-between font-mono text-base font-bold text-brand-600">
               <span>{generatedInviteCode}</span>
               <button
                 type="button"
@@ -268,7 +268,7 @@ export const Staff: React.FC = () => {
                   navigator.clipboard.writeText(generatedInviteCode);
                   toast.success('Invite code copied to clipboard!');
                 }}
-                className="p-1.5 rounded-lg hover:bg-surface-800 text-surface-400 hover:text-white transition-colors"
+                className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"
               >
                 <Copy className="w-4 h-4" />
               </button>

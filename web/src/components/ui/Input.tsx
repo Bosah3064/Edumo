@@ -58,14 +58,14 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         {label && (
           <label
             htmlFor={inputId}
-            className="block text-xs font-semibold text-surface-300 uppercase tracking-wider"
+            className="block text-xs font-semibold text-gray-600 uppercase tracking-wider"
           >
             {label}
           </label>
         )}
         <div className="relative rounded-xl">
           {leftIcon && (
-            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-surface-400">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
               {leftIcon}
             </div>
           )}
@@ -75,13 +75,13 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             type={computedType}
             value={value}
             className={clsx(
-              'w-full rounded-xl bg-surface-900/80 border text-surface-100 placeholder-surface-500 text-sm transition-all duration-200 focus:outline-none focus:ring-2',
+              'w-full rounded-xl bg-gray-50 border text-gray-800 placeholder-gray-400 text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:bg-white',
               leftIcon ? 'pl-10' : 'pl-4',
               isPassword || rightIcon ? 'pr-11' : 'pr-4',
               'py-2.5',
               error
                 ? 'border-danger-500/80 focus:border-danger-500 focus:ring-danger-500/20'
-                : 'border-surface-700/80 focus:border-brand-500 focus:ring-brand-500/20 hover:border-surface-600',
+                : 'border-gray-200 focus:border-brand-500 focus:ring-brand-500/20 hover:border-gray-300',
               className
             )}
             {...props}
@@ -92,7 +92,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             <button
               type="button"
               onClick={() => setShowPassword((prev) => !prev)}
-              className="password-eye-btn text-surface-400 hover:text-brand-400 focus:outline-none"
+              className="password-eye-btn text-gray-400 hover:text-brand-500 focus:outline-none"
               title={showPassword ? 'Hide password' : 'Show password'}
               tabIndex={-1}
             >
@@ -100,7 +100,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             </button>
           ) : (
             rightIcon && (
-              <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-surface-400 pointer-events-none">
+              <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 pointer-events-none">
                 {rightIcon}
               </div>
             )
@@ -128,16 +128,16 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
               />
               <div className={clsx('strength-bar', strength === 'strong' ? strength : '')} />
             </div>
-            <p className="text-[10px] text-surface-400 mt-1 capitalize">
-              Password strength: <span className="font-semibold text-white">{strength}</span>
+            <p className="text-[10px] text-gray-500 mt-1 capitalize">
+              Password strength: <span className="font-semibold text-gray-700">{strength}</span>
             </p>
           </div>
         )}
 
         {error ? (
-          <p className="text-xs text-danger-400 mt-1 animate-fade-in">{error}</p>
+          <p className="text-xs text-red-500 mt-1 animate-fade-in">{error}</p>
         ) : helperText ? (
-          <p className="text-xs text-surface-400 mt-1">{helperText}</p>
+          <p className="text-xs text-gray-500 mt-1">{helperText}</p>
         ) : null}
       </div>
     );

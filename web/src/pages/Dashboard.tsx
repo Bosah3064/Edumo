@@ -97,8 +97,8 @@ export const Dashboard: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in max-w-7xl mx-auto">
       {/* Top Welcome Banner */}
-      <div className="relative rounded-3xl bg-gradient-to-r from-brand-900/60 via-indigo-950/40 to-surface-900 border border-brand-500/20 p-6 sm:p-8 overflow-hidden shadow-2xl">
-        <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-gradient-to-l from-brand-500/10 to-transparent pointer-events-none" />
+      <div className="relative rounded-3xl bg-gradient-to-r from-[#1d5f99] via-[#683669] to-[#a5243d] p-6 sm:p-8 overflow-hidden shadow-2xl">
+        <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-gradient-to-l from-white/5 to-transparent pointer-events-none" />
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
@@ -115,7 +115,7 @@ export const Dashboard: React.FC = () => {
             <h1 className="text-2xl sm:text-3xl font-display font-bold text-white tracking-tight">
               Jambo, {currentUser?.displayName || 'Administrator'} 👋
             </h1>
-            <p className="text-sm text-surface-300 mt-1">
+            <p className="text-sm text-white/80 mt-1">
               Active Campus:{' '}
               <span className="font-semibold text-white">
                 {currentSchool?.name || 'Main Campus'}
@@ -149,69 +149,69 @@ export const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <Card className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-semibold text-surface-400 uppercase tracking-wider">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
               Enrolled Learners
             </p>
-            <h3 className="text-2xl font-display font-bold text-white mt-1">
+            <h3 className="text-2xl font-display font-bold text-gray-900 mt-1">
               {loadingStats ? '...' : studentCount}
             </h3>
-            <p className="text-2xs text-accent-400 mt-1 flex items-center gap-1 font-medium">
+            <p className="text-2xs text-accent-600 mt-1 flex items-center gap-1 font-medium">
               <TrendingUp className="w-3 h-3" />
               <span>100% active standing</span>
             </p>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-brand-500/15 border border-brand-500/25 flex items-center justify-center text-brand-400">
+          <div className="w-12 h-12 rounded-2xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-brand-500">
             <Users className="w-6 h-6" />
           </div>
         </Card>
 
         <Card className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-semibold text-surface-400 uppercase tracking-wider">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
               Today's Attendance
             </p>
-            <h3 className="text-2xl font-display font-bold text-accent-400 mt-1">
+            <h3 className="text-2xl font-display font-bold text-accent-600 mt-1">
               96.4%
             </h3>
-            <p className="text-2xs text-surface-400 mt-1 font-medium">
+            <p className="text-2xs text-gray-500 mt-1 font-medium">
               137 Present • 5 Absent
             </p>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-accent-500/15 border border-accent-500/25 flex items-center justify-center text-accent-400">
+          <div className="w-12 h-12 rounded-2xl bg-accent-500/10 border border-accent-500/20 flex items-center justify-center text-accent-600">
             <CalendarCheck2 className="w-6 h-6" />
           </div>
         </Card>
 
         <Card className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-semibold text-surface-400 uppercase tracking-wider">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
               Teaching & Staff
             </p>
-            <h3 className="text-2xl font-display font-bold text-white mt-1">
+            <h3 className="text-2xl font-display font-bold text-gray-900 mt-1">
               {loadingStats ? '...' : staffCount}
             </h3>
-            <p className="text-2xs text-surface-400 mt-1 font-medium">
+            <p className="text-2xs text-gray-500 mt-1 font-medium">
               Active TSC verified
             </p>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-indigo-500/15 border border-indigo-500/25 flex items-center justify-center text-indigo-400">
+          <div className="w-12 h-12 rounded-2xl bg-edumoPurple-500/10 border border-edumoPurple-500/20 flex items-center justify-center text-edumoPurple-500">
             <GraduationCap className="w-6 h-6" />
           </div>
         </Card>
 
         <Card className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-semibold text-surface-400 uppercase tracking-wider">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
               Active Streams
             </p>
-            <h3 className="text-2xl font-display font-bold text-white mt-1">
+            <h3 className="text-2xl font-display font-bold text-gray-900 mt-1">
               {loadingStats ? '...' : classCount}
             </h3>
-            <p className="text-2xs text-brand-400 mt-1 font-medium">
+            <p className="text-2xs text-brand-600 mt-1 font-medium">
               All learning areas assigned
             </p>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-warning-500/15 border border-warning-500/25 flex items-center justify-center text-warning-400">
+          <div className="w-12 h-12 rounded-2xl bg-warning-500/10 border border-warning-500/20 flex items-center justify-center text-warning-600">
             <Building2 className="w-6 h-6" />
           </div>
         </Card>
@@ -221,80 +221,80 @@ export const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Quick Actions */}
         <Card className="lg:col-span-1 space-y-3">
-          <h3 className="text-base font-display font-semibold text-white mb-2">
+          <h3 className="text-base font-display font-semibold text-gray-900 mb-2">
             Quick Actions
           </h3>
 
           <button
             onClick={() => navigate('/attendance')}
-            className="w-full flex items-center justify-between p-3 rounded-xl bg-surface-900/60 hover:bg-surface-800 border border-surface-800 transition-all text-left group"
+            className="w-full flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-all text-left group"
           >
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-accent-500/15 text-accent-400 flex items-center justify-center">
+              <div className="w-9 h-9 rounded-xl bg-accent-500/10 text-accent-600 flex items-center justify-center">
                 <CalendarCheck2 className="w-4 h-4" />
               </div>
               <div>
-                <p className="text-xs font-semibold text-white group-hover:text-accent-300">
+                <p className="text-xs font-semibold text-gray-800 group-hover:text-accent-600">
                   Daily Attendance Register
                 </p>
-                <p className="text-2xs text-surface-400">1-tap fast mark (offline-ready)</p>
+                <p className="text-2xs text-gray-500">1-tap fast mark (offline-ready)</p>
               </div>
             </div>
-            <ArrowRight className="w-4 h-4 text-surface-500 group-hover:translate-x-1 transition-transform" />
+            <ArrowRight className="w-4 h-4 text-gray-400 group-hover:translate-x-1 transition-transform" />
           </button>
 
           <button
             onClick={() => navigate('/students')}
-            className="w-full flex items-center justify-between p-3 rounded-xl bg-surface-900/60 hover:bg-surface-800 border border-surface-800 transition-all text-left group"
+            className="w-full flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-all text-left group"
           >
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-brand-500/15 text-brand-400 flex items-center justify-center">
+              <div className="w-9 h-9 rounded-xl bg-brand-500/10 text-brand-500 flex items-center justify-center">
                 <Users className="w-4 h-4" />
               </div>
               <div>
-                <p className="text-xs font-semibold text-white group-hover:text-brand-300">
+                <p className="text-xs font-semibold text-gray-800 group-hover:text-brand-500">
                   Learner Directory
                 </p>
-                <p className="text-2xs text-surface-400">Manage admissions & emergency contacts</p>
+                <p className="text-2xs text-gray-500">Manage admissions & emergency contacts</p>
               </div>
             </div>
-            <ArrowRight className="w-4 h-4 text-surface-500 group-hover:translate-x-1 transition-transform" />
+            <ArrowRight className="w-4 h-4 text-gray-400 group-hover:translate-x-1 transition-transform" />
           </button>
 
           <button
             onClick={() => navigate('/excel-import')}
-            className="w-full flex items-center justify-between p-3 rounded-xl bg-surface-900/60 hover:bg-surface-800 border border-surface-800 transition-all text-left group"
+            className="w-full flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-all text-left group"
           >
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-warning-500/15 text-warning-400 flex items-center justify-center">
+              <div className="w-9 h-9 rounded-xl bg-warning-500/10 text-warning-600 flex items-center justify-center">
                 <FileSpreadsheet className="w-4 h-4" />
               </div>
               <div>
-                <p className="text-xs font-semibold text-white group-hover:text-warning-300">
+                <p className="text-xs font-semibold text-gray-800 group-hover:text-warning-600">
                   Excel Bulk Import
                 </p>
-                <p className="text-2xs text-surface-400">Sanitized import with rollback</p>
+                <p className="text-2xs text-gray-500">Sanitized import with rollback</p>
               </div>
             </div>
-            <ArrowRight className="w-4 h-4 text-surface-500 group-hover:translate-x-1 transition-transform" />
+            <ArrowRight className="w-4 h-4 text-gray-400 group-hover:translate-x-1 transition-transform" />
           </button>
 
           <button
             onClick={() => navigate('/announcements')}
-            className="w-full flex items-center justify-between p-3 rounded-xl bg-surface-900/60 hover:bg-surface-800 border border-surface-800 transition-all text-left group"
+            className="w-full flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-all text-left group"
           >
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-indigo-500/15 text-indigo-400 flex items-center justify-center">
+              <div className="w-9 h-9 rounded-xl bg-edumoPurple-500/10 text-edumoPurple-500 flex items-center justify-center">
                 <Megaphone className="w-4 h-4" />
               </div>
               <div>
-                <p className="text-xs font-semibold text-white group-hover:text-indigo-300">
+                <p className="text-xs font-semibold text-gray-800 group-hover:text-edumoPurple-500">
                   Send Parent Notice
                 </p>
-                <p className="text-2xs text-surface-400">Broadcast via Push, SMS & Portal</p>
+                <p className="text-2xs text-gray-500">Broadcast via Push, SMS & Portal</p>
               </div>
             </div>
-            <ArrowRight className="w-4 h-4 text-surface-500 group-hover:translate-x-1 transition-transform" />
+            <ArrowRight className="w-4 h-4 text-gray-400 group-hover:translate-x-1 transition-transform" />
           </button>
         </Card>
 
@@ -302,10 +302,10 @@ export const Dashboard: React.FC = () => {
         <Card className="lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-base font-display font-semibold text-white">
+              <h3 className="text-base font-display font-semibold text-gray-900">
                 Campus Branches
               </h3>
-              <p className="text-xs text-surface-400">
+              <p className="text-xs text-gray-500">
                 Multi-branch performance and enrollment summary
               </p>
             </div>
@@ -326,17 +326,17 @@ export const Dashboard: React.FC = () => {
                   key={branch.id}
                   className={`p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
                     isActive
-                      ? 'bg-brand-500/10 border-brand-500/30'
-                      : 'bg-surface-900/40 border-surface-800 hover:border-surface-700'
+                      ? 'bg-brand-500/5 border-brand-500/30'
+                      : 'bg-gray-50 border-gray-200 hover:border-gray-300'
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-surface-800 border border-surface-700 flex items-center justify-center text-surface-300">
-                      <Building2 className="w-5 h-5 text-brand-400" />
+                    <div className="w-10 h-10 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center text-brand-500">
+                      <Building2 className="w-5 h-5" />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <h4 className="text-sm font-semibold text-white">
+                        <h4 className="text-sm font-semibold text-gray-900">
                           {branch.name}
                         </h4>
                         {isActive && (
@@ -345,7 +345,7 @@ export const Dashboard: React.FC = () => {
                           </Badge>
                         )}
                       </div>
-                      <p className="text-2xs text-surface-400 mt-0.5">
+                      <p className="text-2xs text-gray-500 mt-0.5">
                         Code: {branch.code || 'MAIN'} • Level: {branch.type || 'Combined'}
                       </p>
                     </div>
@@ -353,19 +353,19 @@ export const Dashboard: React.FC = () => {
 
                   <div className="flex items-center gap-6 text-xs">
                     <div>
-                      <span className="text-2xs text-surface-500 block">Learners</span>
-                      <span className="font-semibold text-white">
+                      <span className="text-2xs text-gray-500 block">Learners</span>
+                      <span className="font-semibold text-gray-900">
                         {isActive ? studentCount : '120'}
                       </span>
                     </div>
                     <div>
-                      <span className="text-2xs text-surface-500 block">Attendance</span>
-                      <span className="font-semibold text-accent-400">
+                      <span className="text-2xs text-gray-500 block">Attendance</span>
+                      <span className="font-semibold text-accent-600">
                         96.2%
                       </span>
                     </div>
                     <div>
-                      <span className="text-2xs text-surface-500 block">Curriculum</span>
+                      <span className="text-2xs text-gray-500 block">Curriculum</span>
                       <Badge variant="neutral" size="sm">
                         {branch.curriculumType || 'CBC'}
                       </Badge>

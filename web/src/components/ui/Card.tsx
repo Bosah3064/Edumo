@@ -16,11 +16,9 @@ export const Card: React.FC<CardProps> = ({
   return (
     <div
       className={clsx(
-        'rounded-2xl p-6 transition-all duration-300',
-        variant === 'glass' && 'glass-card',
-        variant === 'solid' && 'bg-surface-800/90 border border-surface-700/60 shadow-xl',
+        'rounded-2xl p-6 transition-all duration-300 bg-white border border-gray-200 shadow-sm hover:shadow-md',
         variant === 'interactive' &&
-          'glass-card cursor-pointer hover:border-brand-500/40 hover:-translate-y-1',
+          'cursor-pointer hover:border-brand-500/40 hover:-translate-y-1',
         glow && 'ring-1 ring-brand-500/30 shadow-glow',
         className
       )}

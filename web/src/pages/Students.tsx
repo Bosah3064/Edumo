@@ -223,10 +223,10 @@ export const Students: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-display font-bold text-white tracking-tight">
+          <h1 className="text-2xl font-display font-bold text-gray-900 tracking-tight">
             Students & Learners
           </h1>
-          <p className="text-xs text-surface-400 mt-1">
+          <p className="text-xs text-gray-500 mt-1">
             Enrolled learners at {currentSchool?.name || 'Main Campus'}
           </p>
         </div>
@@ -286,7 +286,7 @@ export const Students: React.FC = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="border-b border-surface-800 bg-surface-900/60 text-surface-400 uppercase tracking-wider text-2xs font-semibold">
+                <tr className="border-b border-gray-200 bg-gray-50 text-gray-500 uppercase tracking-wider text-2xs font-semibold">
                   <th className="py-3.5 px-4">Learner</th>
                   <th className="py-3.5 px-4">Admission No.</th>
                   <th className="py-3.5 px-4">Class</th>
@@ -295,32 +295,32 @@ export const Students: React.FC = () => {
                   <th className="py-3.5 px-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-surface-800/60">
+              <tbody className="divide-y divide-gray-100">
                 {filteredStudents.map((student) => (
                   <tr
                     key={student.id}
-                    className="hover:bg-surface-800/40 transition-colors cursor-pointer"
+                    className="hover:bg-gray-50 transition-colors cursor-pointer"
                     onClick={() => setSelectedStudent(student)}
                   >
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-brand-500/20 text-brand-300 font-semibold flex items-center justify-center shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-brand-500/10 text-brand-600 font-semibold flex items-center justify-center shrink-0">
                           {student.firstName.charAt(0)}
                         </div>
                         <div>
-                          <p className="font-semibold text-white">
+                          <p className="font-semibold text-gray-900">
                             {student.firstName} {student.lastName}
                           </p>
-                          <p className="text-2xs text-surface-500 capitalize">
+                          <p className="text-2xs text-gray-500 capitalize">
                             {student.gender || 'Learner'}
                           </p>
                         </div>
                       </div>
                     </td>
-                    <td className="py-3.5 px-4 font-mono font-medium text-surface-300">
+                    <td className="py-3.5 px-4 font-mono font-medium text-gray-600">
                       {student.admissionNumber}
                     </td>
-                    <td className="py-3.5 px-4 text-surface-200">
+                    <td className="py-3.5 px-4 text-gray-700">
                       {student.currentClassId || 'Grade 4'}
                     </td>
                     <td className="py-3.5 px-4 capitalize">
@@ -342,7 +342,7 @@ export const Students: React.FC = () => {
                           e.stopPropagation();
                           setSelectedStudent(student);
                         }}
-                        className="p-1.5 rounded-lg text-surface-400 hover:text-white hover:bg-surface-800 transition-colors"
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-brand-500 hover:bg-gray-100 transition-colors"
                       >
                         <Eye className="w-4 h-4" />
                       </button>
@@ -430,8 +430,8 @@ export const Students: React.FC = () => {
           </div>
 
           {/* Guardian Info */}
-          <div className="pt-2 border-t border-surface-800 space-y-3">
-            <p className="text-2xs font-semibold text-surface-400 uppercase tracking-wider">
+          <div className="pt-2 border-t border-gray-200 space-y-3">
+            <p className="text-2xs font-semibold text-gray-500 uppercase tracking-wider">
               Primary Guardian & Emergency Contact
             </p>
             <div className="grid grid-cols-2 gap-4">
@@ -452,10 +452,10 @@ export const Students: React.FC = () => {
           </div>
 
           {/* Medical Subcollection Alert */}
-          <div className="pt-2 border-t border-surface-800">
+          <div className="pt-2 border-t border-gray-200">
             <div className="flex items-center gap-1.5 mb-2">
-              <HeartPulse className="w-3.5 h-3.5 text-danger-400" />
-              <p className="text-2xs font-semibold text-surface-400 uppercase tracking-wider">
+              <HeartPulse className="w-3.5 h-3.5 text-red-500" />
+              <p className="text-2xs font-semibold text-gray-500 uppercase tracking-wider">
                 Medical & Allergy Alerts (Restricted Subcollection)
               </p>
             </div>
@@ -467,7 +467,7 @@ export const Students: React.FC = () => {
             />
           </div>
 
-          <div className="pt-4 flex justify-end gap-3 border-t border-surface-800">
+          <div className="pt-4 flex justify-end gap-3 border-t border-gray-200">
             <Button
               type="button"
               variant="ghost"
@@ -492,38 +492,38 @@ export const Students: React.FC = () => {
           maxWidth="md"
         >
           <div className="space-y-4 text-xs">
-            <div className="grid grid-cols-2 gap-3 p-3 rounded-2xl bg-surface-800/60 border border-surface-700/60">
+            <div className="grid grid-cols-2 gap-3 p-3 rounded-2xl bg-gray-50 border border-gray-200">
               <div>
-                <span className="text-surface-400 block text-2xs">Class</span>
-                <span className="font-semibold text-white">
+                <span className="text-gray-500 block text-2xs">Class</span>
+                <span className="font-semibold text-gray-900">
                   {selectedStudent.currentClassId || 'Grade 4'}
                 </span>
               </div>
               <div>
-                <span className="text-surface-400 block text-2xs">Status</span>
+                <span className="text-gray-500 block text-2xs">Status</span>
                 <Badge variant="brand" size="sm">
                   {selectedStudent.status}
                 </Badge>
               </div>
               <div>
-                <span className="text-surface-400 block text-2xs">Boarding</span>
-                <span className="capitalize font-medium text-surface-200">
+                <span className="text-gray-500 block text-2xs">Boarding</span>
+                <span className="capitalize font-medium text-gray-700">
                   {selectedStudent.boardingStatus || 'Day'}
                 </span>
               </div>
               <div>
-                <span className="text-surface-400 block text-2xs">Campus</span>
-                <span className="font-medium text-surface-200">
+                <span className="text-gray-500 block text-2xs">Campus</span>
+                <span className="font-medium text-gray-700">
                   {currentSchool?.name}
                 </span>
               </div>
             </div>
 
-            <div className="p-3 rounded-2xl bg-surface-800/40 border border-surface-700/50 space-y-1">
-              <span className="text-2xs font-semibold text-surface-400 uppercase tracking-wider">
+            <div className="p-3 rounded-2xl bg-gray-50 border border-gray-200 space-y-1">
+              <span className="text-2xs font-semibold text-gray-500 uppercase tracking-wider">
                 Guardian Emergency Contact
               </span>
-              <p className="text-surface-200 font-medium">
+              <p className="text-gray-700 font-medium">
                 Phone: {selectedStudent.guardianPhone || '+254712345678'}
               </p>
             </div>

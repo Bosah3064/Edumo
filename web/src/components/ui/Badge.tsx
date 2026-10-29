@@ -21,19 +21,19 @@ export const Badge: React.FC<BadgeProps> = ({
   };
 
   const variantStyles = {
-    brand: 'bg-brand-500/10 text-brand-300 border border-brand-500/25',
-    accent: 'bg-accent-500/10 text-accent-400 border border-accent-500/25',
-    warning: 'bg-warning-500/10 text-warning-400 border border-warning-500/25',
-    danger: 'bg-danger-500/10 text-danger-400 border border-danger-500/25',
-    neutral: 'bg-surface-700/40 text-surface-300 border border-surface-600/30',
+    brand: 'bg-brand-500/10 text-brand-600 border border-brand-500/25',
+    accent: 'bg-accent-500/10 text-accent-700 border border-accent-500/25',
+    warning: 'bg-warning-500/10 text-warning-600 border border-warning-500/25',
+    danger: 'bg-danger-500/10 text-danger-500 border border-danger-500/25',
+    neutral: 'bg-gray-100 text-gray-600 border border-gray-200',
   };
 
   const dotColors = {
-    brand: 'bg-brand-400',
-    accent: 'bg-accent-400',
-    warning: 'bg-warning-400',
-    danger: 'bg-danger-400',
-    neutral: 'bg-surface-400',
+    brand: 'bg-brand-500',
+    accent: 'bg-accent-500',
+    warning: 'bg-warning-500',
+    danger: 'bg-danger-500',
+    neutral: 'bg-gray-400',
   };
 
   return (
