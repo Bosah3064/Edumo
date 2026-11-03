@@ -64,6 +64,7 @@ export interface Branding {
   primaryColor?: string; // Hex
   secondaryColor?: string; // Hex
   motto?: string;
+  examCardTemplate?: string; // 'classic_crest' | 'modern_qr' | 'compact_slip' | 'executive_distinction'
 }
 
 /** Attendance status options */

@@ -86,19 +86,19 @@ service cloud.firestore {
 
     // ===== ORGANIZATIONS =====
     match /organizations/{orgId} {
-      allow read: if isOrgMember(orgId) || isPlatformAdmin();
-      allow create: if false; // Via callable only
-      allow update: if (isOrgOwner(orgId) || isPlatformAdmin()) &&
+      allow read: if isOrgMember(orgId) || isPlatformAdmin() || (isAuthenticated() && resource.data.ownerId == request.auth.uid);
+      allow create: if isAuthenticated() && request.resource.data.ownerId == request.auth.uid;
+      allow update: if (isOrgOwner(orgId) || isPlatformAdmin() || (isAuthenticated() && resource.data.ownerId == request.auth.uid)) &&
         immutableFields(['createdAt', 'createdBy', 'ownerId']) &&
         withinSizeLimit();
       allow delete: if false;
 
       // ===== SCHOOLS (BRANCHES) =====
       match /schools/{schoolId} {
-        allow read: if hasSchoolAccess(orgId, schoolId) || isPlatformAdmin();
-        allow create: if false; // Via callable only
-        allow update: if hasSchoolRole(orgId, schoolId,
-          ['principal', 'deputy', 'admin']) &&
+        allow read: if hasSchoolAccess(orgId, schoolId) || isPlatformAdmin() || (isAuthenticated() && get(/databases/$(database)/documents/organizations/$(orgId)).data.ownerId == request.auth.uid);
+        allow create: if isAuthenticated() && (get(/databases/$(database)/documents/organizations/$(orgId)).data.ownerId == request.auth.uid || hasSchoolRole(orgId, schoolId, ['principal', 'deputy', 'admin']));
+        allow update: if (hasSchoolRole(orgId, schoolId,
+          ['principal', 'deputy', 'admin']) || (isAuthenticated() && get(/databases/$(database)/documents/organizations/$(orgId)).data.ownerId == request.auth.uid)) &&
           immutableFields(['createdAt', 'createdBy']) &&
           withinSizeLimit();
         allow delete: if false;

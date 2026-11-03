@@ -1,9 +1,10 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, connectAuthEmulator } from 'firebase/auth';
 import {
-  getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
   connectFirestoreEmulator,
-  enableIndexedDbPersistence,
 } from 'firebase/firestore';
 import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
 import { getStorage, connectStorageEmulator } from 'firebase/storage';
@@ -28,7 +29,11 @@ export const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfi
 
 // Firebase Services
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({
+    tabManager: persistentMultipleTabManager(),
+  }),
+});
 export const functions = getFunctions(app, 'us-central1');
 export const storage = getStorage(app);
 
@@ -58,17 +63,6 @@ if (typeof window !== 'undefined') {
       isTokenAutoRefreshEnabled: true,
     });
   }
-}
-
-// Enable offline persistence for Firestore
-if (typeof window !== 'undefined') {
-  enableIndexedDbPersistence(db).catch((err) => {
-    if (err.code === 'failed-precondition') {
-      console.warn('Firestore persistence failed: Multiple tabs open');
-    } else if (err.code === 'unimplemented') {
-      console.warn('Firestore persistence not supported by this browser');
-    }
-  });
 }
 
 // Connect to Local Emulators ONLY when explicitly requested (e.g. VITE_USE_EMULATORS='true')

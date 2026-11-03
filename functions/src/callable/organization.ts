@@ -24,7 +24,13 @@ import { DEFAULT_ROLE_PERMISSIONS } from '@edumo/shared';
 export const createOrganization = onCall(
   {
     // enforceAppCheck: true, // Enable in production
-    cors: true,
+    cors: [
+      'https://bosah3064.github.io',
+      /.*\.github\.io$/,
+      /.*\.firebaseapp\.com$/,
+      /.*\.web\.app$/,
+      /localhost.*/,
+    ],
     maxInstances: 10,
   },
   async (request) => {

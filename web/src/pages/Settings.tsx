@@ -26,6 +26,12 @@ import {
   GraduationCap,
   ChevronDown,
   ChevronUp,
+  Award,
+  QrCode,
+  FileText,
+  Printer,
+  CheckCircle2,
+  Sparkles,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { collection, doc, getDocs, updateDoc } from 'firebase/firestore';
@@ -72,13 +78,13 @@ export const Settings: React.FC = () => {
   /* ---- Section collapse state ---- */
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     registration: true,
+    branding: true,
+    examCard: true,
     address: true,
     contacts: true,
-    branding: true,
     curriculum: true,
     grading: true,
     calendar: true,
-    capacity: true,
     language: true,
     payment: false,
     pwa: false,
@@ -140,6 +146,12 @@ export const Settings: React.FC = () => {
   const [logoPreviewUrl, setLogoPreviewUrl] = useState('');
   const [brandingSaved, setBrandingSaved] = useState(false);
 
+  /* ---- Exam Card Template ---- */
+  const [examCardTemplate, setExamCardTemplate] = useState<string>(
+    currentSchool?.branding?.examCardTemplate || 'classic_crest'
+  );
+  const [previewTab, setPreviewTab] = useState<'dashboard' | 'examCard'>('examCard');
+
   /* ---- Academic Calendar ---- */
   const [termsPerYear, setTermsPerYear] = useState<number>(3);
   const [termDates, setTermDates] = useState<Array<{ name: string; start: string; end: string }>>([
@@ -182,6 +194,7 @@ export const Settings: React.FC = () => {
     setLogoUrl(currentSchool.branding?.logo || '');
     setLogoFile(null);
     setLogoPreviewUrl('');
+    setExamCardTemplate(currentSchool.branding?.examCardTemplate || 'classic_crest');
 
     // Email domain
     const domain = (currentSchool.settings as Record<string, unknown> | undefined)?.emailDomain;
@@ -251,6 +264,8 @@ export const Settings: React.FC = () => {
     document.documentElement.style.setProperty('--school-primary', primaryColor);
     document.documentElement.style.setProperty('--school-secondary', secondaryColor);
     document.documentElement.style.setProperty('--school-brand-gradient', `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`);
+    document.documentElement.style.setProperty('--color-blue', primaryColor);
+    document.documentElement.style.setProperty('--color-purple', secondaryColor);
   }, [primaryColor, secondaryColor]);
 
   /* ================================================================ */
@@ -274,24 +289,66 @@ export const Settings: React.FC = () => {
   }, [termsPerYear]);
 
   /* ================================================================ */
-  /*  Colour Presets                                                    */
+  /*  Curated Academic Colour Palettes                                 */
   /* ================================================================ */
   const colorPresets = [
-    { name: 'Edumo Blue', primary: '#1d5f99', secondary: '#683669' },
-    { name: 'Forest Green', primary: '#166534', secondary: '#15803d' },
-    { name: 'Royal Navy', primary: '#1e3a8a', secondary: '#2563eb' },
-    { name: 'School Burgundy', primary: '#7f1d1d', secondary: '#a5243d' },
-    { name: 'Teal Academy', primary: '#0f766e', secondary: '#0891b2' },
-    { name: 'Purple Crest', primary: '#5b21b6', secondary: '#7c3aed' },
-    { name: 'Ocean Blue', primary: '#0369a1', secondary: '#06b6d4' },
-    { name: 'Emerald Gold', primary: '#047857', secondary: '#d97706' },
-    { name: 'Rose Academy', primary: '#be123c', secondary: '#db2777' },
-    { name: 'Sunset Orange', primary: '#c2410c', secondary: '#eab308' },
-    { name: 'Indigo Sky', primary: '#3730a3', secondary: '#6366f1' },
-    { name: 'Slate Mint', primary: '#334155', secondary: '#10b981' },
-    { name: 'Charcoal Crimson', primary: '#1f2937', secondary: '#dc2626' },
-    { name: 'Cobalt Coral', primary: '#1d4ed8', secondary: '#f97316' },
-    { name: 'Plum Violet', primary: '#701a75', secondary: '#8b5cf6' },
+    // Traditional Prestige
+    { name: 'Alliance Maroon & Gold', category: 'Prestige', primary: '#6b1d2f', secondary: '#b45309' },
+    { name: 'Starehe Blue & Crimson', category: 'Prestige', primary: '#1e3a8a', secondary: '#991b1b' },
+    { name: 'Strathmore Navy & Gold', category: 'Prestige', primary: '#0f172a', secondary: '#ca8a04' },
+    { name: 'Mang’u Emerald & Ivory', category: 'Prestige', primary: '#064e3b', secondary: '#047857' },
+    { name: 'Lenana Amber & Plum', category: 'Prestige', primary: '#78350f', secondary: '#701a75' },
+
+    // Modern Academic
+    { name: 'Edumo Sapphire & Violet', category: 'Modern', primary: '#1d5f99', secondary: '#683669' },
+    { name: 'Cyber Cyan & Deep Indigo', category: 'Modern', primary: '#0369a1', secondary: '#3730a3' },
+    { name: 'Forest Teal & Jade', category: 'Modern', primary: '#0f766e', secondary: '#15803d' },
+    { name: 'Royal Purple & Electric Sky', category: 'Modern', primary: '#5b21b6', secondary: '#2563eb' },
+    { name: 'Sunset Terracotta & Gold', category: 'Modern', primary: '#c2410c', secondary: '#d97706' },
+
+    // East African Heritage
+    { name: 'Serengeti Ochre & Slate', category: 'Heritage', primary: '#9a3412', secondary: '#334155' },
+    { name: 'Kilimanjaro Royal & Azure', category: 'Heritage', primary: '#1d4ed8', secondary: '#0284c7' },
+    { name: 'Kigali Emerald & Sunburst', category: 'Heritage', primary: '#166534', secondary: '#ca8a04' },
+    { name: 'Nile Teal & Deep Navy', category: 'Heritage', primary: '#0d9488', secondary: '#1e3a8a' },
+
+    // High Distinction
+    { name: 'Burgundy Crest & Rose', category: 'Distinction', primary: '#881337', secondary: '#db2777' },
+    { name: 'Imperial Violet & Amber', category: 'Distinction', primary: '#4c1d95', secondary: '#d97706' },
+  ];
+
+  /* ================================================================ */
+  /*  Exam Card Templates Config                                      */
+  /* ================================================================ */
+  const examCardTemplates = [
+    {
+      id: 'classic_crest',
+      title: 'Classic Crest (Formal Academic)',
+      description: 'Traditional East African bordered certificate frame with passport photo box, subjects timetable verification grid, and official headteacher stamp box.',
+      icon: Award,
+      badge: 'Most Popular',
+    },
+    {
+      id: 'modern_qr',
+      title: 'Modern QR Biometric Pass',
+      description: 'Tech-forward digital admit card with scannable candidate QR code, room/desk allocation, biometric verification badge, and security watermark.',
+      icon: QrCode,
+      badge: 'Digital First',
+    },
+    {
+      id: 'compact_slip',
+      title: 'Compact Dual-Slip (Eco-Print)',
+      description: 'Paper-saving 2-per-page admit slip layout with candidate solemn pledge, parent emergency contact, and invigilator signature initial lines.',
+      icon: Printer,
+      badge: 'Eco Print',
+    },
+    {
+      id: 'executive_distinction',
+      title: 'Executive Distinction Certificate',
+      description: 'Premium high-security format with decorative guilloche border, embossed crest effect, security candidate code, and authorized validation grid.',
+      icon: FileText,
+      badge: 'Premium Security',
+    },
   ];
 
   /* ================================================================ */
@@ -320,7 +377,6 @@ export const Settings: React.FC = () => {
 
         // 3. Build the school update payload
         const schoolUpdate: Record<string, unknown> = {
-          // Core type
           type: schoolType,
           curriculumType: curriculum,
           gradingMode,
@@ -332,6 +388,7 @@ export const Settings: React.FC = () => {
             secondaryColor,
             motto: schoolMotto.trim(),
             logo: savedLogoUrl,
+            examCardTemplate,
           },
 
           // Address
@@ -413,7 +470,7 @@ export const Settings: React.FC = () => {
         setBrandingSaved(true);
       }
 
-      toast.success(`${currentSchool?.name || 'School'} settings saved successfully!`);
+      toast.success(`${currentSchool?.name || 'School'} branding & settings saved successfully!`);
     } catch (error) {
       console.error('Failed to save settings:', error);
       toast.error('Failed to save settings. Please try again.');
@@ -436,13 +493,37 @@ export const Settings: React.FC = () => {
   /* ================================================================ */
   return (
     <div className="space-y-6 max-w-7xl mx-auto animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-display font-bold text-gray-900 tracking-tight">
-          Institution &amp; Campus Settings
-        </h1>
-        <p className="text-xs text-gray-500 mt-1">
-          Configure school registration, branding, curriculum, calendar, and more — all changes apply to <span className="font-bold text-gray-700">{currentSchool?.name || 'this campus'}</span> only.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-display font-bold text-gray-900 tracking-tight">
+            Campus Branding &amp; Settings
+          </h1>
+          <p className="text-xs text-gray-500 mt-1">
+            Visual identity, admit card styling, and configurations apply to{' '}
+            <span className="font-bold text-gray-800 underline decoration-brand-500/30">
+              {currentSchool?.name || 'Active Campus'}
+            </span>{' '}
+            only.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {brandingSaved && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              Applied Live
+            </span>
+          )}
+          <Button
+            type="button"
+            variant="primary"
+            onClick={handleSave}
+            isLoading={isSaving}
+            leftIcon={<Save className="w-4 h-4" />}
+          >
+            Save All Changes
+          </Button>
+        </div>
       </div>
 
       <form onSubmit={handleSave} className="space-y-5">
@@ -462,12 +543,461 @@ export const Settings: React.FC = () => {
         </div>
 
         {/* ============================================================ */}
-        {/*  1. SCHOOL REGISTRATION & IDENTITY                           */}
+        {/*  1. SCHOOL BRANDING & COLOURS (ENHANCED)                     */}
+        {/* ============================================================ */}
+        <Card className="space-y-5">
+          <div className="flex items-center justify-between gap-3">
+            <SectionHeader
+              icon={<Palette className="w-4 h-4 text-brand-700" />}
+              title="School Visual Identity &amp; Colours"
+              subtitle={`Branding applied specifically to "${currentSchool?.name || 'this campus'}"`}
+              isOpen={openSections.branding}
+              onToggle={() => toggle('branding')}
+            />
+          </div>
+
+          {openSections.branding && (
+            <div className="space-y-5 pt-2">
+              {/* Presets Header */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-bold uppercase tracking-wider text-gray-700">
+                    Curated Institution Palettes
+                  </p>
+                  <span className="text-2xs text-gray-400">Click any preset to apply instantly</span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
+                  {colorPresets.map((preset) => {
+                    const isSelected = primaryColor === preset.primary && secondaryColor === preset.secondary;
+                    return (
+                      <button
+                        key={preset.name}
+                        type="button"
+                        onClick={() => {
+                          setPrimaryColor(preset.primary);
+                          setSecondaryColor(preset.secondary);
+                          setBrandingSaved(false);
+                        }}
+                        className={`rounded-xl border p-2.5 text-left transition-all ${
+                          isSelected
+                            ? 'border-brand-500 ring-2 ring-brand-500/20 bg-blue-50/20 shadow-sm'
+                            : 'border-gray-200 hover:border-gray-300 bg-white'
+                        }`}
+                      >
+                        <div
+                          className="h-8 rounded-lg mb-2 shadow-xs"
+                          style={{ background: `linear-gradient(135deg, ${preset.primary}, ${preset.secondary})` }}
+                        />
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-xs font-semibold text-gray-800 truncate">{preset.name}</span>
+                          {isSelected && <span className="text-xs font-bold text-emerald-600">✓</span>}
+                        </div>
+                        <span className="text-[10px] text-gray-400 block mt-0.5">{preset.category}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Live Preview Switcher */}
+              <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-200 pb-3">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wider text-gray-700">
+                      Live Campus Preview
+                    </p>
+                    <p className="text-2xs text-gray-500">
+                      Updates instantly as you adjust branding and colours
+                    </p>
+                  </div>
+
+                  {/* Preview Tabs */}
+                  <div className="inline-flex p-1 bg-white rounded-xl border border-gray-200">
+                    <button
+                      type="button"
+                      onClick={() => setPreviewTab('examCard')}
+                      className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                        previewTab === 'examCard'
+                          ? 'bg-brand-700 text-white shadow-xs'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      Exam Admit Card Preview
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPreviewTab('dashboard')}
+                      className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                        previewTab === 'dashboard'
+                          ? 'bg-brand-700 text-white shadow-xs'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      Dashboard UI Preview
+                    </button>
+                  </div>
+                </div>
+
+                {/* TAB 1: EXAM CARD LIVE PREVIEW */}
+                {previewTab === 'examCard' && (
+                  <div className="bg-white rounded-xl border border-gray-300 p-5 shadow-sm max-w-2xl mx-auto animate-fade-in">
+                    {/* Header with School Branding */}
+                    <div className="border-b-2 pb-4 text-center" style={{ borderColor: primaryColor }}>
+                      <div className="flex items-center justify-center gap-3 mb-1">
+                        <div
+                          className="w-12 h-12 rounded-xl text-white font-bold flex items-center justify-center text-lg shadow-sm shrink-0"
+                          style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}
+                        >
+                          {logoPreviewUrl ? (
+                            <img src={logoPreviewUrl} alt="Logo" className="w-full h-full object-cover rounded-xl" />
+                          ) : logoUrl ? (
+                            <img src={logoUrl} alt="Logo" className="w-full h-full object-cover rounded-xl" />
+                          ) : (
+                            (currentSchool?.name || 'S').charAt(0).toUpperCase()
+                          )}
+                        </div>
+                        <div className="text-left">
+                          <h3 className="text-base font-bold text-gray-900 leading-tight uppercase tracking-wide">
+                            {currentSchool?.name || 'Edumo Demonstration Academy'}
+                          </h3>
+                          <p className="text-xs text-gray-500 italic">
+                            "{schoolMotto || 'Knowledge, Discipline and Excellence'}"
+                          </p>
+                        </div>
+                      </div>
+                      <div
+                        className="inline-block mt-2 px-4 py-0.5 rounded-full text-white text-[11px] font-extrabold uppercase tracking-wider"
+                        style={{ background: primaryColor }}
+                      >
+                        Official Candidate Examination Admit Card — Term 2 Exams
+                      </div>
+                    </div>
+
+                    {/* Candidate Identity */}
+                    <div className="grid grid-cols-[1fr_90px] gap-4 my-4 items-center">
+                      <div className="space-y-1 text-xs text-gray-700">
+                        <p>
+                          <span className="font-semibold text-gray-500">Candidate Name:</span>{' '}
+                          <strong className="text-gray-900 text-sm">Amina Wangari Mwangi</strong>
+                        </p>
+                        <p>
+                          <span className="font-semibold text-gray-500">Admission / Index:</span>{' '}
+                          <strong className="font-mono text-gray-900 font-bold">KMA/2026/0412</strong>
+                        </p>
+                        <p>
+                          <span className="font-semibold text-gray-500">Class &amp; Stream:</span>{' '}
+                          <span className="font-semibold text-gray-800">Grade 10 Alpha (Senior Secondary)</span>
+                        </p>
+                        <p>
+                          <span className="font-semibold text-gray-500">Examination Center:</span>{' '}
+                          <span className="font-semibold text-gray-800">{currentSchool?.name || 'Main Hall A'}</span>
+                        </p>
+                      </div>
+
+                      {/* Photo Box */}
+                      <div
+                        className="w-20 h-24 border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-center p-1 bg-gray-50"
+                        style={{ borderColor: secondaryColor }}
+                      >
+                        <span className="text-[10px] text-gray-400 font-bold uppercase">Passport Photo</span>
+                      </div>
+                    </div>
+
+                    {/* Timetable Schedule Grid */}
+                    <table className="w-full text-left text-xs border border-gray-200 rounded-lg overflow-hidden my-3">
+                      <thead style={{ background: primaryColor, color: '#ffffff' }}>
+                        <tr>
+                          <th className="p-2 font-bold">Date &amp; Time</th>
+                          <th className="p-2 font-bold">Subject / Learning Area</th>
+                          <th className="p-2 font-bold">Desk</th>
+                          <th className="p-2 font-bold text-center">Invigilator Sign</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200 text-gray-700">
+                        <tr>
+                          <td className="p-2 font-mono text-2xs">Mon 08:30 AM</td>
+                          <td className="p-2 font-semibold">Mathematics (Paper 1)</td>
+                          <td className="p-2">D-14</td>
+                          <td className="p-2 text-center text-gray-300">__________</td>
+                        </tr>
+                        <tr className="bg-gray-50">
+                          <td className="p-2 font-mono text-2xs">Tue 08:30 AM</td>
+                          <td className="p-2 font-semibold">English Language &amp; Literature</td>
+                          <td className="p-2">D-14</td>
+                          <td className="p-2 text-center text-gray-300">__________</td>
+                        </tr>
+                        <tr>
+                          <td className="p-2 font-mono text-2xs">Wed 08:30 AM</td>
+                          <td className="p-2 font-semibold">Integrated Science &amp; Biology</td>
+                          <td className="p-2">D-14</td>
+                          <td className="p-2 text-center text-gray-300">__________</td>
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    {/* Footer Validation */}
+                    <div className="flex items-end justify-between pt-3 border-t border-gray-200 text-2xs text-gray-500">
+                      <div>
+                        <p className="font-semibold text-gray-700">Candidate Declaration:</p>
+                        <p>I confirm adherence to all official Ministry Examination regulations.</p>
+                      </div>
+                      <div className="text-right">
+                        <div
+                          className="w-24 h-10 border border-gray-300 rounded mb-1 flex items-center justify-center text-[9px] font-bold text-gray-400 uppercase tracking-wider"
+                          style={{ color: secondaryColor }}
+                        >
+                          Official Stamp
+                        </div>
+                        <p className="font-semibold text-gray-700">Head Teacher Signature</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 2: DASHBOARD UI PREVIEW */}
+                {previewTab === 'dashboard' && (
+                  <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-3 animate-fade-in">
+                    <div className="rounded-xl border border-gray-200 bg-white p-3">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div
+                          className="w-11 h-11 rounded-xl shrink-0 overflow-hidden flex items-center justify-center text-white font-bold shadow-sm"
+                          style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}
+                        >
+                          {logoPreviewUrl ? (
+                            <img src={logoPreviewUrl} alt="Logo" className="w-full h-full object-cover" />
+                          ) : logoUrl ? (
+                            <img src={logoUrl} alt="Logo" className="w-full h-full object-cover" />
+                          ) : (
+                            (currentSchool?.name || 'S').charAt(0).toUpperCase()
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-gray-900 truncate">
+                            {currentSchool?.name || 'School Name'}
+                          </p>
+                          <p className="text-xs text-gray-500 truncate">{schoolMotto || 'School motto'}</p>
+                        </div>
+                      </div>
+                      <div className="space-y-2 text-xs font-semibold">
+                        <div className="rounded-lg px-3 py-2 text-white" style={{ background: primaryColor }}>
+                          Dashboard
+                        </div>
+                        <div className="rounded-lg px-3 py-2 border border-gray-200 text-gray-700">Students</div>
+                        <div className="rounded-lg px-3 py-2 border border-gray-200 text-gray-700">Attendance</div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-gray-200 bg-white p-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <p className="text-sm font-bold text-gray-900">Active Campus Overview</p>
+                          <p className="text-xs text-gray-500">Live school visual dashboard</p>
+                        </div>
+                        <button
+                          type="button"
+                          className="rounded-lg px-3 py-2 text-xs font-bold text-white shadow-xs"
+                          style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}
+                        >
+                          Add Record
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-3 gap-3">
+                        {[
+                          ['Total Learners', '1,248'],
+                          ['Teachers', '86'],
+                          ['Attendance', '96%'],
+                        ].map(([label, value]) => (
+                          <div key={label} className="rounded-xl border border-gray-200 p-3">
+                            <p className="text-xs text-gray-500">{label}</p>
+                            <p className="text-xl font-bold mt-1" style={{ color: primaryColor }}>
+                              {value}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Colour Pickers */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  Primary Campus Colour
+                  <div className="mt-1.5 flex gap-2">
+                    <input
+                      type="color"
+                      value={primaryColor}
+                      onChange={(e) => {
+                        setPrimaryColor(e.target.value);
+                        setBrandingSaved(false);
+                      }}
+                      className="block h-11 w-20 rounded-xl border border-gray-200 bg-white p-1 cursor-pointer"
+                    />
+                    <input
+                      type="text"
+                      value={primaryColor.toUpperCase()}
+                      maxLength={7}
+                      onChange={(e) => {
+                        if (/^#[0-9a-fA-F]{6}$/.test(e.target.value)) {
+                          setPrimaryColor(e.target.value);
+                          setBrandingSaved(false);
+                        }
+                      }}
+                      className="block h-11 min-w-0 flex-1 rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold text-gray-900"
+                    />
+                  </div>
+                </label>
+
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  Secondary Campus Colour
+                  <div className="mt-1.5 flex gap-2">
+                    <input
+                      type="color"
+                      value={secondaryColor}
+                      onChange={(e) => {
+                        setSecondaryColor(e.target.value);
+                        setBrandingSaved(false);
+                      }}
+                      className="block h-11 w-20 rounded-xl border border-gray-200 bg-white p-1 cursor-pointer"
+                    />
+                    <input
+                      type="text"
+                      value={secondaryColor.toUpperCase()}
+                      maxLength={7}
+                      onChange={(e) => {
+                        if (/^#[0-9a-fA-F]{6}$/.test(e.target.value)) {
+                          setSecondaryColor(e.target.value);
+                          setBrandingSaved(false);
+                        }
+                      }}
+                      className="block h-11 min-w-0 flex-1 rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold text-gray-900"
+                    />
+                  </div>
+                </label>
+              </div>
+
+              {/* Motto & Logo */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Input
+                  label="School Motto"
+                  placeholder="Knowledge, Discipline and Service"
+                  value={schoolMotto}
+                  onChange={(e) => {
+                    setSchoolMotto(e.target.value);
+                    setBrandingSaved(false);
+                  }}
+                />
+                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  School Logo Image
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null;
+                      setLogoFile(file);
+                      if (!file) {
+                        setLogoPreviewUrl('');
+                        return;
+                      }
+                      const reader = new FileReader();
+                      reader.onload = () =>
+                        setLogoPreviewUrl(typeof reader.result === 'string' ? reader.result : '');
+                      reader.readAsDataURL(file);
+                      setBrandingSaved(false);
+                    }}
+                    className="mt-1.5 w-full rounded-xl border border-gray-200 bg-white text-xs text-gray-600 file:mr-3 file:border-0 file:bg-gray-100 file:px-3 file:py-2.5 file:text-gray-700 cursor-pointer"
+                  />
+                </label>
+              </div>
+            </div>
+          )}
+        </Card>
+
+        {/* ============================================================ */}
+        {/*  2. EXAM CARDS TEMPLATES SELECTOR (NEW)                      */}
+        {/* ============================================================ */}
+        <Card className="space-y-4">
+          <SectionHeader
+            icon={<Award className="w-4 h-4 text-brand-700" />}
+            title="Examination Admit Card Templates"
+            subtitle="Choose the official exam pass format for printable student examination cards"
+            isOpen={openSections.examCard}
+            onToggle={() => toggle('examCard')}
+          />
+
+          {openSections.examCard && (
+            <div className="space-y-4 pt-2">
+              <p className="text-xs text-gray-500">
+                Select the format that best fits your institution’s examination administration. When teachers
+                or administrators generate exam passes, this template will be used.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {examCardTemplates.map((tmpl) => {
+                  const isSelected = examCardTemplate === tmpl.id;
+                  const Icon = tmpl.icon;
+                  return (
+                    <div
+                      key={tmpl.id}
+                      onClick={() => {
+                        setExamCardTemplate(tmpl.id);
+                        setBrandingSaved(false);
+                      }}
+                      className={`rounded-2xl border p-4 cursor-pointer transition-all ${
+                        isSelected
+                          ? 'border-brand-500 ring-2 ring-brand-500/20 bg-blue-50/20 shadow-md'
+                          : 'border-gray-200 bg-white hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3 mb-2">
+                        <div className="flex items-center gap-2.5">
+                          <div
+                            className={`p-2 rounded-xl text-white ${
+                              isSelected ? 'bg-brand-700' : 'bg-gray-700'
+                            }`}
+                          >
+                            <Icon className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-bold text-gray-900">{tmpl.title}</h4>
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-brand-700">
+                              {tmpl.badge}
+                            </span>
+                          </div>
+                        </div>
+
+                        {isSelected ? (
+                          <span className="rounded-full bg-emerald-100 text-emerald-800 px-2.5 py-0.5 text-xs font-bold">
+                            Selected
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            className="text-xs font-semibold text-gray-400 hover:text-gray-700"
+                          >
+                            Choose
+                          </button>
+                        )}
+                      </div>
+
+                      <p className="text-xs text-gray-600 leading-relaxed mt-2">{tmpl.description}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </Card>
+
+        {/* ============================================================ */}
+        {/*  3. SCHOOL REGISTRATION & IDENTITY                           */}
         {/* ============================================================ */}
         <Card className="space-y-4">
           <SectionHeader
             icon={<Building2 className="w-4 h-4 text-brand-700" />}
-            title="School Registration & Identity"
+            title="School Registration &amp; Identity"
             subtitle="Government registration details and school classification"
             isOpen={openSections.registration}
             onToggle={() => toggle('registration')}
@@ -553,7 +1083,7 @@ export const Settings: React.FC = () => {
         </Card>
 
         {/* ============================================================ */}
-        {/*  2. SCHOOL ADDRESS                                           */}
+        {/*  4. SCHOOL ADDRESS                                           */}
         {/* ============================================================ */}
         <Card className="space-y-4">
           <SectionHeader
@@ -613,7 +1143,7 @@ export const Settings: React.FC = () => {
         </Card>
 
         {/* ============================================================ */}
-        {/*  3. CONTACT INFORMATION                                      */}
+        {/*  5. CONTACT INFORMATION                                      */}
         {/* ============================================================ */}
         <Card className="space-y-4">
           <SectionHeader
@@ -650,171 +1180,12 @@ export const Settings: React.FC = () => {
         </Card>
 
         {/* ============================================================ */}
-        {/*  4. SCHOOL BRANDING & COLOURS                                */}
-        {/* ============================================================ */}
-        <Card className="space-y-4">
-          <div className="flex items-center justify-between gap-3">
-            <SectionHeader
-              icon={<Palette className="w-4 h-4 text-brand-700" />}
-              title="School Branding & Colours"
-              subtitle="Customise visual identity for this campus only"
-              isOpen={openSections.branding}
-              onToggle={() => toggle('branding')}
-            />
-            {brandingSaved && (
-              <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 border border-emerald-200 shrink-0">
-                Saved for this school
-              </span>
-            )}
-          </div>
-
-          {openSections.branding && (
-            <div className="space-y-4 pt-2">
-              {/* Colour Presets */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-                {colorPresets.map((preset) => {
-                  const isSelected = primaryColor === preset.primary && secondaryColor === preset.secondary;
-                  return (
-                    <button
-                      key={preset.name}
-                      type="button"
-                      onClick={() => {
-                        setPrimaryColor(preset.primary);
-                        setSecondaryColor(preset.secondary);
-                        setBrandingSaved(false);
-                      }}
-                      className={`rounded-xl border p-3 text-left transition-all ${
-                        isSelected ? 'border-brand-500 ring-2 ring-brand-500/20' : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <div className="h-10 rounded-lg mb-2" style={{ background: `linear-gradient(135deg, ${preset.primary}, ${preset.secondary})` }} />
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs font-semibold text-gray-700">{preset.name}</span>
-                        {isSelected && <span className="text-[11px] font-bold text-emerald-700">✓</span>}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Live Preview */}
-              <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-xs font-bold uppercase tracking-wider text-gray-600">Live school preview</p>
-                  <span className="text-xs font-semibold text-gray-500">Updates while choosing colours</span>
-                </div>
-                <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-3">
-                  <div className="rounded-xl border border-gray-200 bg-white p-3">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-11 h-11 rounded-xl shrink-0 overflow-hidden flex items-center justify-center text-white font-bold shadow-sm" style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}>
-                        {logoPreviewUrl ? <img src={logoPreviewUrl} alt="Logo preview" className="w-full h-full object-cover" /> : logoUrl ? <img src={logoUrl} alt="Logo" className="w-full h-full object-cover" /> : (currentSchool?.name || 'S').charAt(0).toUpperCase()}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-bold text-gray-900 truncate">{currentSchool?.name || 'School Name'}</p>
-                        <p className="text-xs text-gray-500 truncate">{schoolMotto || 'School motto'}</p>
-                      </div>
-                    </div>
-                    <div className="space-y-2 text-xs font-semibold">
-                      <div className="rounded-lg px-3 py-2 text-white" style={{ background: primaryColor }}>Dashboard</div>
-                      <div className="rounded-lg px-3 py-2 border border-gray-200 text-gray-700">Students</div>
-                      <div className="rounded-lg px-3 py-2 border border-gray-200 text-gray-700">Assignments</div>
-                    </div>
-                  </div>
-                  <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <div className="flex items-center justify-between mb-4">
-                      <div><p className="text-sm font-bold text-gray-900">School overview</p><p className="text-xs text-gray-500">Branded dashboard preview</p></div>
-                      <button type="button" className="rounded-lg px-3 py-2 text-xs font-bold text-white" style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}>Add Student</button>
-                    </div>
-                    <div className="grid grid-cols-3 gap-3">
-                      {[['Students', '1,248'], ['Teachers', '86'], ['Attendance', '96%']].map(([label, value]) => <div key={label} className="rounded-xl border border-gray-200 p-3"><p className="text-xs text-gray-500">{label}</p><p className="text-xl font-bold mt-1" style={{ color: primaryColor }}>{value}</p></div>)}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Colour Pickers */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Primary Colour
-                  <div className="mt-1.5 flex gap-2">
-                    <input
-                      type="color"
-                      value={primaryColor}
-                      onChange={(e) => { setPrimaryColor(e.target.value); setBrandingSaved(false); }}
-                      aria-label="Choose primary school colour"
-                      className="block h-11 w-20 rounded-xl border border-gray-200 bg-white p-1"
-                    />
-                    <input
-                      type="text"
-                      value={primaryColor.toUpperCase()}
-                      maxLength={7}
-                      onChange={(e) => { if (/^#[0-9a-fA-F]{6}$/.test(e.target.value)) { setPrimaryColor(e.target.value); setBrandingSaved(false); } }}
-                      aria-label="Primary colour hex code"
-                      className="block h-11 min-w-0 flex-1 rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold text-gray-900"
-                    />
-                  </div>
-                </label>
-                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Secondary Colour
-                  <div className="mt-1.5 flex gap-2">
-                    <input
-                      type="color"
-                      value={secondaryColor}
-                      onChange={(e) => { setSecondaryColor(e.target.value); setBrandingSaved(false); }}
-                      aria-label="Choose secondary school colour"
-                      className="block h-11 w-20 rounded-xl border border-gray-200 bg-white p-1"
-                    />
-                    <input
-                      type="text"
-                      value={secondaryColor.toUpperCase()}
-                      maxLength={7}
-                      onChange={(e) => { if (/^#[0-9a-fA-F]{6}$/.test(e.target.value)) { setSecondaryColor(e.target.value); setBrandingSaved(false); } }}
-                      aria-label="Secondary colour hex code"
-                      className="block h-11 min-w-0 flex-1 rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold text-gray-900"
-                    />
-                  </div>
-                </label>
-              </div>
-
-              {/* Motto & Logo */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Input
-                  label="School Motto"
-                  placeholder="Knowledge, Discipline and Service"
-                  value={schoolMotto}
-                  onChange={(e) => setSchoolMotto(e.target.value)}
-                />
-                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  School Logo
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0] || null;
-                      setLogoFile(file);
-                      if (!file) {
-                        setLogoPreviewUrl('');
-                        return;
-                      }
-                      const reader = new FileReader();
-                      reader.onload = () => setLogoPreviewUrl(typeof reader.result === 'string' ? reader.result : '');
-                      reader.readAsDataURL(file);
-                    }}
-                    className="mt-1.5 w-full rounded-xl border border-gray-200 bg-white text-xs text-gray-600 file:mr-3 file:border-0 file:bg-gray-100 file:px-3 file:py-2.5 file:text-gray-700"
-                  />
-                </label>
-              </div>
-            </div>
-          )}
-        </Card>
-
-        {/* ============================================================ */}
-        {/*  5. CURRICULUM & REGIONAL REGULATIONS                        */}
+        {/*  6. CURRICULUM & REGIONAL REGULATIONS                        */}
         {/* ============================================================ */}
         <Card className="space-y-4">
           <SectionHeader
             icon={<Globe className="w-4 h-4 text-accent-700" />}
-            title="Curriculum & Regional Regulations"
+            title="Curriculum &amp; Regional Regulations"
             subtitle="Country-specific curriculum system and billing currency"
             isOpen={openSections.curriculum}
             onToggle={() => toggle('curriculum')}
@@ -863,7 +1234,7 @@ export const Settings: React.FC = () => {
         </Card>
 
         {/* ============================================================ */}
-        {/*  6. GRADING SCALE                                            */}
+        {/*  7. GRADING SCALE                                            */}
         {/* ============================================================ */}
         <Card className="space-y-4">
           <SectionHeader
@@ -893,7 +1264,11 @@ export const Settings: React.FC = () => {
                     <Input
                       aria-label="Grade label"
                       value={grade.label}
-                      onChange={(e) => setGradingScale((scale) => scale.map((item, i) => i === index ? { ...item, label: e.target.value } : item))}
+                      onChange={(e) =>
+                        setGradingScale((scale) =>
+                          scale.map((item, i) => (i === index ? { ...item, label: e.target.value } : item))
+                        )
+                      }
                     />
                     <Input
                       aria-label="Minimum percentage"
@@ -901,7 +1276,11 @@ export const Settings: React.FC = () => {
                       min="0"
                       max="100"
                       value={grade.min}
-                      onChange={(e) => setGradingScale((scale) => scale.map((item, i) => i === index ? { ...item, min: Number(e.target.value) } : item))}
+                      onChange={(e) =>
+                        setGradingScale((scale) =>
+                          scale.map((item, i) => (i === index ? { ...item, min: Number(e.target.value) } : item))
+                        )
+                      }
                     />
                     <Input
                       aria-label="Maximum percentage"
@@ -909,7 +1288,11 @@ export const Settings: React.FC = () => {
                       min="0"
                       max="100"
                       value={grade.max}
-                      onChange={(e) => setGradingScale((scale) => scale.map((item, i) => i === index ? { ...item, max: Number(e.target.value) } : item))}
+                      onChange={(e) =>
+                        setGradingScale((scale) =>
+                          scale.map((item, i) => (i === index ? { ...item, max: Number(e.target.value) } : item))
+                        )
+                      }
                     />
                     <button
                       type="button"
@@ -937,12 +1320,12 @@ export const Settings: React.FC = () => {
         </Card>
 
         {/* ============================================================ */}
-        {/*  7. ACADEMIC CALENDAR / TERM DATES                           */}
+        {/*  8. ACADEMIC CALENDAR / TERM DATES                           */}
         {/* ============================================================ */}
         <Card className="space-y-4">
           <SectionHeader
             icon={<Calendar className="w-4 h-4 text-brand-700" />}
-            title="Academic Calendar & Term Dates"
+            title="Academic Calendar &amp; Term Dates"
             subtitle="Configure school terms / semesters and their dates"
             isOpen={openSections.calendar}
             onToggle={() => toggle('calendar')}
@@ -969,19 +1352,31 @@ export const Settings: React.FC = () => {
                     <Input
                       label={idx === 0 ? 'Term Name' : undefined}
                       value={term.name}
-                      onChange={(e) => setTermDates((prev) => prev.map((t, i) => i === idx ? { ...t, name: e.target.value } : t))}
+                      onChange={(e) =>
+                        setTermDates((prev) =>
+                          prev.map((t, i) => (i === idx ? { ...t, name: e.target.value } : t))
+                        )
+                      }
                     />
                     <Input
                       label={idx === 0 ? 'Start Date' : undefined}
                       type="date"
                       value={term.start}
-                      onChange={(e) => setTermDates((prev) => prev.map((t, i) => i === idx ? { ...t, start: e.target.value } : t))}
+                      onChange={(e) =>
+                        setTermDates((prev) =>
+                          prev.map((t, i) => (i === idx ? { ...t, start: e.target.value } : t))
+                        )
+                      }
                     />
                     <Input
                       label={idx === 0 ? 'End Date' : undefined}
                       type="date"
                       value={term.end}
-                      onChange={(e) => setTermDates((prev) => prev.map((t, i) => i === idx ? { ...t, end: e.target.value } : t))}
+                      onChange={(e) =>
+                        setTermDates((prev) =>
+                          prev.map((t, i) => (i === idx ? { ...t, end: e.target.value } : t))
+                        )
+                      }
                     />
                   </div>
                 ))}
@@ -991,12 +1386,12 @@ export const Settings: React.FC = () => {
         </Card>
 
         {/* ============================================================ */}
-        {/*  8. LANGUAGE, TIMEZONE & DATE FORMAT                         */}
+        {/*  9. LANGUAGE, TIMEZONE & DATE FORMAT                         */}
         {/* ============================================================ */}
         <Card className="space-y-4">
           <SectionHeader
             icon={<Languages className="w-4 h-4 text-brand-700" />}
-            title="Language, Timezone & Date Format"
+            title="Language, Timezone &amp; Date Format"
             subtitle="Localisation preferences for this school"
             isOpen={openSections.language}
             onToggle={() => toggle('language')}
@@ -1042,12 +1437,12 @@ export const Settings: React.FC = () => {
         </Card>
 
         {/* ============================================================ */}
-        {/*  9. PAYMENT & SMS SETTINGS                                   */}
+        {/*  10. PAYMENT & SMS SETTINGS                                  */}
         {/* ============================================================ */}
         <Card className="space-y-4">
           <SectionHeader
             icon={<CreditCard className="w-4 h-4 text-brand-700" />}
-            title="Payment & SMS Configuration"
+            title="Payment &amp; SMS Configuration"
             subtitle="Mobile money, bank details, and SMS credits"
             isOpen={openSections.payment}
             onToggle={() => toggle('payment')}
@@ -1114,7 +1509,9 @@ export const Settings: React.FC = () => {
                 <MessageSquare className="w-5 h-5 text-blue-600 shrink-0" />
                 <div className="flex-1">
                   <p className="text-xs font-semibold text-gray-900">SMS Credits Balance</p>
-                  <p className="text-2xs text-gray-500">Used for attendance alerts, fee reminders, and parent notifications</p>
+                  <p className="text-2xs text-gray-500">
+                    Used for attendance alerts, fee reminders, and parent notifications
+                  </p>
                 </div>
                 <span className="text-lg font-bold text-blue-700">{smsCreditsBalance.toLocaleString()}</span>
               </div>
@@ -1123,12 +1520,12 @@ export const Settings: React.FC = () => {
         </Card>
 
         {/* ============================================================ */}
-        {/*  10. PWA & CACHE MANAGEMENT                                  */}
+        {/*  11. PWA & CACHE MANAGEMENT                                  */}
         {/* ============================================================ */}
         <Card className="space-y-4">
           <SectionHeader
             icon={<Smartphone className="w-4 h-4 text-brand-700" />}
-            title="Progressive Web App (PWA) & Offline Cache"
+            title="Progressive Web App (PWA) &amp; Offline Cache"
             isOpen={openSections.pwa}
             onToggle={() => toggle('pwa')}
           />

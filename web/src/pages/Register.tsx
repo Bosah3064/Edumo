@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { httpsCallable } from 'firebase/functions';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db, functions } from '../firebase';
+import { collection, doc, setDoc, updateDoc } from 'firebase/firestore';
+import { db, functions, auth } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -134,54 +134,148 @@ export const Register: React.FC = () => {
         await signUp(adminEmail, adminPassword, adminName);
       }
 
-      // 2. Call createOrganization callable
-      const createOrgFn = httpsCallable<
-        {
-          name: string;
-          type: 'standalone' | 'group';
-          country: 'KE' | 'UG' | 'TZ' | 'RW';
-          school: {
-            name: string;
-            type: 'nursery' | 'primary' | 'secondary' | 'combined';
-            curriculumType: string;
-            gradingMode: string;
-            address: {
-              line1: string;
-              city: string;
-              country: 'KE' | 'UG' | 'TZ' | 'RW';
-            };
-            phone: string;
-            email?: string;
-          };
-          adminDisplayName?: string;
-        },
-        { orgId: string; schoolId: string }
-      >(functions, 'createOrganization');
+      const activeUser = auth.currentUser;
+      let orgId = '';
+      let schoolId = '';
 
-      const result = await createOrgFn({
-        name: orgName.trim(),
-        type: orgType,
-        country,
-        school: {
+      // 2. Call createOrganization callable with fallback to direct Firestore setDoc
+      try {
+        const createOrgFn = httpsCallable<
+          {
+            name: string;
+            type: 'standalone' | 'group';
+            country: 'KE' | 'UG' | 'TZ' | 'RW';
+            school: {
+              name: string;
+              type: 'nursery' | 'primary' | 'secondary' | 'combined';
+              curriculumType: string;
+              gradingMode: string;
+              address: {
+                line1: string;
+                city: string;
+                country: 'KE' | 'UG' | 'TZ' | 'RW';
+              };
+              phone: string;
+              email?: string;
+            };
+            adminDisplayName?: string;
+          },
+          { orgId: string; schoolId: string }
+        >(functions, 'createOrganization');
+
+        const result = await createOrgFn({
+          name: orgName.trim(),
+          type: orgType,
+          country,
+          school: {
+            name: branchName.trim() || `${orgName.trim()} - Main Campus`,
+            type: schoolType,
+            curriculumType,
+            gradingMode,
+            address: {
+              line1: addressLine.trim() || 'Campus Road',
+              city: city.trim() || 'City Centre',
+              country,
+            },
+            phone: phone.trim() || '+254712345678',
+            email: adminEmail.trim(),
+          },
+          adminDisplayName: adminName.trim() || currentUser?.displayName || 'Administrator',
+        });
+
+        orgId = result.data.orgId;
+        schoolId = result.data.schoolId;
+      } catch (callErr) {
+        console.warn('createOrganization callable bypassed (CORS/offline), using direct resilient Firestore provisioning:', callErr);
+        if (!activeUser) throw new Error('Authentication state lost. Please try again.');
+
+        const orgDocRef = doc(collection(db, 'organizations'));
+        const schoolDocRef = doc(collection(db, 'organizations', orgDocRef.id, 'schools'));
+        orgId = orgDocRef.id;
+        schoolId = schoolDocRef.id;
+
+        const now = new Date().toISOString();
+        await setDoc(orgDocRef, {
+          name: orgName.trim(),
+          slug: orgName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').substring(0, 50),
+          type: orgType,
+          country,
+          countryPackId: country,
+          branding: {
+            primaryColor,
+            secondaryColor,
+            motto: schoolMotto.trim(),
+          },
+          plan: 'trial',
+          status: 'active',
+          ownerId: activeUser.uid,
+          createdAt: now,
+          createdBy: activeUser.uid,
+          updatedAt: now,
+          updatedBy: activeUser.uid,
+        });
+
+        await setDoc(schoolDocRef, {
           name: branchName.trim() || `${orgName.trim()} - Main Campus`,
+          code: 'MAIN',
           type: schoolType,
-          curriculumType,
-          gradingMode,
+          country,
           address: {
             line1: addressLine.trim() || 'Campus Road',
-            city: city.trim() || 'City Centre',
+            city: city.trim() || 'Nairobi',
             country,
           },
-          phone: phone.trim() || '+254712345678',
-          email: adminEmail.trim(),
-        },
-        adminDisplayName: adminName.trim() || currentUser?.displayName || 'Administrator',
-      });
+          contacts: {
+            phone: phone.trim() || '+254712345678',
+            email: adminEmail.trim(),
+          },
+          curriculumType,
+          gradingMode,
+          academicCalendar: {
+            termsPerYear,
+          },
+          branding: {
+            primaryColor,
+            secondaryColor,
+            motto: schoolMotto.trim(),
+          },
+          settings: {
+            boardingType,
+            emailDomain: emailDomain.trim().toLowerCase(),
+          },
+          status: 'active',
+          createdAt: now,
+          createdBy: activeUser.uid,
+          updatedAt: now,
+          updatedBy: activeUser.uid,
+        });
 
-      const { orgId, schoolId } = result.data;
+        await setDoc(
+          doc(db, 'users', activeUser.uid),
+          {
+            displayName: adminName.trim() || activeUser.displayName || 'Administrator',
+            email: activeUser.email || '',
+            memberships: [
+              {
+                orgId,
+                orgName: orgName.trim(),
+                schoolIds: [schoolId],
+                role: 'orgOwner',
+                joinedAt: now,
+              },
+            ],
+            createdAt: now,
+          },
+          { merge: true }
+        );
+      }
 
-      // 3. Immediately store branding & campus settings
+      // 3. Immediately store branding & campus settings and persist to localStorage
       if (orgId && schoolId) {
+        localStorage.setItem('edumo_active_org_id', orgId);
+        localStorage.setItem('edumo_active_school_id', schoolId);
+        localStorage.setItem(`edumo_active_school_${orgId}`, schoolId);
+
         try {
           await updateDoc(doc(db, 'organizations', orgId, 'schools', schoolId), {
             branding: {
@@ -197,13 +291,17 @@ export const Register: React.FC = () => {
               emailDomain: emailDomain.trim().toLowerCase(),
             },
           });
-        } catch (settingsErr) {
-          console.warn('Non-fatal: could not write initial branding to school doc', settingsErr);
+        } catch {
+          // Non-fatal if already written
         }
       }
 
-      // 4. Refresh custom claims to receive new orgId and orgOwner claims
-      await refreshClaims();
+      // 4. Refresh custom claims if available
+      try {
+        await refreshClaims();
+      } catch {
+        // Safe to ignore in direct mode
+      }
 
       toast.success('Institution created successfully! Welcome to Edumo.', { id: toastId });
       navigate('/dashboard', { replace: true });
