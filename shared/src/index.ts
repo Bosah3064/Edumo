@@ -8,3 +8,4 @@ export * from './types/models';
 export * from './types/records';
 export * from './types/countryPack';
 export * from './types/finance';
+export * from './data/countryPacks';

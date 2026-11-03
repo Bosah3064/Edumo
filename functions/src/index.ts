@@ -8,6 +8,7 @@ export {
   createOrganization,
   updateOrganization,
   addBranch,
+  mergeBranch,
 } from './callable/organization';
 
 export {
@@ -25,6 +26,22 @@ export {
   linkGuardian,
   verifyGuardianLink,
 } from './callable/guardian';
+
+export {
+  createStudent,
+  updateStudent,
+  transferStudent,
+  softDeactivateStudent,
+} from './callable/student';
+
+export {
+  createStaff,
+  updateStaff,
+} from './callable/staff';
+
+export {
+  markAttendance,
+} from './callable/attendance';
 
 // === Auth Triggers ===
 export { onUserCreate } from './triggers/onUserCreate';

@@ -1022,4 +1022,45 @@ describe('Authorized operations work correctly', () => {
         .get()
     );
   });
+
+  describe('Extended subcollections & compliance rules', () => {
+    it('Principal CAN read student special needs record', async () => {
+      const db = testEnv
+        .authenticatedContext(PRINCIPAL_A1, principalClaims(ORG_A, SCHOOL_A1))
+        .firestore();
+      await assertSucceeds(
+        db.doc(`organizations/${ORG_A}/schools/${SCHOOL_A1}/students/${STUDENT_A1_S1}/specialNeeds/sen-001`).get()
+      );
+    });
+
+    it('Teacher without SEN permission CANNOT read special needs record', async () => {
+      const db = testEnv
+        .authenticatedContext(TEACHER_A1, teacherClaims(ORG_A, SCHOOL_A1))
+        .firestore();
+      await assertFails(
+        db.doc(`organizations/${ORG_A}/schools/${SCHOOL_A1}/students/${STUDENT_A1_S1}/specialNeeds/sen-001`).get()
+      );
+    });
+
+    it('Org A principal CANNOT read Org B student documents', async () => {
+      const db = testEnv
+        .authenticatedContext(PRINCIPAL_A1, principalClaims(ORG_A, SCHOOL_A1))
+        .firestore();
+      await assertFails(
+        db.doc(`organizations/${ORG_B}/schools/${SCHOOL_B1}/students/student-b1/documents/doc-001`).get()
+      );
+    });
+
+    it('No user can write directly to auditAccess log', async () => {
+      const db = testEnv
+        .authenticatedContext(OWNER_A, orgOwnerClaims(ORG_A, [SCHOOL_A1]))
+        .firestore();
+      await assertFails(
+        db.doc(`organizations/${ORG_A}/schools/${SCHOOL_A1}/auditAccess/log-001`).set({
+          accessedBy: OWNER_A,
+          timestamp: new Date().toISOString(),
+        })
+      );
+    });
+  });
 });

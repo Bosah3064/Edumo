@@ -12,6 +12,7 @@ import {
   createOrganizationSchema,
   updateOrganizationSchema,
   addBranchSchema,
+  mergeBranchSchema,
 } from '../schemas';
 import { validationError } from '../utils/errors';
 import { DEFAULT_ROLE_PERMISSIONS } from '@edumo/shared';
@@ -354,6 +355,88 @@ export const addBranch = onCall(
     });
 
     return { schoolId, message: 'Branch added successfully.' };
+  }
+);
+
+/**
+ * Merge one branch into another branch within the same organization.
+ * Marks source branch as merged and logs an audit trail.
+ */
+export const mergeBranch = onCall(
+  { cors: true },
+  async (request) => {
+    const authCtx = requireAuth(request);
+    const parseResult = mergeBranchSchema.safeParse(request.data);
+    if (!parseResult.success) {
+      throw validationError(
+        parseResult.error.issues.map((i) => ({
+          path: i.path.map(String),
+          message: i.message,
+        }))
+      );
+    }
+    const { orgId, sourceSchoolId, targetSchoolId, reason } = parseResult.data;
+
+    requireOrgOwner(authCtx, orgId);
+
+    if (sourceSchoolId === targetSchoolId) {
+      throw new Error('Source and target school cannot be the same');
+    }
+
+    const orgRef = db.collection('organizations').doc(orgId);
+    const sourceRef = orgRef.collection('schools').doc(sourceSchoolId);
+    const targetRef = orgRef.collection('schools').doc(targetSchoolId);
+
+    const [sourceSnap, targetSnap] = await Promise.all([
+      sourceRef.get(),
+      targetRef.get(),
+    ]);
+
+    if (!sourceSnap.exists) {
+      throw new Error('Source branch not found');
+    }
+    if (!targetSnap.exists) {
+      throw new Error('Target branch not found');
+    }
+
+    const sourceData = sourceSnap.data()!;
+    if (sourceData.status === 'merged') {
+      throw new Error('Source branch is already merged');
+    }
+
+    const now = FieldValue.serverTimestamp();
+
+    await sourceRef.update({
+      status: 'merged',
+      mergedIntoSchoolId: targetSchoolId,
+      mergeReason: reason,
+      mergedAt: now,
+      mergedBy: authCtx.uid,
+      updatedAt: now,
+      updatedBy: authCtx.uid,
+    });
+
+    await writeAuditLog({
+      orgId,
+      schoolId: sourceSchoolId,
+      action: 'branch.merge',
+      category: 'admin',
+      actorUid: authCtx.uid,
+      actorRole: 'orgOwner',
+      targetType: 'school',
+      targetId: sourceSchoolId,
+      before: { status: sourceData.status },
+      after: {
+        status: 'merged',
+        mergedIntoSchoolId: targetSchoolId,
+        reason,
+      },
+    });
+
+    return {
+      success: true,
+      message: `Branch ${sourceData.name || sourceSchoolId} merged into ${targetSnap.data()?.name || targetSchoolId}.`,
+    };
   }
 );
 

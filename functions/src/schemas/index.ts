@@ -109,6 +109,15 @@ export const addBranchSchema = z.object({
 
 export type AddBranchInput = z.infer<typeof addBranchSchema>;
 
+export const mergeBranchSchema = z.object({
+  orgId: z.string().min(1),
+  sourceSchoolId: z.string().min(1),
+  targetSchoolId: z.string().min(1),
+  reason: z.string().min(3).max(500),
+});
+
+export type MergeBranchInput = z.infer<typeof mergeBranchSchema>;
+
 // ===== Invites =====
 
 export const createInviteSchema = z.object({
@@ -203,6 +212,58 @@ export const createStudentSchema = z.object({
 
 export type CreateStudentInput = z.infer<typeof createStudentSchema>;
 
+export const updateStudentSchema = z.object({
+  orgId: z.string().min(1),
+  schoolId: z.string().min(1),
+  studentId: z.string().min(1),
+  updates: z.object({
+    firstName: z.string().min(1).max(100).optional(),
+    middleName: z.string().max(100).optional(),
+    lastName: z.string().min(1).max(100).optional(),
+    dateOfBirth: z.string().min(1).optional(),
+    gender: z.enum(['male', 'female', 'other']).optional(),
+    nationality: z.string().max(50).optional(),
+    currentClassId: z.string().min(1).optional(),
+    currentStreamId: z.string().optional(),
+    boardingStatus: z.enum(['day', 'boarding']).optional(),
+    emergencyContacts: z.array(z.object({
+      name: z.string().min(1).max(100),
+      phone: phoneSchema,
+      relationship: z.string().min(1).max(50),
+    })).max(5).optional(),
+    address: z.object({
+      line1: z.string().min(1).max(500),
+      city: z.string().min(1).max(100),
+      country: countryCodeSchema,
+    }).optional(),
+  }),
+});
+
+export type UpdateStudentInput = z.infer<typeof updateStudentSchema>;
+
+export const transferStudentSchema = z.object({
+  sourceOrgId: z.string().min(1),
+  sourceSchoolId: z.string().min(1),
+  targetOrgId: z.string().min(1),
+  targetSchoolId: z.string().min(1),
+  studentId: z.string().min(1),
+  newClassId: z.string().min(1),
+  newStreamId: z.string().optional(),
+  reason: z.string().min(3).max(500),
+});
+
+export type TransferStudentInput = z.infer<typeof transferStudentSchema>;
+
+export const softDeactivateStudentSchema = z.object({
+  orgId: z.string().min(1),
+  schoolId: z.string().min(1),
+  studentId: z.string().min(1),
+  reason: z.enum(['graduated', 'transferred_out', 'expelled', 'withdrawn', 'deceased', 'other']),
+  notes: z.string().max(500).optional(),
+});
+
+export type SoftDeactivateStudentInput = z.infer<typeof softDeactivateStudentSchema>;
+
 // ===== Staff =====
 
 export const createStaffSchema = z.object({
@@ -222,6 +283,26 @@ export const createStaffSchema = z.object({
 });
 
 export type CreateStaffInput = z.infer<typeof createStaffSchema>;
+
+export const updateStaffSchema = z.object({
+  orgId: z.string().min(1),
+  schoolId: z.string().min(1),
+  staffId: z.string().min(1),
+  updates: z.object({
+    firstName: z.string().min(1).max(100).optional(),
+    lastName: z.string().min(1).max(100).optional(),
+    phone: phoneSchema.optional(),
+    email: emailSchema.optional(),
+    role: z.string().min(1).max(50).optional(),
+    department: z.string().max(100).optional(),
+    qualification: z.string().max(200).optional(),
+    tscNumber: z.string().max(50).optional(),
+    contractType: z.enum(['permanent', 'contract', 'partTime', 'intern']).optional(),
+    status: z.enum(['active', 'suspended', 'terminated', 'on_leave']).optional(),
+  }),
+});
+
+export type UpdateStaffInput = z.infer<typeof updateStaffSchema>;
 
 // ===== Attendance =====
 

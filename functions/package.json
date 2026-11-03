@@ -13,7 +13,8 @@
     "deploy": "firebase deploy --only functions",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:rules": "vitest run --config vitest.rules.config.ts"
+    "test:rules": "vitest run --config vitest.rules.config.ts",
+    "seed": "node lib/functions/src/scripts/seed.js"
   },
   "engines": {
     "node": ">=20.0.0"
