@@ -130,7 +130,15 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar }) => {
                 Profile & School Settings
               </button>
               <button
-                onClick={() => signOut()}
+                onClick={async () => {
+                  setProfileOpen(false);
+                  try {
+                    await signOut();
+                    navigate('/login', { replace: true });
+                  } catch (err) {
+                    console.error('Sign out error:', err);
+                  }
+                }}
                 className="w-full flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50"
               >
                 <LogOut className="w-4 h-4" />

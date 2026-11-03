@@ -1,14 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, Navigate, useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import { MobileNav } from './MobileNav';
 import { OfflineBanner } from '../ui/OfflineBanner';
 import { useTenant } from '../../contexts/TenantContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { Spinner } from '../ui/Spinner';
 
 export const AppShell: React.FC = () => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const { currentSchool } = useTenant();
+  const { currentUser, loading } = useAuth();
+  const location = useLocation();
 
   useEffect(() => {
     const root = document.documentElement;
@@ -28,6 +32,21 @@ export const AppShell: React.FC = () => {
       root.style.removeProperty('--color-purple');
     };
   }, [currentSchool]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#f3f4f6]">
+        <div className="flex flex-col items-center gap-3">
+          <Spinner size="lg" />
+          <p className="text-xs font-semibold text-gray-500">Loading your school workspace...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return <Navigate to="/login" replace state={{ from: location }} />;
+  }
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#f3f4f6] text-[#1f2937]">

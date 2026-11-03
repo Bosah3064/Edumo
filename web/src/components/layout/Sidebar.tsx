@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import enTranslations from '../../i18n/en.json';
 import swTranslations from '../../i18n/sw.json';
 import { useAuth } from '../../contexts/AuthContext';
@@ -27,6 +27,7 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   const { signOut, currentUser } = useAuth();
   const { currentRole, currentSchool } = useTenant();
+  const navigate = useNavigate();
   const [sidebarLanguage, setSidebarLanguage] = useState<'en' | 'sw'>(() =>
     localStorage.getItem('edumo_sidebar_language') === 'sw' ? 'sw' : 'en'
   );
@@ -136,7 +137,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
             </div>
           </div>
           <button
-            onClick={() => signOut()}
+            onClick={async () => {
+              try {
+                await signOut();
+                navigate('/login', { replace: true });
+              } catch (err) {
+                console.error('Sign out error:', err);
+              }
+            }}
             title={navTranslations.signOut}
             className="p-1.5 rounded-lg text-gray-400 hover:text-[#a5243d] hover:bg-red-50 transition-colors"
           >

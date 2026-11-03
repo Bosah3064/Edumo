@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/Button';
@@ -11,14 +11,23 @@ import toast from 'react-hot-toast';
 
 export const Login: React.FC = () => {
   const { t } = useTranslation();
-  const { signIn } = useAuth();
+  const { signIn, currentUser, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [mode, setMode] = useState<'email' | 'phone'>('email');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // If already authenticated, redirect to destination or dashboard
+  useEffect(() => {
+    if (!authLoading && currentUser) {
+      const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/dashboard';
+      navigate(from, { replace: true });
+    }
+  }, [currentUser, authLoading, navigate, location]);
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,7 +39,8 @@ export const Login: React.FC = () => {
     try {
       await signIn(email, password);
       toast.success('Signed in successfully');
-      navigate('/dashboard');
+      const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/dashboard';
+      navigate(from, { replace: true });
     } catch (err: unknown) {
       console.error('Sign in error:', err);
       const msg = err instanceof Error ? err.message : 'Invalid login credentials';

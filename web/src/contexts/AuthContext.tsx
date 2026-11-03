@@ -85,6 +85,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCurrentUser(null);
     setUserProfileOrgId(null);
     localStorage.removeItem('edumo_active_org_id');
+    localStorage.removeItem('edumo_active_school_id');
   };
 
   const isPlatformAdmin = useMemo(() => {
@@ -92,8 +93,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [claims]);
 
   const activeOrgId = useMemo(() => {
+    if (!currentUser) return null;
     return claims?.orgId || userProfileOrgId || localStorage.getItem('edumo_active_org_id') || 'demo-org-edumo';
-  }, [claims, userProfileOrgId]);
+  }, [currentUser, claims, userProfileOrgId]);
 
   return (
     <AuthContext.Provider
