@@ -103,8 +103,12 @@ export const Announcements: React.FC = () => {
 
   const handleBroadcast = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !body.trim() || !organization || !currentSchool) {
+    if (!title.trim() || !body.trim()) {
       toast.error('Title and message body are required');
+      return;
+    }
+    if (!organization || !currentSchool) {
+      toast.error('No active school branch selected. Please choose a school first.');
       return;
     }
 

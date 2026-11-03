@@ -188,6 +188,15 @@ service cloud.firestore {
           }
         }
 
+        // ===== COUNTERS =====
+        match /counters/{counterId} {
+          allow read: if hasSchoolAccess(orgId, schoolId);
+          allow create, update: if hasSchoolRole(orgId, schoolId,
+            ['principal', 'deputy', 'admin', 'teacher']) &&
+            withinSizeLimit();
+          allow delete: if false;
+        }
+
         // ===== CLASSES =====
         match /classes/{classId} {
           allow read: if hasSchoolAccess(orgId, schoolId);

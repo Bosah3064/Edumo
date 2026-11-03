@@ -96,7 +96,10 @@ export const Staff: React.FC = () => {
 
   const handleSendInvite = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!organization || !currentSchool) return;
+    if (!organization || !currentSchool) {
+      toast.error('No active school branch selected. Please choose a school first.');
+      return;
+    }
 
     setInviting(true);
     const toastId = toast.loading('Generating secure single-use staff invite...');
@@ -109,14 +112,20 @@ export const Staff: React.FC = () => {
       const fallbackId = getNextSchoolId(staffList, roleKey as 'teacher' | 'staff' | 'admin', year);
       const fallbackSequence = Number(fallbackId.match(/\d{4}$/)?.[0] || 1);
 
-      const schoolId = await runTransaction(db, async (transaction) => {
-        const snapshot = await transaction.get(counterRef);
-        const last = snapshot.exists() ? Number(snapshot.data().lastSequence || 0) : 0;
-        const sequence = Math.max(last, fallbackSequence - 1) + 1;
-        const id = formatSchoolId(roleKey as 'teacher' | 'staff' | 'admin', sequence, year);
-        transaction.set(counterRef, { lastSequence: sequence, updatedAt: serverTimestamp() }, { merge: true });
-        return id;
-      });
+      let schoolId = fallbackId;
+      try {
+        schoolId = await runTransaction(db, async (transaction) => {
+          const snapshot = await transaction.get(counterRef);
+          const last = snapshot.exists() ? Number(snapshot.data().lastSequence || 0) : 0;
+          const sequence = Math.max(last, fallbackSequence - 1) + 1;
+          const id = formatSchoolId(roleKey as 'teacher' | 'staff' | 'admin', sequence, year);
+          transaction.set(counterRef, { lastSequence: sequence, updatedAt: serverTimestamp() }, { merge: true });
+          return id;
+        });
+      } catch (cErr) {
+        console.warn('Staff counter fallback:', cErr);
+        schoolId = fallbackId;
+      }
       setGeneratedSchoolId(schoolId);
 
       const createInviteFn = httpsCallable(functions, 'createInvite');

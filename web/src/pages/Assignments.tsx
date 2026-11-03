@@ -39,7 +39,8 @@ export const Assignments: React.FC = () => {
 
   const createAssignment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!organization || !currentSchool || !title.trim() || !startsAt || !expiresAt) return toast.error('Title, start time and expiry time are required');
+    if (!organization || !currentSchool) return toast.error('No active school branch selected. Please choose a school first.');
+    if (!title.trim() || !startsAt || !expiresAt) return toast.error('Title, start time and expiry time are required');
     if (new Date(expiresAt) <= new Date(startsAt)) return toast.error('Expiry must be after the start time');
     setSaving(true);
     try {

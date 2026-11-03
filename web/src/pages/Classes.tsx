@@ -113,7 +113,14 @@ export const Classes: React.FC = () => {
 
   const handleAddClass = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newClassName.trim() || !organization || !currentSchool) return;
+    if (!newClassName.trim()) {
+      toast.error('Class name is required');
+      return;
+    }
+    if (!organization || !currentSchool) {
+      toast.error('No active school branch selected. Please choose a school first.');
+      return;
+    }
 
     setSaving(true);
     const toastId = toast.loading('Creating class stream...');

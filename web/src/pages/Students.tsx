@@ -108,11 +108,24 @@ export const Students: React.FC = () => {
     return () => unsub();
   }, [organization, currentSchool]);
 
+  // Auto-generate admission number whenever modal is opened
+  useEffect(() => {
+    if (isEnrollModalOpen && !admissionNo) {
+      setAdmissionNo(getNextAdmissionNumber(students, getCurrentAdmissionYear()));
+    }
+  }, [isEnrollModalOpen, students]);
+
   const handleEnroll = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!organization || !currentSchool) return;
-    if (!admissionNo || !firstName || !lastName) {
-      toast.error('Admission number, first and last name are required');
+    if (!organization || !currentSchool) {
+      toast.error('No active school branch selected. Please choose a school first.');
+      return;
+    }
+
+    const admToUse = admissionNo || getNextAdmissionNumber(students, getCurrentAdmissionYear());
+
+    if (!firstName.trim() || !lastName.trim()) {
+      toast.error('First name and last name are required');
       return;
     }
 
@@ -122,8 +135,8 @@ export const Students: React.FC = () => {
     try {
       const year = getCurrentAdmissionYear();
       const yearPrefix = String(year).slice(-2);
-      const fallbackAdmission = getNextAdmissionNumber(students, year);
-      const fallbackSequence = Number(fallbackAdmission.split('/')[1]);
+      const fallbackAdmission = admToUse;
+      const fallbackSequence = Number(fallbackAdmission.split('/')[1]) || 1;
       const counterRef = doc(
         db,
         'organizations', organization.id,
@@ -131,21 +144,27 @@ export const Students: React.FC = () => {
         'counters', `admissions-${yearPrefix}`
       );
 
-      const generatedAdmission = await runTransaction(db, async (transaction) => {
-        const counterSnapshot = await transaction.get(counterRef);
-        const counterSequence = counterSnapshot.exists()
-          ? Number(counterSnapshot.data().lastSequence || 0)
-          : 0;
-        const sequence = Math.max(counterSequence, fallbackSequence - 1) + 1;
-        const nextAdmission = formatAdmissionNumber(year, sequence);
+      let generatedAdmission = fallbackAdmission;
+      try {
+        generatedAdmission = await runTransaction(db, async (transaction) => {
+          const counterSnapshot = await transaction.get(counterRef);
+          const counterSequence = counterSnapshot.exists()
+            ? Number(counterSnapshot.data().lastSequence || 0)
+            : 0;
+          const sequence = Math.max(counterSequence, fallbackSequence - 1) + 1;
+          const nextAdmission = formatAdmissionNumber(year, sequence);
 
-        transaction.set(counterRef, {
-          lastSequence: sequence,
-          updatedAt: serverTimestamp(),
-        }, { merge: true });
+          transaction.set(counterRef, {
+            lastSequence: sequence,
+            updatedAt: serverTimestamp(),
+          }, { merge: true });
 
-        return nextAdmission;
-      });
+          return nextAdmission;
+        });
+      } catch (counterErr) {
+        console.warn('Counter transaction fallback:', counterErr);
+        generatedAdmission = fallbackAdmission;
+      }
 
       const schoolEmailDomain = getSchoolEmailDomain(currentSchool);
       const schoolEmail = getSchoolEmailForAdmission(generatedAdmission, schoolEmailDomain);
@@ -276,7 +295,10 @@ export const Students: React.FC = () => {
             title="No students found"
             description="No learners match your search query or enrolled list is currently empty."
             actionLabel="Enroll First Student"
-            onAction={() => setIsEnrollModalOpen(true)}
+            onAction={() => {
+              setAdmissionNo(getNextAdmissionNumber(students, getCurrentAdmissionYear()));
+              setIsEnrollModalOpen(true);
+            }}
           />
         ) : (
           <div className="overflow-x-auto">

@@ -191,7 +191,14 @@ export const Attendance: React.FC = () => {
   };
 
   const handleSave = async () => {
-    if (!organization || !currentSchool) return;
+    if (!organization || !currentSchool) {
+      toast.error('No active school branch selected. Please choose a school first.');
+      return;
+    }
+    if (roster.length === 0) {
+      toast.error('No learners in this class to mark attendance for.');
+      return;
+    }
     setSaving(true);
 
     const recordId = `${selectedDate}_${selectedClass.replace(/\s+/g, '_')}`;

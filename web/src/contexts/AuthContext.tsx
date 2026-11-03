@@ -27,6 +27,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [claims, setClaims] = useState<UserClaims | null>(null);
+  const [userProfileOrgId, setUserProfileOrgId] = useState<string | null>(() => {
+    return localStorage.getItem('edumo_active_org_id');
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -37,6 +40,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const tokenResult = await user.getIdTokenResult();
           const customClaims = tokenResult.claims as unknown as UserClaims;
           setClaims(customClaims);
+          if (customClaims?.orgId) {
+            setUserProfileOrgId(customClaims.orgId);
+            localStorage.setItem('edumo_active_org_id', customClaims.orgId);
+          }
         } catch (error) {
           console.error('Error fetching token claims:', error);
           setClaims(null);
@@ -55,6 +62,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const tokenResult = await auth.currentUser.getIdTokenResult(true); // force refresh
     const updatedClaims = tokenResult.claims as unknown as UserClaims;
     setClaims(updatedClaims);
+    if (updatedClaims?.orgId) {
+      setUserProfileOrgId(updatedClaims.orgId);
+      localStorage.setItem('edumo_active_org_id', updatedClaims.orgId);
+    }
     return updatedClaims;
   };
 
@@ -72,6 +83,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await fbSignOut(auth);
     setClaims(null);
     setCurrentUser(null);
+    setUserProfileOrgId(null);
+    localStorage.removeItem('edumo_active_org_id');
   };
 
   const isPlatformAdmin = useMemo(() => {
@@ -79,8 +92,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [claims]);
 
   const activeOrgId = useMemo(() => {
-    return claims?.orgId || null;
-  }, [claims]);
+    return claims?.orgId || userProfileOrgId || localStorage.getItem('edumo_active_org_id') || 'demo-org-edumo';
+  }, [claims, userProfileOrgId]);
 
   return (
     <AuthContext.Provider

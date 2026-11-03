@@ -91,7 +91,10 @@ export const Settings: React.FC = () => {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!organization) return;
+    if (!organization) {
+      toast.error('No organization workspace loaded. Please refresh or sign in again.');
+      return;
+    }
 
     try {
       await updateDoc(doc(db, 'organizations', organization.id), { name: orgName.trim() });
