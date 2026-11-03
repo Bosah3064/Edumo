@@ -39,41 +39,8 @@ interface StaffMember {
 export const Staff: React.FC = () => {
   const { organization, currentSchool } = useTenant();
 
-  const [staffList, setStaffList] = useState<StaffMember[]>([
-    {
-      id: 'staff-1',
-      name: 'Dr. Faith Mwangi',
-      role: 'principal',
-      email: 'principal@academy.ac.ke',
-      phone: '+254711223344',
-      tscNumber: 'TSC/482910',
-      schoolId: '26/A0001',
-      assignedClasses: ['All Classes'],
-      status: 'active',
-    },
-    {
-      id: 'staff-2',
-      name: 'Peter Kamau',
-      role: 'teacher',
-      email: 'p.kamau@academy.ac.ke',
-      phone: '+254722334455',
-      tscNumber: 'TSC/519302',
-      schoolId: '26/T0001',
-      assignedClasses: ['Grade 4 East', 'Grade 5'],
-      status: 'active',
-    },
-    {
-      id: 'staff-3',
-      name: 'Mercy Achieng',
-      role: 'bursar',
-      email: 'm.achieng@academy.ac.ke',
-      phone: '+254733445566',
-      schoolId: '26/W0001',
-      assignedClasses: ['Finance Office'],
-      status: 'active',
-    },
-  ]);
-
+  const [staffList, setStaffList] = useState<StaffMember[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [inviting, setInviting] = useState(false);
@@ -84,6 +51,48 @@ export const Staff: React.FC = () => {
   const [inviteRole, setInviteRole] = useState('teacher');
   const [generatedInviteCode, setGeneratedInviteCode] = useState<string | null>(null);
   const [generatedSchoolId, setGeneratedSchoolId] = useState<string>('');
+
+  useEffect(() => {
+    if (!organization || !currentSchool) return;
+
+    const staffRef = collection(
+      db,
+      'organizations',
+      organization.id,
+      'schools',
+      currentSchool.id,
+      'staff'
+    );
+
+    const unsub = onSnapshot(
+      staffRef,
+      (snap) => {
+        const list: StaffMember[] = snap.docs.map((d) => {
+          const data = d.data();
+          return {
+            id: d.id,
+            name: data.name || data.displayName || `${data.firstName || ''} ${data.lastName || ''}`.trim() || 'Staff Member',
+            role: data.role || 'teacher',
+            email: data.email || '',
+            phone: data.phone || '',
+            tscNumber: data.tscNumber,
+            assignedClasses: data.assignedClasses || [],
+            status: data.status || 'active',
+            schoolId: data.schoolId,
+            schoolEmail: data.schoolEmail,
+          };
+        });
+        setStaffList(list);
+        setLoading(false);
+      },
+      (err) => {
+        console.error('Error fetching staff:', err);
+        setLoading(false);
+      }
+    );
+
+    return () => unsub();
+  }, [organization, currentSchool]);
 
   const handleSendInvite = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,15 +131,14 @@ export const Staff: React.FC = () => {
       });
 
       const data = res.data as { inviteCode?: string; code?: string };
-      const code = data.inviteCode || data.code || 'EDUMO-7492';
+      const code = data.inviteCode || data.code;
+      if (!code) throw new Error('No invite code returned from server');
       setGeneratedInviteCode(code);
       toast.success('Invite code generated successfully!', { id: toastId });
     } catch (err: unknown) {
-      console.warn('Invite callable note:', err);
-      // Fallback demo invite code
-      const mockCode = `EDUMO-${Math.floor(1000 + Math.random() * 9000)}`;
-      setGeneratedInviteCode(mockCode);
-      toast.success(`Invite generated: ${mockCode}`, { id: toastId });
+      console.error('Invite generation error:', err);
+      const msg = err instanceof Error ? err.message : 'Failed to generate invite code';
+      toast.error(msg, { id: toastId });
     } finally {
       setInviting(false);
     }
@@ -170,62 +178,110 @@ export const Staff: React.FC = () => {
         </Button>
       </div>
 
-      {/* Staff Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {staffList.map((member) => (
-          <Card key={member.id} className="flex flex-col justify-between">
-            <div>
-              <div className="flex items-start justify-between gap-3 mb-4">
-                <div className="w-12 h-12 rounded-2xl bg-edumoPurple-500/10 border border-edumoPurple-500/20 flex items-center justify-center text-edumoPurple-500 font-bold text-sm">
-                  {member.name.charAt(0)}
-                </div>
-                <Badge variant={roleColors[member.role] || 'neutral'} size="sm">
-                  {member.role.toUpperCase()}
-                </Badge>
-              </div>
-
-              <h3 className="text-base font-semibold text-gray-900">{member.name}</h3>
-              {member.schoolId && (
-                <p className="text-2xs font-mono font-semibold text-brand-700 mt-0.5">
-                  School ID: {member.schoolId} • Role: {member.role}
-                </p>
-              )}
-              {member.tscNumber && (
-                <p className="text-2xs font-mono text-brand-600 mt-0.5">
-                  {member.tscNumber}
-                </p>
-              )}
-
-              <div className="mt-4 pt-3 border-t border-gray-200 space-y-1.5 text-xs text-gray-600">
-                <div className="flex items-center gap-2 text-gray-500">
-                  <Mail className="w-3.5 h-3.5 shrink-0" />
-                  <span className="truncate">{member.email}</span>
-                </div>
-                <div className="flex items-center gap-2 text-gray-500">
-                  <Phone className="w-3.5 h-3.5 shrink-0" />
-                  <span>{member.phone}</span>
-                </div>
-              </div>
-
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                {member.assignedClasses.map((cls) => (
-                  <span
-                    key={cls}
-                    className="text-2xs px-2 py-0.5 rounded-md bg-gray-100 text-gray-600 border border-gray-200"
-                  >
-                    {cls}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-5 pt-3 border-t border-gray-200 flex justify-between items-center text-2xs text-gray-500">
-              <span>Status: Active</span>
-              <span className="text-accent-600 font-medium">Verified Credentials</span>
-            </div>
-          </Card>
-        ))}
+      {/* Search Bar */}
+      <div className="flex items-center gap-4">
+        <div className="w-full sm:w-96 relative">
+          <Input
+            placeholder="Search staff by name, email or role..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            leftIcon={<Search className="w-4 h-4" />}
+            className="!py-2"
+          />
+        </div>
       </div>
+
+      {/* Staff Grid */}
+      {staffList.filter((m) =>
+        `${m.name} ${m.email} ${m.role} ${m.tscNumber || ''}`
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase())
+      ).length === 0 ? (
+        <Card className="text-center py-12 text-gray-500">
+          <GraduationCap className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+          <h3 className="text-base font-semibold text-gray-900">No staff members found</h3>
+          <p className="text-xs text-gray-500 mt-1 max-w-sm mx-auto">
+            {searchQuery
+              ? 'No staff members match your search criteria.'
+              : 'Get started by inviting educators and administrators to your campus.'}
+          </p>
+          <div className="mt-4">
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={() => {
+                setGeneratedInviteCode(null);
+                setIsInviteModalOpen(true);
+              }}
+              leftIcon={<UserPlus className="w-4 h-4" />}
+            >
+              Invite First Staff Member
+            </Button>
+          </div>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {staffList
+            .filter((m) =>
+              `${m.name} ${m.email} ${m.role} ${m.tscNumber || ''}`
+                .toLowerCase()
+                .includes(searchQuery.toLowerCase())
+            )
+            .map((member) => (
+              <Card key={member.id} className="flex flex-col justify-between">
+                <div>
+                  <div className="flex items-start justify-between gap-3 mb-4">
+                    <div className="w-12 h-12 rounded-2xl bg-edumoPurple-500/10 border border-edumoPurple-500/20 flex items-center justify-center text-edumoPurple-500 font-bold text-sm">
+                      {member.name.charAt(0)}
+                    </div>
+                    <Badge variant={roleColors[member.role] || 'neutral'} size="sm">
+                      {member.role.toUpperCase()}
+                    </Badge>
+                  </div>
+
+                  <h3 className="text-base font-semibold text-gray-900">{member.name}</h3>
+                  {member.schoolId && (
+                    <p className="text-2xs font-mono font-semibold text-brand-700 mt-0.5">
+                      School ID: {member.schoolId} • Role: {member.role}
+                    </p>
+                  )}
+                  {member.tscNumber && (
+                    <p className="text-2xs font-mono text-brand-600 mt-0.5">
+                      {member.tscNumber}
+                    </p>
+                  )}
+
+                  <div className="mt-4 pt-3 border-t border-gray-200 space-y-1.5 text-xs text-gray-600">
+                    <div className="flex items-center gap-2 text-gray-500">
+                      <Mail className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">{member.email}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-500">
+                      <Phone className="w-3.5 h-3.5 shrink-0" />
+                      <span>{member.phone}</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {member.assignedClasses.map((cls) => (
+                      <span
+                        key={cls}
+                        className="text-2xs px-2 py-0.5 rounded-md bg-gray-100 text-gray-600 border border-gray-200"
+                      >
+                        {cls}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-5 pt-3 border-t border-gray-200 flex justify-between items-center text-2xs text-gray-500">
+                  <span>Status: Active</span>
+                  <span className="text-accent-600 font-medium">Verified Credentials</span>
+                </div>
+              </Card>
+            ))}
+        </div>
+      )}
 
       {/* Invite Modal */}
       <Modal

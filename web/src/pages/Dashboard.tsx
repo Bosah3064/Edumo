@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { useTenant } from '../contexts/TenantContext';
-import { collection, query, getDocs, limit, DocumentData } from 'firebase/firestore';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -18,7 +18,6 @@ import {
   Megaphone,
   FileSpreadsheet,
   TrendingUp,
-  ShieldAlert,
 } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
@@ -30,59 +29,134 @@ export const Dashboard: React.FC = () => {
   const [studentCount, setStudentCount] = useState<number>(0);
   const [staffCount, setStaffCount] = useState<number>(0);
   const [classCount, setClassCount] = useState<number>(0);
+  const [todayAttendance, setTodayAttendance] = useState<{
+    present: number;
+    absent: number;
+    late: number;
+    excused: number;
+    rate: string;
+    hasData: boolean;
+  }>({
+    present: 0,
+    absent: 0,
+    late: 0,
+    excused: 0,
+    rate: '—',
+    hasData: false,
+  });
   const [loadingStats, setLoadingStats] = useState(true);
 
   useEffect(() => {
     if (!organization || !currentSchool) return;
 
-    const fetchCounts = async () => {
-      try {
-        const studentsRef = collection(
-          db,
-          'organizations',
-          organization.id,
-          'schools',
-          currentSchool.id,
-          'students'
-        );
-        const staffRef = collection(
-          db,
-          'organizations',
-          organization.id,
-          'schools',
-          currentSchool.id,
-          'staff'
-        );
-        const classesRef = collection(
-          db,
-          'organizations',
-          organization.id,
-          'schools',
-          currentSchool.id,
-          'classes'
-        );
+    const todayDate = new Date().toISOString().split('T')[0];
 
-        const [studSnap, staffSnap, classSnap] = await Promise.all([
-          getDocs(query(studentsRef, limit(100))),
-          getDocs(query(staffRef, limit(100))),
-          getDocs(query(classesRef, limit(100))),
-        ]);
+    const studentsRef = collection(
+      db,
+      'organizations',
+      organization.id,
+      'schools',
+      currentSchool.id,
+      'students'
+    );
+    const staffRef = collection(
+      db,
+      'organizations',
+      organization.id,
+      'schools',
+      currentSchool.id,
+      'staff'
+    );
+    const classesRef = collection(
+      db,
+      'organizations',
+      organization.id,
+      'schools',
+      currentSchool.id,
+      'classes'
+    );
+    const attendanceRef = collection(
+      db,
+      'organizations',
+      organization.id,
+      'schools',
+      currentSchool.id,
+      'attendance'
+    );
 
-        // Default sensible metrics for demo if new school
-        setStudentCount(studSnap.size > 0 ? studSnap.size : 142);
-        setStaffCount(staffSnap.size > 0 ? staffSnap.size : 18);
-        setClassCount(classSnap.size > 0 ? classSnap.size : 8);
-      } catch (err) {
-        // Fallback default sample metrics
-        setStudentCount(142);
-        setStaffCount(18);
-        setClassCount(8);
-      } finally {
+    const unsubStudents = onSnapshot(
+      studentsRef,
+      (snap) => {
+        setStudentCount(snap.size);
         setLoadingStats(false);
-      }
-    };
+      },
+      (err) => console.error('Dashboard students count error:', err)
+    );
 
-    fetchCounts();
+    const unsubStaff = onSnapshot(
+      staffRef,
+      (snap) => {
+        setStaffCount(snap.size);
+      },
+      (err) => console.error('Dashboard staff count error:', err)
+    );
+
+    const unsubClasses = onSnapshot(
+      classesRef,
+      (snap) => {
+        setClassCount(snap.size);
+      },
+      (err) => console.error('Dashboard classes count error:', err)
+    );
+
+    const todayAttendanceQuery = query(attendanceRef, where('date', '==', todayDate));
+    const unsubAttendance = onSnapshot(
+      todayAttendanceQuery,
+      (snap) => {
+        let totalPresent = 0;
+        let totalAbsent = 0;
+        let totalLate = 0;
+        let totalExcused = 0;
+
+        snap.forEach((doc) => {
+          const data = doc.data();
+          totalPresent += data.totalPresent || 0;
+          totalAbsent += data.totalAbsent || 0;
+          totalLate += data.totalLate || 0;
+          totalExcused += data.totalExcused || 0;
+        });
+
+        const totalEnrolledMarked = totalPresent + totalAbsent + totalLate + totalExcused;
+        if (totalEnrolledMarked > 0) {
+          const rate = ((totalPresent + totalLate) / totalEnrolledMarked) * 100;
+          setTodayAttendance({
+            present: totalPresent,
+            absent: totalAbsent,
+            late: totalLate,
+            excused: totalExcused,
+            rate: `${rate.toFixed(1)}%`,
+            hasData: true,
+          });
+        } else {
+          setTodayAttendance({
+            present: 0,
+            absent: 0,
+            late: 0,
+            excused: 0,
+            rate: '—',
+            hasData: false,
+          });
+        }
+      },
+      (err) => console.error('Dashboard attendance listener error:', err)
+    );
+
+    return () => {
+      unsubStudents();
+      unsubStaff();
+      unsubClasses();
+      unsubAttendance();
+    };
   }, [organization, currentSchool]);
 
   const curriculumLabels: Record<string, string> = {
@@ -157,7 +231,7 @@ export const Dashboard: React.FC = () => {
             </h3>
             <p className="text-2xs text-accent-600 mt-1 flex items-center gap-1 font-medium">
               <TrendingUp className="w-3 h-3" />
-              <span>100% active standing</span>
+              <span>Real-time enrollment</span>
             </p>
           </div>
           <div className="w-12 h-12 rounded-2xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-brand-500">
@@ -171,10 +245,12 @@ export const Dashboard: React.FC = () => {
               Today's Attendance
             </p>
             <h3 className="text-2xl font-display font-bold text-accent-600 mt-1">
-              96.4%
+              {todayAttendance.rate}
             </h3>
             <p className="text-2xs text-gray-500 mt-1 font-medium">
-              137 Present • 5 Absent
+              {todayAttendance.hasData
+                ? `${todayAttendance.present} Present • ${todayAttendance.absent} Absent`
+                : 'Not marked yet today'}
             </p>
           </div>
           <div className="w-12 h-12 rounded-2xl bg-accent-500/10 border border-accent-500/20 flex items-center justify-center text-accent-600">
@@ -191,7 +267,7 @@ export const Dashboard: React.FC = () => {
               {loadingStats ? '...' : staffCount}
             </h3>
             <p className="text-2xs text-gray-500 mt-1 font-medium">
-              Active TSC verified
+              Active registered staff
             </p>
           </div>
           <div className="w-12 h-12 rounded-2xl bg-edumoPurple-500/10 border border-edumoPurple-500/20 flex items-center justify-center text-edumoPurple-500">
@@ -202,13 +278,13 @@ export const Dashboard: React.FC = () => {
         <Card className="flex items-center justify-between">
           <div>
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-              Active Streams
+              Active Classes
             </p>
             <h3 className="text-2xl font-display font-bold text-gray-900 mt-1">
               {loadingStats ? '...' : classCount}
             </h3>
             <p className="text-2xs text-brand-600 mt-1 font-medium">
-              All learning areas assigned
+              Configured class streams
             </p>
           </div>
           <div className="w-12 h-12 rounded-2xl bg-warning-500/10 border border-warning-500/20 flex items-center justify-center text-warning-600">
@@ -298,7 +374,7 @@ export const Dashboard: React.FC = () => {
           </button>
         </Card>
 
-        {/* Multi-Branch Campus Comparison */}
+        {/* Multi-Branch Campus Overview */}
         <Card className="lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -306,7 +382,7 @@ export const Dashboard: React.FC = () => {
                 Campus Branches
               </h3>
               <p className="text-xs text-gray-500">
-                Multi-branch performance and enrollment summary
+                Multi-branch status and configuration
               </p>
             </div>
             <Button
@@ -355,13 +431,13 @@ export const Dashboard: React.FC = () => {
                     <div>
                       <span className="text-2xs text-gray-500 block">Learners</span>
                       <span className="font-semibold text-gray-900">
-                        {isActive ? studentCount : '120'}
+                        {isActive ? studentCount : '—'}
                       </span>
                     </div>
                     <div>
-                      <span className="text-2xs text-gray-500 block">Attendance</span>
+                      <span className="text-2xs text-gray-500 block">Today's Rate</span>
                       <span className="font-semibold text-accent-600">
-                        96.2%
+                        {isActive ? todayAttendance.rate : '—'}
                       </span>
                     </div>
                     <div>

@@ -95,50 +95,8 @@ export const Students: React.FC = () => {
           ...(d.data() as DocumentData),
         })) as StudentRecord[];
 
-        // If newly created school with 0 students, seed sensible demo view
-        if (list.length === 0) {
-          const sampleList: StudentRecord[] = [
-            {
-              id: 'demo-1',
-              admissionNumber: '26/0001',
-              firstName: 'Amina',
-              lastName: 'Kariuki',
-              currentClassId: 'Grade 4',
-              currentStreamId: 'East',
-              gender: 'female',
-              boardingStatus: 'day',
-              status: 'active',
-              guardianPhone: '+254712345678',
-            },
-            {
-              id: 'demo-2',
-              admissionNumber: '26/0002',
-              firstName: 'Brian',
-              lastName: 'Omondi',
-              currentClassId: 'Grade 4',
-              currentStreamId: 'East',
-              gender: 'male',
-              boardingStatus: 'boarding',
-              status: 'active',
-              guardianPhone: '+254722334455',
-            },
-            {
-              id: 'demo-3',
-              admissionNumber: '26/0003',
-              firstName: 'Chantal',
-              lastName: 'Uwase',
-              currentClassId: 'Grade 5',
-              currentStreamId: 'North',
-              gender: 'female',
-              boardingStatus: 'day',
-              status: 'active',
-              guardianPhone: '+250788112233',
-            },
-          ];
-          setStudents(sampleList);
-        } else {
-          setStudents(list);
-        }
+        // Set real live data
+        setStudents(list);
         setLoading(false);
       },
       (err) => {

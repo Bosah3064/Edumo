@@ -8,6 +8,10 @@ import {
 import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
 import { getStorage, connectStorageEmulator } from 'firebase/storage';
 import { getAnalytics, isSupported } from 'firebase/analytics';
+import {
+  initializeAppCheck,
+  ReCaptchaEnterpriseProvider,
+} from 'firebase/app-check';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyBb_-yB9CFVg4w3b7_qoLmvzh_BY1Wj6j0',
@@ -32,6 +36,29 @@ export const storage = getStorage(app);
 export const analyticsPromise = isSupported().then((yes) =>
   yes ? getAnalytics(app) : null,
 );
+
+// App Check — protects backend resources from abuse
+// In development/emulator mode, use the debug provider token
+// In production, use reCAPTCHA Enterprise
+if (typeof window !== 'undefined') {
+  const useEmulatorAppCheck = import.meta.env.VITE_USE_EMULATORS === 'true';
+
+  if (useEmulatorAppCheck) {
+    // Enable debug token for emulator testing
+    // Set FIREBASE_APPCHECK_DEBUG_TOKEN=true in env or browser console:
+    //   self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+    (self as any).FIREBASE_APPCHECK_DEBUG_TOKEN =
+      import.meta.env.VITE_APPCHECK_DEBUG_TOKEN || true;
+  }
+
+  const recaptchaSiteKey = import.meta.env.VITE_RECAPTCHA_ENTERPRISE_SITE_KEY;
+  if (recaptchaSiteKey) {
+    initializeAppCheck(app, {
+      provider: new ReCaptchaEnterpriseProvider(recaptchaSiteKey),
+      isTokenAutoRefreshEnabled: true,
+    });
+  }
+}
 
 // Enable offline persistence for Firestore
 if (typeof window !== 'undefined') {

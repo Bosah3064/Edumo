@@ -23,12 +23,12 @@ describe('Zod Schemas Validation', () => {
     it('validates a valid organization creation payload', () => {
       const payload = {
         name: 'St. Mary High School',
-        type: 'secondary',
+        type: 'standalone',
         country: 'KE',
         school: {
           name: 'Main Campus',
           type: 'secondary',
-          curriculumType: 'cbc',
+          curriculumType: 'CBC',
           gradingMode: 'cbc_no_aggregate',
           address: {
             line1: '123 Education Road',
