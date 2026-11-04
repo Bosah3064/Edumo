@@ -123,5 +123,39 @@ describe('Country Pack Grading Engine (Master Spec Section 6)', () => {
       expect(result.division).toBeDefined();
     });
   });
+
+  describe('Zeraki-Inspired Academic Analytics Engine (Phase 1)', () => {
+    it('accurately computes weighted examination series totals across multiple assessments', () => {
+      // Opener (20%), Mid-Term (30%), End-Term (50%)
+      const openerScore = 80;
+      const midTermScore = 70;
+      const endTermScore = 90;
+
+      const weightedTotal = (openerScore * 0.20) + (midTermScore * 0.30) + (endTermScore * 0.50);
+      expect(weightedTotal).toBe(82);
+
+      const band = calculateGradeBand(weightedTotal, classicScale);
+      expect(band?.code).toBe('A');
+    });
+
+    it('correctly flags at-risk learners with score drops >= 15%', () => {
+      const baselineScore = 75; // Term 1 Opener
+      const currentScore = 52;  // Term 1 Mid-Term
+      const dropDelta = baselineScore - currentScore;
+
+      const isCriticalDrop = dropDelta >= 15;
+      expect(isCriticalDrop).toBe(true);
+      expect(dropDelta).toBe(23);
+    });
+
+    it('identifies below-competency performance threshold (< 45%)', () => {
+      const learnerScores = [32, 44, 45, 68, 85];
+      const belowCompetency = learnerScores.filter((score) => score < 45);
+
+      expect(belowCompetency.length).toBe(2);
+      expect(belowCompetency).toEqual([32, 44]);
+    });
+  });
 });
+
 

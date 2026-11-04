@@ -215,3 +215,151 @@ export async function parseUploadedMarksWorkbook(
   return { marks, errorCount };
 }
 
+/**
+ * Zeraki-Inspired Comprehensive Examination Analysis Workbook (.xlsx)
+ * Multi-sheet analysis: Executive Summary, Subject Performance, and Stream Matrix
+ */
+export interface ExamAnalysisOptions {
+  schoolName: string;
+  examTitle: string;
+  className: string;
+  termTitle: string;
+  academicYear: string;
+  totalStudents: number;
+  subjectSummaries: Array<{
+    subjectName: string;
+    teacherName: string;
+    entries: number;
+    meanScore: number;
+    highestScore: number;
+    lowestScore: number;
+    passRate: number;
+  }>;
+  streamSummaries: Array<{
+    streamName: string;
+    studentCount: number;
+    meanScore: number;
+    attendanceRate: number;
+  }>;
+}
+
+export async function exportExaminationAnalysisWorkbook(
+  options: ExamAnalysisOptions
+): Promise<void> {
+  const { default: ExcelJS } = await import('exceljs');
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'EDUMO Academic Analytics';
+  workbook.created = new Date();
+
+  // --- Sheet 1: Subject Performance Matrix ---
+  const subjectSheet = workbook.addWorksheet('Subject Analysis', {
+    views: [{ state: 'frozen', ySplit: 4 }],
+  });
+
+  subjectSheet.mergeCells('A1:G1');
+  const title1 = subjectSheet.getCell('A1');
+  title1.value = `${options.schoolName.toUpperCase()} — EXAMINATION SUBJECT PERFORMANCE ANALYSIS`;
+  title1.font = { name: 'Arial', size: 12, bold: true, color: { argb: 'FFFFFFFF' } };
+  title1.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1D5F99' } };
+  title1.alignment = { horizontal: 'center', vertical: 'middle' };
+  subjectSheet.getRow(1).height = 26;
+
+  subjectSheet.mergeCells('A2:G2');
+  const meta1 = subjectSheet.getCell('A2');
+  meta1.value = `Series: ${options.examTitle} | Class: ${options.className} | Term: ${options.termTitle} (${options.academicYear}) | Total Candidates: ${options.totalStudents}`;
+  meta1.font = { name: 'Arial', size: 9, italic: true, color: { argb: 'FF334155' } };
+  meta1.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
+  meta1.alignment = { horizontal: 'center', vertical: 'middle' };
+  subjectSheet.getRow(2).height = 18;
+
+  const subHeaders = ['No.', 'Learning Area / Subject', 'Subject Educator', 'Entries', 'Mean Score (%)', 'Highest Mark', 'Pass / Competent Rate'];
+  subjectSheet.getRow(4).values = subHeaders;
+  subjectSheet.getRow(4).height = 22;
+  subjectSheet.getRow(4).eachCell((c) => {
+    c.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+    c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF334155' } };
+    c.alignment = { horizontal: 'center', vertical: 'middle' };
+  });
+
+  options.subjectSummaries.forEach((s, idx) => {
+    const row = subjectSheet.addRow([
+      idx + 1,
+      sanitizeCellValue(s.subjectName),
+      sanitizeCellValue(s.teacherName),
+      s.entries,
+      `${s.meanScore}%`,
+      s.highestScore,
+      `${s.passRate}%`,
+    ]);
+    row.height = 20;
+    row.getCell(1).alignment = { horizontal: 'center' };
+    row.getCell(4).alignment = { horizontal: 'center' };
+    row.getCell(5).alignment = { horizontal: 'center' };
+    row.getCell(6).alignment = { horizontal: 'center' };
+    row.getCell(7).alignment = { horizontal: 'center' };
+  });
+
+  subjectSheet.columns = [{ width: 8 }, { width: 30 }, { width: 24 }, { width: 12 }, { width: 16 }, { width: 14 }, { width: 22 }];
+  subjectSheet.autoFilter = `A4:G${4 + options.subjectSummaries.length}`;
+
+  // --- Sheet 2: Stream Comparison ---
+  const streamSheet = workbook.addWorksheet('Stream Comparison', {
+    views: [{ state: 'frozen', ySplit: 4 }],
+  });
+
+  streamSheet.mergeCells('A1:E1');
+  const title2 = streamSheet.getCell('A1');
+  title2.value = `${options.schoolName.toUpperCase()} — CLASS STREAM OPERATIONAL COMPARISON`;
+  title2.font = { name: 'Arial', size: 12, bold: true, color: { argb: 'FFFFFFFF' } };
+  title2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF683669' } };
+  title2.alignment = { horizontal: 'center', vertical: 'middle' };
+  streamSheet.getRow(1).height = 26;
+
+  streamSheet.mergeCells('A2:E2');
+  const meta2 = streamSheet.getCell('A2');
+  meta2.value = `Note: CBC schools adhere to No-Aggregate standards. Ranks are suppressed.`;
+  meta2.font = { name: 'Arial', size: 9, italic: true, color: { argb: 'FF334155' } };
+  meta2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFDF4FF' } };
+  meta2.alignment = { horizontal: 'center', vertical: 'middle' };
+  streamSheet.getRow(2).height = 18;
+
+  const strHeaders = ['Stream / Class Section', 'Candidature', 'Mean Assessment Score', 'Daily Attendance Rate', 'Status'];
+  streamSheet.getRow(4).values = strHeaders;
+  streamSheet.getRow(4).height = 22;
+  streamSheet.getRow(4).eachCell((c) => {
+    c.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+    c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF334155' } };
+    c.alignment = { horizontal: 'center', vertical: 'middle' };
+  });
+
+  options.streamSummaries.forEach((st) => {
+    const row = streamSheet.addRow([
+      sanitizeCellValue(st.streamName),
+      st.studentCount,
+      `${st.meanScore}%`,
+      `${st.attendanceRate}%`,
+      'VERIFIED',
+    ]);
+    row.height = 20;
+    row.getCell(2).alignment = { horizontal: 'center' };
+    row.getCell(3).alignment = { horizontal: 'center' };
+    row.getCell(4).alignment = { horizontal: 'center' };
+    row.getCell(5).alignment = { horizontal: 'center' };
+  });
+
+  streamSheet.columns = [{ width: 28 }, { width: 14 }, { width: 24 }, { width: 22 }, { width: 16 }];
+  streamSheet.autoFilter = `A4:E${4 + options.streamSummaries.length}`;
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `exam_analysis_${options.examTitle.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+

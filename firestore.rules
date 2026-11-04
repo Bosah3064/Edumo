@@ -259,6 +259,15 @@ service cloud.firestore {
           }
         }
 
+        // ===== EXAM SERIES (Zeraki-Inspired) =====
+        match /examSeries/{seriesId} {
+          allow read: if hasSchoolAccess(orgId, schoolId);
+          allow create, update: if hasSchoolRole(orgId, schoolId,
+            ['principal', 'deputy', 'admin']) ||
+            hasPermission('academics.write');
+          allow delete: if hasSchoolRole(orgId, schoolId, ['principal']);
+        }
+
         // ===== REPORT CARDS =====
         match /reportCards/{reportCardId} {
           allow read: if hasSchoolAccess(orgId, schoolId) ||

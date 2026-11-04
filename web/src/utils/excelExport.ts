@@ -396,3 +396,229 @@ export async function exportStaffDirectory(
   downloadBlob(blob, `staff_directory_${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
+// ============================================================
+// GOVERNMENT-FORMAT EXPORT MODULES (Master Spec Section 6 & 11)
+// Pluggable per country pack: NEMIS, UNEB, NECTA, REB
+// Marked VERIFY WITH OFFICIAL SOURCE
+// ============================================================
+
+export interface GovernmentExportStudent {
+  admissionNumber: string;
+  firstName: string;
+  lastName: string;
+  gender: string;
+  dob?: string;
+  className: string;
+  upiOrLin?: string;
+  specialNeeds?: string;
+}
+
+/**
+ * Kenya: NEMIS / CBA Portal Learner Register Export (.xlsx)
+ * VERIFY WITH OFFICIAL SOURCE: Ministry of Education (MoE) Kenya
+ */
+export async function exportKenyaNEMISReport(
+  schoolName: string,
+  schoolCode: string,
+  students: GovernmentExportStudent[]
+): Promise<void> {
+  const { default: ExcelJS } = await import('exceljs');
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'EDUMO - Kenya NEMIS Adapter';
+  workbook.created = new Date();
+
+  const sheet = workbook.addWorksheet('NEMIS_Learners_Upload', {
+    views: [{ state: 'frozen', ySplit: 4 }],
+  });
+
+  sheet.mergeCells('A1:H1');
+  const title = sheet.getCell('A1');
+  title.value = `REPUBLIC OF KENYA - MINISTRY OF EDUCATION - NEMIS CBA REGISTRY`;
+  title.font = { name: 'Arial', size: 12, bold: true, color: { argb: 'FFFFFFFF' } };
+  title.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F766E' } };
+  title.alignment = { horizontal: 'center', vertical: 'middle' };
+  sheet.getRow(1).height = 26;
+
+  sheet.mergeCells('A2:H2');
+  const meta = sheet.getCell('A2');
+  meta.value = `School: ${schoolName} | MoE Code: ${schoolCode || 'MOE-KE-PENDING'} | Official CBC Format [VERIFY WITH OFFICIAL SOURCE]`;
+  meta.font = { name: 'Arial', size: 9, italic: true, color: { argb: 'FF334155' } };
+  meta.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0FDFA' } };
+  meta.alignment = { horizontal: 'center', vertical: 'middle' };
+  sheet.getRow(2).height = 18;
+
+  const headers = ['Serial No', 'NEMIS UPI Code', 'Admission No', 'First Name', 'Surname', 'Gender', 'CBC Grade', 'Special Needs Category'];
+  sheet.getRow(4).values = headers;
+  sheet.getRow(4).height = 22;
+  sheet.getRow(4).eachCell((c) => {
+    c.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+    c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF134E4A' } };
+    c.alignment = { horizontal: 'center', vertical: 'middle' };
+  });
+
+  students.forEach((st, idx) => {
+    const upi = st.upiOrLin || `UPI-${100000 + idx}`;
+    const row = sheet.addRow([
+      idx + 1,
+      sanitizeCellValue(upi),
+      sanitizeCellValue(st.admissionNumber),
+      sanitizeCellValue(st.firstName),
+      sanitizeCellValue(st.lastName),
+      sanitizeCellValue(st.gender === 'female' ? 'F' : 'M'),
+      sanitizeCellValue(st.className),
+      sanitizeCellValue(st.specialNeeds || 'NONE'),
+    ]);
+    row.height = 20;
+    row.getCell(1).alignment = { horizontal: 'center' };
+    row.getCell(2).alignment = { horizontal: 'center' };
+    row.getCell(6).alignment = { horizontal: 'center' };
+    row.getCell(7).alignment = { horizontal: 'center' };
+  });
+
+  sheet.autoFilter = `A4:H${4 + students.length}`;
+  sheet.columns = [{ width: 10 }, { width: 18 }, { width: 16 }, { width: 18 }, { width: 18 }, { width: 10 }, { width: 14 }, { width: 22 }];
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  downloadBlob(blob, `nemis_ke_cba_${schoolCode || 'export'}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
+
+/**
+ * Uganda: UNEB Examination Candidate Register Export (.xlsx)
+ * VERIFY WITH OFFICIAL SOURCE: Uganda National Examinations Board
+ */
+export async function exportUgandaUNEBReport(
+  schoolName: string,
+  centreNumber: string,
+  students: GovernmentExportStudent[]
+): Promise<void> {
+  const { default: ExcelJS } = await import('exceljs');
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'EDUMO - Uganda UNEB Adapter';
+  workbook.created = new Date();
+
+  const sheet = workbook.addWorksheet('UNEB_Candidate_Register', {
+    views: [{ state: 'frozen', ySplit: 4 }],
+  });
+
+  sheet.mergeCells('A1:G1');
+  const title = sheet.getCell('A1');
+  title.value = `UGANDA NATIONAL EXAMINATIONS BOARD (UNEB) — CANDIDATE REGISTER`;
+  title.font = { name: 'Arial', size: 12, bold: true, color: { argb: 'FFFFFFFF' } };
+  title.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFB45309' } };
+  title.alignment = { horizontal: 'center', vertical: 'middle' };
+  sheet.getRow(1).height = 26;
+
+  sheet.mergeCells('A2:G2');
+  const meta = sheet.getCell('A2');
+  meta.value = `Centre: ${centreNumber || 'U0000'} | School: ${schoolName} | Direction-Aware D1..F9 Standard`;
+  meta.font = { name: 'Arial', size: 9, italic: true, color: { argb: 'FF334155' } };
+  meta.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } };
+  meta.alignment = { horizontal: 'center', vertical: 'middle' };
+  sheet.getRow(2).height = 18;
+
+  const headers = ['Candidate Index', 'Learner LIN', 'Admission No', 'Candidate Full Name', 'Sex', 'Class/Level', 'UNEB Status'];
+  sheet.getRow(4).values = headers;
+  sheet.getRow(4).height = 22;
+  sheet.getRow(4).eachCell((c) => {
+    c.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+    c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF78350F' } };
+    c.alignment = { horizontal: 'center', vertical: 'middle' };
+  });
+
+  students.forEach((st, idx) => {
+    const candidateIdx = `${centreNumber || 'U1234'}/${String(idx + 1).padStart(3, '0')}`;
+    const row = sheet.addRow([
+      sanitizeCellValue(candidateIdx),
+      sanitizeCellValue(st.upiOrLin || `LIN-${200000 + idx}`),
+      sanitizeCellValue(st.admissionNumber),
+      sanitizeCellValue(`${st.firstName} ${st.lastName}`.toUpperCase()),
+      sanitizeCellValue(st.gender === 'female' ? 'F' : 'M'),
+      sanitizeCellValue(st.className),
+      'REGISTERED',
+    ]);
+    row.height = 20;
+    row.getCell(1).alignment = { horizontal: 'center' };
+    row.getCell(2).alignment = { horizontal: 'center' };
+    row.getCell(5).alignment = { horizontal: 'center' };
+    row.getCell(7).alignment = { horizontal: 'center' };
+  });
+
+  sheet.autoFilter = `A4:G${4 + students.length}`;
+  sheet.columns = [{ width: 18 }, { width: 18 }, { width: 16 }, { width: 30 }, { width: 8 }, { width: 16 }, { width: 14 }];
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  downloadBlob(blob, `uneb_ug_${centreNumber || 'candidates'}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
+
+/**
+ * Tanzania: NECTA Candidate Registration Roster Export (.xlsx)
+ * VERIFY WITH OFFICIAL SOURCE: National Examinations Council of Tanzania
+ */
+export async function exportTanzaniaNECTAReport(
+  schoolName: string,
+  centreNumber: string,
+  students: GovernmentExportStudent[]
+): Promise<void> {
+  const { default: ExcelJS } = await import('exceljs');
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'EDUMO - Tanzania NECTA Adapter';
+  workbook.created = new Date();
+
+  const sheet = workbook.addWorksheet('NECTA_CSEE_O-Level', {
+    views: [{ state: 'frozen', ySplit: 4 }],
+  });
+
+  sheet.mergeCells('A1:G1');
+  const title = sheet.getCell('A1');
+  title.value = `BARAZA LA MITIHANI LA TANZANIA (NECTA) — ORODHA YA WATAHINIWA`;
+  title.font = { name: 'Arial', size: 12, bold: true, color: { argb: 'FFFFFFFF' } };
+  title.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E40AF' } };
+  title.alignment = { horizontal: 'center', vertical: 'middle' };
+  sheet.getRow(1).height = 26;
+
+  sheet.mergeCells('A2:G2');
+  const meta = sheet.getCell('A2');
+  meta.value = `Kituo: ${centreNumber || 'S.0000'} | Shule: ${schoolName} | Division I..IV Best-6/7 Form 4/6 Roster`;
+  meta.font = { name: 'Arial', size: 9, italic: true, color: { argb: 'FF334155' } };
+  meta.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEFF6FF' } };
+  meta.alignment = { horizontal: 'center', vertical: 'middle' };
+  sheet.getRow(2).height = 18;
+
+  const headers = ['Namba ya Mtahiniwa', 'Namba ya Usajili', 'Jina Kamili la Mwanafunzi', 'Jinsia', 'Kidato', 'Mchepuo', 'Hali'];
+  sheet.getRow(4).values = headers;
+  sheet.getRow(4).height = 22;
+  sheet.getRow(4).eachCell((c) => {
+    c.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+    c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF172554' } };
+    c.alignment = { horizontal: 'center', vertical: 'middle' };
+  });
+
+  students.forEach((st, idx) => {
+    const candNo = `${centreNumber || 'S.1234'}/${String(idx + 1).padStart(4, '0')}`;
+    const row = sheet.addRow([
+      sanitizeCellValue(candNo),
+      sanitizeCellValue(st.admissionNumber),
+      sanitizeCellValue(`${st.firstName} ${st.lastName}`.toUpperCase()),
+      sanitizeCellValue(st.gender === 'female' ? 'KE' : 'ME'),
+      sanitizeCellValue(st.className),
+      'SCIENCE / ARTS',
+      'HALALI',
+    ]);
+    row.height = 20;
+    row.getCell(1).alignment = { horizontal: 'center' };
+    row.getCell(2).alignment = { horizontal: 'center' };
+    row.getCell(4).alignment = { horizontal: 'center' };
+    row.getCell(7).alignment = { horizontal: 'center' };
+  });
+
+  sheet.autoFilter = `A4:G${4 + students.length}`;
+  sheet.columns = [{ width: 22 }, { width: 18 }, { width: 30 }, { width: 10 }, { width: 16 }, { width: 18 }, { width: 14 }];
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  downloadBlob(blob, `necta_tz_${centreNumber || 'candidates'}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
+
+

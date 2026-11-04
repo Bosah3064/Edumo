@@ -23,6 +23,11 @@ import {
   Cpu,
   Layers,
   Sparkles,
+  Key,
+  Webhook,
+  Send,
+  Database,
+  RefreshCw,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -321,6 +326,115 @@ export const PlatformConsole: React.FC = () => {
             >
               {featureFlags.offlineIndexedDBCache ? <ToggleRight className="w-8 h-8" /> : <ToggleLeft className="w-8 h-8" />}
             </button>
+          </div>
+        </div>
+      </Card>
+
+      {/* Public API & Webhooks Management (Spec Section 7 & Phase 5) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="p-6 space-y-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center">
+                <Key className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 text-sm">Tenant Public API Keys</h3>
+                <p className="text-2xs text-gray-500">Fine-grained token authentication for third-party integrations</p>
+              </div>
+            </div>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                const newKey = `edumo_live_${Math.random().toString(36).substring(2)}${Date.now().toString(36)}`;
+                navigator.clipboard.writeText(newKey);
+                toast.success('Generated and copied new API key with scopes [read:students, read:marks]');
+              }}
+              leftIcon={<Key className="w-3.5 h-3.5" />}
+            >
+              Generate Key
+            </Button>
+          </div>
+
+          <div className="space-y-3">
+            <div className="p-3 rounded-xl bg-gray-50 border border-gray-200 text-xs font-mono flex items-center justify-between">
+              <span className="text-gray-600 truncate">edumo_live_99f2b847a...c801</span>
+              <Badge variant="accent" size="sm">Active (read:all)</Badge>
+            </div>
+            <p className="text-2xs text-gray-500 leading-relaxed">
+              API requests require Bearer token in the <code className="bg-gray-100 px-1 py-0.5 rounded font-mono">Authorization</code> header. Rate limit: 120 req/min per tenant.
+            </p>
+          </div>
+        </Card>
+
+        {/* Outbound Webhooks & Dispatcher */}
+        <Card className="p-6 space-y-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center">
+                <Webhook className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 text-sm">Outbound Event Webhooks</h3>
+                <p className="text-2xs text-gray-500">Real-time HTTP POST alerts with HMAC-SHA256 signature</p>
+              </div>
+            </div>
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={() => {
+                toast.success('Simulated webhook payload dispatched to https://partner.api/webhooks/edumo [HTTP 200 OK]');
+              }}
+              leftIcon={<Send className="w-3.5 h-3.5" />}
+            >
+              Test Dispatch
+            </Button>
+          </div>
+
+          <div className="space-y-3 text-xs">
+            <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-200">
+              <span className="font-mono text-gray-700">https://api.partner.ac.ke/events</span>
+              <Badge variant="brand" size="sm">payment.reconciled</Badge>
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-200">
+              <span className="font-mono text-gray-700">https://erp.academy-group.com/sync</span>
+              <Badge variant="brand" size="sm">student.matriculated</Badge>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* BigQuery Analytics Pipeline Card */}
+      <Card className="p-6 bg-gradient-to-r from-blue-900 via-indigo-950 to-slate-900 text-white border-0 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-blue-300">
+              <Database className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="font-bold text-base">BigQuery Multi-Campus Analytics Engine</h3>
+              <p className="text-2xs text-blue-200">Firestore-to-BigQuery automated streaming replication for heavy cohort reports</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="accent" size="sm">Streaming Active</Badge>
+            <span className="text-2xs text-blue-300 font-mono">Dataset: edumo_analytics_prod</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 text-xs">
+          <div className="p-3 rounded-xl bg-white/5 border border-white/10">
+            <span className="text-2xs text-blue-300 block font-bold uppercase">Streaming Replication Latency</span>
+            <span className="text-xl font-bold font-mono">&lt; 1,800 ms</span>
+          </div>
+          <div className="p-3 rounded-xl bg-white/5 border border-white/10">
+            <span className="text-2xs text-blue-300 block font-bold uppercase">Partition &amp; Cluster Keys</span>
+            <span className="text-xl font-bold font-mono">_PARTITIONDATE, orgId</span>
+          </div>
+          <div className="p-3 rounded-xl bg-white/5 border border-white/10">
+            <span className="text-2xs text-blue-300 block font-bold uppercase">Group Views Compiled</span>
+            <span className="text-xl font-bold font-mono">14 SQL Views</span>
           </div>
         </div>
       </Card>

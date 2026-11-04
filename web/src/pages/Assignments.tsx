@@ -33,6 +33,11 @@ import {
   Calendar,
   BookOpen,
   Award,
+  HelpCircle,
+  Share2,
+  Download,
+  Sparkles,
+  Check,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -55,9 +60,101 @@ export const Assignments: React.FC = () => {
   const { organization, currentSchool, currentRole } = useTenant();
   const { currentUser } = useAuth();
 
+  const [activeSection, setActiveSection] = useState<'homework' | 'quizzes' | 'resources'>('homework');
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
+
+  // Quiz auto-marking state
+  const [activeQuiz, setActiveQuiz] = useState<any | null>(null);
+  const [quizAnswers, setQuizAnswers] = useState<Record<number, number>>({});
+  const [quizResult, setQuizResult] = useState<{ score: number; total: number; percentage: number } | null>(null);
+
+  const sampleQuizzes = [
+    {
+      id: 'quiz-01',
+      title: 'CBC Integrated Science: Ecosystems & Living Things',
+      grade: 'Grade 6',
+      subject: 'Science & Technology',
+      timeLimitMinutes: 15,
+      questions: [
+        {
+          id: 1,
+          question: 'Which of the following organisms is an autotroph (primary producer)?',
+          options: ['Acacia tree', 'African elephant', 'Grasshopper', 'Lion'],
+          correctIndex: 0,
+        },
+        {
+          id: 2,
+          question: 'What is the primary function of chlorophyll in plant leaves?',
+          options: ['Water absorption', 'Trapping solar light energy for photosynthesis', 'Gas exchange', 'Anchoring the stem'],
+          correctIndex: 1,
+        },
+        {
+          id: 3,
+          question: 'Which East African lake is known for being the second deepest freshwater lake in the world?',
+          options: ['Lake Victoria', 'Lake Naivasha', 'Lake Tanganyika', 'Lake Turkana'],
+          correctIndex: 2,
+        },
+      ],
+    },
+    {
+      id: 'quiz-02',
+      title: 'Mathematics: Fractions, Ratios & Percentages',
+      grade: 'Grade 5',
+      subject: 'Mathematics',
+      timeLimitMinutes: 20,
+      questions: [
+        {
+          id: 1,
+          question: 'What is 3/4 expressed as a percentage?',
+          options: ['25%', '50%', '75%', '80%'],
+          correctIndex: 2,
+        },
+        {
+          id: 2,
+          question: 'If a school has 120 boys and 80 girls, what is the ratio of boys to girls in simplest form?',
+          options: ['3:2', '2:3', '4:3', '6:4'],
+          correctIndex: 0,
+        },
+      ],
+    },
+  ];
+
+  const sampleResources = [
+    {
+      id: 'res-01',
+      title: 'KICD Curriculum Design: Grade 6 Mathematics',
+      category: 'Curriculum Guide',
+      size: '2.4 MB',
+      subject: 'Mathematics',
+      dateAdded: '2026-02-14',
+    },
+    {
+      id: 'res-02',
+      title: 'Kenya CBC Formative Assessment Rubrics (KNEC CBA)',
+      category: 'Assessment Rubric',
+      size: '1.8 MB',
+      subject: 'All Learning Areas',
+      dateAdded: '2026-01-20',
+    },
+    {
+      id: 'res-03',
+      title: 'UNEB O-Level Physics Revision Question Bank',
+      category: 'Past Paper',
+      size: '4.1 MB',
+      subject: 'Physics',
+      dateAdded: '2026-03-05',
+    },
+    {
+      id: 'res-04',
+      title: 'NECTA Kidato cha Nne Kiswahili Miongozo ya Utungaji',
+      category: 'Teaching Guide',
+      size: '3.2 MB',
+      subject: 'Kiswahili',
+      dateAdded: '2026-02-28',
+    },
+  ];
 
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState('');

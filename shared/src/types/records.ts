@@ -108,6 +108,56 @@ export interface ReportCard extends DocMeta {
   pdfPath?: string;
 }
 
+/** Examination Series Configuration (Zeraki-Inspired) */
+export interface ExamSeries extends Partial<DocMeta> {
+  name: string;
+  academicYearId: string;
+  termId: string;
+  weightPercentage: number;
+  startDate?: string;
+  endDate?: string;
+  status: 'draft' | 'active' | 'locked' | 'published';
+  targetClasses?: string[];
+}
+
+/** Diagnostic Subject Performance */
+export interface SubjectPerformance {
+  subjectId: string;
+  subjectName: string;
+  meanScore: number;
+  highestScore: number;
+  lowestScore: number;
+  totalLearners: number;
+  meetingOrExceedingRate: number;
+  teacherName?: string;
+}
+
+/** Early Academic Intervention Alert */
+export interface AtRiskLearnerAlert {
+  studentId: string;
+  studentName: string;
+  admissionNumber: string;
+  className: string;
+  streamName?: string;
+  riskFactor: 'critical_drop' | 'below_competency' | 'chronic_missing';
+  previousScore: number;
+  currentScore: number;
+  scoreDelta: number;
+  remedialFocusArea: string;
+}
+
+/** Longitudinal Learner Progress Record */
+export interface LearnerTermProgress {
+  academicYear: string;
+  termTitle: string;
+  overallAverage?: number;
+  overallBand?: string;
+  subjectsPassed: number;
+  totalSubjects: number;
+  atRisk: boolean;
+}
+
+
 export interface ReportCardSubject {
   subjectId: string;
   name: string;
