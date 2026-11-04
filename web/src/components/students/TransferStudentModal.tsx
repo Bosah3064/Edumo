@@ -191,3 +191,4 @@ export const TransferStudentModal: React.FC<TransferStudentModalProps> = ({
     </Modal>
   );
 };
+

@@ -15,6 +15,9 @@ import { ExcelImport } from './pages/ExcelImport';
 import { ParentPortal } from './pages/ParentPortal';
 import { Settings } from './pages/Settings';
 import { Assignments } from './pages/Assignments';
+import { Academics } from './pages/Academics';
+import { Timetable } from './pages/Timetable';
+import { Reports } from './pages/Reports';
 
 export const router = createBrowserRouter([
   // Public routes
@@ -70,6 +73,18 @@ export const router = createBrowserRouter([
       {
         path: '/assignments',
         element: <Assignments />,
+      },
+      {
+        path: '/academics',
+        element: <Academics />,
+      },
+      {
+        path: '/timetable',
+        element: <Timetable />,
+      },
+      {
+        path: '/reports',
+        element: <Reports />,
       },
       {
         path: '/parent-portal',

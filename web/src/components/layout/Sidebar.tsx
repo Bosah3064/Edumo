@@ -18,6 +18,9 @@ import {
   Settings,
   LogOut,
   ClipboardCheck,
+  Award,
+  Calendar,
+  FileText,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -48,10 +51,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
     { to: '/students', label: navTranslations.students, icon: Users },
     { to: '/attendance', label: navTranslations.attendance, icon: CalendarCheck2 },
     { to: '/classes', label: navTranslations.classes, icon: BookOpen },
+    { to: '/timetable', label: sidebarLanguage === 'sw' ? 'Ratiba ya Masomo' : 'Class Timetable', icon: Calendar },
+    { to: '/academics', label: sidebarLanguage === 'sw' ? 'Matokeo na Alama' : 'Academics & Marks', icon: Award },
+    { to: '/assignments', label: sidebarLanguage === 'sw' ? 'Kazi za Darasa' : 'Assignments', icon: ClipboardCheck },
     { to: '/staff', label: navTranslations.staff, icon: GraduationCap },
     { to: '/announcements', label: navTranslations.announcements, icon: Megaphone },
-    { to: '/assignments', label: sidebarLanguage === 'sw' ? 'Kazi za Darasa' : 'Assignments', icon: ClipboardCheck },
     { to: '/excel-import', label: navTranslations.excelImport, icon: FileSpreadsheet },
+    { to: '/reports', label: sidebarLanguage === 'sw' ? 'Ripoti za Excel' : 'Report Builder', icon: FileText },
     { to: '/parent-portal', label: navTranslations.parentPortal, icon: HeartHandshake },
     { to: '/settings', label: navTranslations.settings, icon: Settings },
   ];
