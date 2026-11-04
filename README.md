@@ -242,8 +242,8 @@ firebase deploy --only firestore:rules,storage:rules
 |-------|--------|-------------|
 | 0 | ✅ Complete | Architecture, data model, rules, functions, country packs |
 | 1 | ✅ Complete | Foundation MVP — onboarding, records, attendance (offline), announcements, parent portal, real Excel import/export (.xlsx), Teacher Task Tracker, Exam Card print generator, inter-branch transfers, audit logs |
-| 2 | 🔜 Next | Academics — grading engine (CBC, UNEB, NECTA, Rwanda), assessments, report cards (PDF), timetable with clash detection, custom report builder |
-| 3 | Planned | Finance — fees, payments, M-Pesa Daraja, Airtel Money, reconciliation, financial reports |
+| 2 | ✅ Complete | Academics & Excel Reports — direction-aware grading engine (CBC, UNEB, NECTA, Rwanda), Marks-by-Excel offline entry, continuous assessment gradebook, report cards (PDF/print), timetable with automated clash detection & relief substitution, custom report builder |
+| 3 | 🔜 Next | Finance — fees structures per class/term/branch, discounts, invoices, receipts, arrears, M-Pesa Daraja & mobile money adapters, reconciliation, financial reports |
 | 4 | Planned | Operations — admissions pipeline, parent-teacher messaging, transport, pastoral, health |
 | 5 | Planned | Extended — library, boarding, platform console, BigQuery analytics |
 | 6 | Planned | Hardening — penetration testing, accessibility audit, legal privacy policy |
