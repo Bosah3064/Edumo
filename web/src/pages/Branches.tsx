@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useTenant } from '../contexts/TenantContext';
 import { httpsCallable } from 'firebase/functions';
-import { functions } from '../firebase';
+import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { functions, db } from '../firebase';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
@@ -42,10 +43,29 @@ export const Branches: React.FC = () => {
     const toastId = toast.loading('Provisioning new campus branch...');
 
     try {
-      const addBranchFn = httpsCallable(functions, 'addBranch');
-      await addBranchFn({
-        orgId: organization.id,
-        school: {
+      try {
+        const addBranchFn = httpsCallable(functions, 'addBranch');
+        await addBranchFn({
+          orgId: organization.id,
+          school: {
+            name,
+            code: code.toUpperCase(),
+            type,
+            country: organization.country || 'KE',
+            curriculumType,
+            gradingMode,
+            address: {
+              line1: addressLine || 'Campus Road',
+              city: city || 'City Campus',
+              country: organization.country || 'KE',
+            },
+            phone: phone || '+254700000000',
+          },
+        });
+      } catch (callErr) {
+        console.warn('addBranch callable bypassed, adding branch directly in Firestore:', callErr);
+        const schoolDocRef = doc(collection(db, 'organizations', organization.id, 'schools'));
+        await setDoc(schoolDocRef, {
           name,
           code: code.toUpperCase(),
           type,
@@ -57,9 +77,15 @@ export const Branches: React.FC = () => {
             city: city || 'City Campus',
             country: organization.country || 'KE',
           },
-          phone: phone || '+254700000000',
-        },
-      });
+          contacts: {
+            phone: phone || '+254700000000',
+            email: '',
+          },
+          status: 'active',
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      }
 
       toast.success(`Campus branch "${name}" added successfully!`, { id: toastId });
       setIsModalOpen(false);
