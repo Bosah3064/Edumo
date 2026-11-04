@@ -21,6 +21,7 @@ import {
   Award,
   Calendar,
   FileText,
+  CreditCard,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -58,6 +59,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
     { to: '/announcements', label: navTranslations.announcements, icon: Megaphone },
     { to: '/excel-import', label: navTranslations.excelImport, icon: FileSpreadsheet },
     { to: '/reports', label: sidebarLanguage === 'sw' ? 'Ripoti za Excel' : 'Report Builder', icon: FileText },
+    { to: '/finance', label: sidebarLanguage === 'sw' ? 'Ada na Fedha' : 'Fees & Finance', icon: CreditCard },
     { to: '/parent-portal', label: navTranslations.parentPortal, icon: HeartHandshake },
     { to: '/settings', label: navTranslations.settings, icon: Settings },
   ];

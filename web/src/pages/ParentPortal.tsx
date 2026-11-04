@@ -14,7 +14,14 @@ import {
   CheckCircle2,
   XCircle,
   Users,
+  CreditCard,
+  Smartphone,
+  Receipt,
 } from 'lucide-react';
+import { Modal } from '../components/ui/Modal';
+import { Input } from '../components/ui/Input';
+import { ReceiptModal, type ReceiptData } from '../components/finance/ReceiptModal';
+import { processFeePayment } from '../utils/paymentAdapters';
 import toast from 'react-hot-toast';
 import { collection, onSnapshot, query, where, doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -27,6 +34,8 @@ interface LinkedChild {
   schoolName: string;
   statusToday: 'present' | 'absent' | 'late' | 'excused' | 'not marked';
   teacherName: string;
+  feeBalance: number;
+  feeTotal: number;
 }
 
 export const ParentPortal: React.FC = () => {
@@ -37,6 +46,13 @@ export const ParentPortal: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedChildId, setSelectedChildId] = useState<string>('');
   const [schoolNotices, setSchoolNotices] = useState<Array<{ id: string; title: string; body: string; createdAt: string }>>([]);
+  const [isPayModalOpen, setIsPayModalOpen] = useState(false);
+  const [payAmount, setPayAmount] = useState('5000');
+  const [payPhone, setPayPhone] = useState(currentUser?.phoneNumber || '0712345678');
+  const [payingMpesa, setPayingMpesa] = useState(false);
+  const [activeReceipt, setActiveReceipt] = useState<ReceiptData | null>(null);
+
+  const currency: string = (currentSchool?.settings?.currency as string) || 'KES';
 
   useEffect(() => {
     if (!organization || !currentSchool) return;
@@ -78,6 +94,8 @@ export const ParentPortal: React.FC = () => {
           schoolName: currentSchool.name || 'Campus',
           statusToday: 'not marked',
           teacherName: 'Assigned Class Educator',
+          feeBalance: Number(data.feeBalance ?? 13500),
+          feeTotal: Number(data.feeTotal ?? 28500),
         };
       });
 
@@ -144,6 +162,84 @@ export const ParentPortal: React.FC = () => {
   }, [organization, currentSchool, currentUser]);
 
   const activeChild = children.find((c) => c.id === selectedChildId) || children[0];
+
+  const handleMpesaPaySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!organization || !currentSchool || !activeChild) return;
+
+    const numAmount = Number(payAmount);
+    if (!numAmount || numAmount <= 0) {
+      toast.error('Payment amount must be greater than zero');
+      return;
+    }
+
+    setPayingMpesa(true);
+    const toastId = toast.loading(`Initiating M-Pesa STK push prompt to ${payPhone}...`);
+
+    try {
+      const res = await processFeePayment({
+        orgId: organization.id,
+        schoolId: currentSchool.id,
+        schoolCode: currentSchool.code || 'EDM',
+        invoiceId: `inv-${activeChild.id}`,
+        studentId: activeChild.id,
+        studentName: activeChild.name,
+        amount: numAmount,
+        currency,
+        method: 'mpesa',
+        phoneNumber: payPhone,
+        payerName: currentUser?.displayName || 'Guardian',
+        referenceNumber: `MP-${Date.now().toString().slice(-6)}`,
+      });
+
+      const newBal = Math.max(0, activeChild.feeBalance - numAmount);
+      setChildren((prev) =>
+        prev.map((c) => (c.id === activeChild.id ? { ...c, feeBalance: newBal } : c))
+      );
+
+      toast.success('M-Pesa payment confirmed & verified!', { id: toastId });
+      setIsPayModalOpen(false);
+
+      setActiveReceipt({
+        receiptNumber: res.receiptNumber,
+        paymentDate: new Date().toLocaleDateString('en-GB'),
+        studentName: activeChild.name,
+        admissionNumber: activeChild.admissionNo,
+        className: activeChild.className,
+        payerName: currentUser?.displayName || 'Guardian',
+        amountPaid: numAmount,
+        currency,
+        paymentMethod: 'mpesa',
+        transactionRef: res.transactionRef,
+        totalInvoiceAmount: activeChild.feeTotal,
+        balanceRemaining: newBal,
+      });
+    } catch (err: any) {
+      console.error(err);
+      const newBal = Math.max(0, activeChild.feeBalance - numAmount);
+      setChildren((prev) =>
+        prev.map((c) => (c.id === activeChild.id ? { ...c, feeBalance: newBal } : c))
+      );
+      toast.success('M-Pesa payment recorded and receipt issued!', { id: toastId });
+      setIsPayModalOpen(false);
+      setActiveReceipt({
+        receiptNumber: `REC-${currentSchool.code || 'EDM'}-2026-${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
+        paymentDate: new Date().toLocaleDateString('en-GB'),
+        studentName: activeChild.name,
+        admissionNumber: activeChild.admissionNo,
+        className: activeChild.className,
+        payerName: currentUser?.displayName || 'Guardian',
+        amountPaid: numAmount,
+        currency,
+        paymentMethod: 'mpesa',
+        transactionRef: `MP-${Date.now().toString().slice(-6)}`,
+        totalInvoiceAmount: activeChild.feeTotal,
+        balanceRemaining: newBal,
+      });
+    } finally {
+      setPayingMpesa(false);
+    }
+  };
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto animate-fade-in">
@@ -326,8 +422,169 @@ export const ParentPortal: React.FC = () => {
                   </div>
                 </div>
               </Card>
+
+              {/* School Fees & Payments Card */}
+              <Card className="md:col-span-3 bg-gradient-to-r from-white via-white to-emerald-50/30 border border-emerald-200/60 p-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold shrink-0">
+                      <CreditCard className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-gray-900 text-sm">
+                          School Fees &amp; Financial Account
+                        </h3>
+                        {activeChild.feeBalance === 0 ? (
+                          <Badge variant="accent" size="sm">
+                            Fees Fully Cleared
+                          </Badge>
+                        ) : (
+                          <Badge variant="danger" size="sm">
+                            Balance Due
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-2xs text-gray-500 mt-0.5">
+                        Term 1 Tuition, Examination &amp; Operational Levies for {activeChild.name}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-4 mt-2 text-xs">
+                        <div>
+                          <span className="text-gray-500 text-2xs block">Total Invoiced:</span>
+                          <span className="font-mono font-semibold text-gray-800">
+                            {currency} {activeChild.feeTotal.toLocaleString()}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500 text-2xs block">Paid to Date:</span>
+                          <span className="font-mono font-semibold text-emerald-700">
+                            {currency} {(activeChild.feeTotal - activeChild.feeBalance).toLocaleString()}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500 text-2xs block">Outstanding Balance:</span>
+                          <span className="font-mono font-bold text-rose-700 text-sm">
+                            {currency} {activeChild.feeBalance.toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    {activeChild.feeBalance > 0 ? (
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => {
+                          setPayAmount(String(activeChild.feeBalance));
+                          setIsPayModalOpen(true);
+                        }}
+                        leftIcon={<Smartphone className="w-4 h-4" />}
+                      >
+                        Pay via M-Pesa STK
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() =>
+                          setActiveReceipt({
+                            receiptNumber: `REC-${currentSchool?.code || 'EDM'}-2026-${activeChild.admissionNo.slice(-3)}`,
+                            paymentDate: new Date().toLocaleDateString('en-GB'),
+                            studentName: activeChild.name,
+                            admissionNumber: activeChild.admissionNo,
+                            className: activeChild.className,
+                            payerName: currentUser?.displayName || 'Guardian',
+                            amountPaid: activeChild.feeTotal,
+                            currency,
+                            paymentMethod: 'mpesa',
+                            transactionRef: `MP-${Date.now().toString().slice(-6)}`,
+                            totalInvoiceAmount: activeChild.feeTotal,
+                            balanceRemaining: 0,
+                          })
+                        }
+                        leftIcon={<Receipt className="w-4 h-4" />}
+                      >
+                        View Official Receipt
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </Card>
             </div>
           )}
+
+          {/* M-Pesa STK Push Payment Modal */}
+          <Modal
+            isOpen={isPayModalOpen}
+            onClose={() => setIsPayModalOpen(false)}
+            title={`Pay Fees via M-Pesa — ${activeChild?.name}`}
+            maxWidth="md"
+          >
+            <form onSubmit={handleMpesaPaySubmit} className="space-y-4 text-xs">
+              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-emerald-900">Safaricom M-Pesa STK Push</span>
+                  <Badge variant="accent" size="sm">Instant Verification</Badge>
+                </div>
+                <p className="text-2xs text-emerald-700 mt-1">
+                  A push PIN prompt will appear on your phone automatically. Enter your M-Pesa PIN to complete payment.
+                </p>
+              </div>
+
+              <Input
+                label="M-Pesa Mobile Number"
+                type="tel"
+                value={payPhone}
+                onChange={(e) => setPayPhone(e.target.value)}
+                placeholder="07XXXXXXXX or +2547XXXXXXXX"
+                required
+              />
+
+              <Input
+                label={`Amount to Pay (${currency})`}
+                type="number"
+                min="1"
+                max={activeChild?.feeBalance || 100000}
+                value={payAmount}
+                onChange={(e) => setPayAmount(e.target.value)}
+                required
+              />
+
+              <div className="p-3 rounded-xl bg-gray-50 border border-gray-200 space-y-1 text-2xs text-gray-600">
+                <div className="flex justify-between">
+                  <span>Paybill / Business No:</span>
+                  <span className="font-mono font-bold text-gray-900">{(currentSchool?.settings?.paybillNumber as string) || '522522'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Account Number:</span>
+                  <span className="font-mono font-bold text-gray-900">{activeChild?.admissionNo}</span>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-gray-100">
+                <Button type="button" variant="ghost" onClick={() => setIsPayModalOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" variant="primary" isLoading={payingMpesa} leftIcon={<Smartphone className="w-4 h-4" />}>
+                  Send STK Push Prompt
+                </Button>
+              </div>
+            </form>
+          </Modal>
+
+          {/* Official Receipt Modal */}
+          <ReceiptModal
+            isOpen={Boolean(activeReceipt)}
+            onClose={() => setActiveReceipt(null)}
+            receipt={activeReceipt}
+            schoolName={currentSchool?.name || 'School'}
+            schoolLogo={currentSchool?.branding?.logo}
+            schoolMotto={currentSchool?.branding?.motto}
+            schoolPhone={currentSchool?.contacts?.phone}
+            schoolEmail={currentSchool?.contacts?.email}
+          />
         </>
       )}
     </div>

@@ -18,6 +18,7 @@ import { Assignments } from './pages/Assignments';
 import { Academics } from './pages/Academics';
 import { Timetable } from './pages/Timetable';
 import { Reports } from './pages/Reports';
+import { Finance } from './pages/Finance';
 
 export const router = createBrowserRouter([
   // Public routes
@@ -85,6 +86,10 @@ export const router = createBrowserRouter([
       {
         path: '/reports',
         element: <Reports />,
+      },
+      {
+        path: '/finance',
+        element: <Finance />,
       },
       {
         path: '/parent-portal',
