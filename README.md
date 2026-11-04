@@ -248,6 +248,18 @@ firebase deploy --only firestore:rules,storage:rules
 | 5 | ✅ Complete | Extended — library catalogue & book loans, uniform inventory with reorder alerts, boarding dormitories & roll calls, cashless canteen wallets, co-curricular clubs, platform super admin console with tenant provisioning, SaaS billing KPIs, global feature flags, and full tenant data portability export |
 | 6 | 🔜 Next | Hardening — penetration testing, accessibility audit, legal privacy policy |
 
+## Zeraki-Inspired Enhancement Suite
+
+EDUMO integrates the capabilities of Zeraki Analytics, Zeraki Finance, and Zeraki Learning into one connected ecosystem:
+
+| Enhancement Module | Status | Deliverables |
+| :--- | :--- | :--- |
+| **Academic Analytics & Exam Engine** | ✅ Complete | Examination series management (Opener 20%, Mid-Term 30%, End-Term 50%), stream diagnostics, subject comparative matrix, automated at-risk early detection (drops $\ge 15\%$), multi-term learner trajectories, Excel exam analysis (.xlsx), strict CBC No-Aggregate compliance |
+| **Advanced School Finance** | 🔜 Next | Parent pledges (strictly separated from actual collections), payment vouchers with multi-step approval, LPOs/LSOs, supplier registry, cashbooks, cash flow forecasts |
+| **Digital Learning Platform** | Planned | Student/teacher LMS portals, video lessons, revision notes, past paper question bank, interactive timed quizzes with auto-marking |
+| **Parent Experience & Reach** | Planned | Longitudinal child progress tracking, 1-click report card PDF download, digital receipt drawer, low-data mode |
+| **Reporting & Dashboards** | Planned | 9 role-tailored dashboards, BigQuery streaming views, executive examination broadsheets |
+
 ## License
 
 Private. All rights reserved.
