@@ -230,17 +230,23 @@ firebase deploy --only firestore:rules,storage:rules
 - [ ] Review CSP headers in firebase.json
 - [ ] Run penetration testing (Phase 6)
 
+## Live Deployments
+
+- **Production (Firebase Hosting):** [https://edumo-3dfc9.web.app](https://edumo-3dfc9.web.app)
+- **GitHub Pages:** [https://bosah3064.github.io/Edumo/](https://bosah3064.github.io/Edumo/)
+- **Repository:** [https://github.com/Bosah3064/Edumo.git](https://github.com/Bosah3064/Edumo.git)
+
 ## Project Phases
 
 | Phase | Status | Description |
 |-------|--------|-------------|
 | 0 | ✅ Complete | Architecture, data model, rules, functions, country packs |
-| 1 | 🔜 Next | Foundation MVP — onboarding, records, attendance, announcements |
-| 2 | Planned | Academics — grading engine, marks, report cards, timetable |
-| 3 | Planned | Finance — fees, payments, M-Pesa, reconciliation |
-| 4 | Planned | Operations — admissions, messaging, transport, pastoral |
-| 5 | Planned | Extended — library, boarding, platform console, BigQuery |
-| 6 | Planned | Hardening — pen testing, accessibility, privacy policy |
+| 1 | ✅ Complete | Foundation MVP — onboarding, records, attendance (offline), announcements, parent portal, real Excel import/export (.xlsx), Teacher Task Tracker, Exam Card print generator, inter-branch transfers, audit logs |
+| 2 | 🔜 Next | Academics — grading engine (CBC, UNEB, NECTA, Rwanda), assessments, report cards (PDF), timetable with clash detection, custom report builder |
+| 3 | Planned | Finance — fees, payments, M-Pesa Daraja, Airtel Money, reconciliation, financial reports |
+| 4 | Planned | Operations — admissions pipeline, parent-teacher messaging, transport, pastoral, health |
+| 5 | Planned | Extended — library, boarding, platform console, BigQuery analytics |
+| 6 | Planned | Hardening — penetration testing, accessibility audit, legal privacy policy |
 
 ## License
 
