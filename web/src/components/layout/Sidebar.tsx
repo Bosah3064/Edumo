@@ -22,6 +22,9 @@ import {
   Calendar,
   FileText,
   CreditCard,
+  UserPlus,
+  Bus,
+  MessageSquare,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -60,6 +63,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
     { to: '/excel-import', label: navTranslations.excelImport, icon: FileSpreadsheet },
     { to: '/reports', label: sidebarLanguage === 'sw' ? 'Ripoti za Excel' : 'Report Builder', icon: FileText },
     { to: '/finance', label: sidebarLanguage === 'sw' ? 'Ada na Fedha' : 'Fees & Finance', icon: CreditCard },
+    { to: '/admissions', label: sidebarLanguage === 'sw' ? 'Udahili na Usajili' : 'Admissions', icon: UserPlus },
+    { to: '/operations', label: sidebarLanguage === 'sw' ? 'Uendeshaji wa Shule' : 'Operations & Fleet', icon: Bus },
+    { to: '/messaging', label: sidebarLanguage === 'sw' ? 'Ujumbe na Wazazi' : 'Messages & Alerts', icon: MessageSquare },
     { to: '/parent-portal', label: navTranslations.parentPortal, icon: HeartHandshake },
     { to: '/settings', label: navTranslations.settings, icon: Settings },
   ];

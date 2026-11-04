@@ -19,6 +19,9 @@ import { Academics } from './pages/Academics';
 import { Timetable } from './pages/Timetable';
 import { Reports } from './pages/Reports';
 import { Finance } from './pages/Finance';
+import { Admissions } from './pages/Admissions';
+import { Operations } from './pages/Operations';
+import { Messaging } from './pages/Messaging';
 
 export const router = createBrowserRouter([
   // Public routes
@@ -90,6 +93,18 @@ export const router = createBrowserRouter([
       {
         path: '/finance',
         element: <Finance />,
+      },
+      {
+        path: '/admissions',
+        element: <Admissions />,
+      },
+      {
+        path: '/operations',
+        element: <Operations />,
+      },
+      {
+        path: '/messaging',
+        element: <Messaging />,
       },
       {
         path: '/parent-portal',
