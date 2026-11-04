@@ -27,6 +27,9 @@ import {
   Phone,
   Calendar,
   Sparkles,
+  Download,
+  Printer,
+  ArrowRightLeft,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
@@ -36,6 +39,9 @@ import {
   getSchoolEmailDomain,
   getSchoolEmailForAdmission,
 } from '../utils/admission';
+import { exportLearnerMasterList } from '../utils/excelExport';
+import { ExamCardModal } from '../components/students/ExamCardModal';
+import { TransferStudentModal } from '../components/students/TransferStudentModal';
 
 interface StudentRecord {
   id: string;
@@ -53,7 +59,7 @@ interface StudentRecord {
 }
 
 export const Students: React.FC = () => {
-  const { organization, currentSchool } = useTenant();
+  const { organization, currentSchool, schools } = useTenant();
 
   const [students, setStudents] = useState<StudentRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,6 +68,9 @@ export const Students: React.FC = () => {
 
   const [isEnrollModalOpen, setIsEnrollModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<StudentRecord | null>(null);
+  const [examCardStudent, setExamCardStudent] = useState<StudentRecord | null>(null);
+  const [transferStudent, setTransferStudent] = useState<StudentRecord | null>(null);
+  const [exportingExcel, setExportingExcel] = useState(false);
 
   // Form State
   const [admissionNo, setAdmissionNo] = useState('');
@@ -225,6 +234,39 @@ export const Students: React.FC = () => {
     }
   };
 
+  const handleExportExcel = async () => {
+    if (!currentSchool) return;
+    if (students.length === 0) {
+      toast.error('No enrolled learners to export');
+      return;
+    }
+    setExportingExcel(true);
+    const toastId = toast.loading('Generating Official Learner Master Roster (.xlsx)...');
+    try {
+      await exportLearnerMasterList(
+        currentSchool.name,
+        currentSchool.code || 'CAMPUS',
+        students.map((s) => ({
+          admissionNumber: s.admissionNumber,
+          firstName: s.firstName,
+          lastName: s.lastName,
+          className: s.currentClassId,
+          gender: s.gender,
+          boardingStatus: s.boardingStatus,
+          guardianPhone: s.guardianPhone,
+          schoolEmail: s.schoolEmail,
+          status: s.status,
+        }))
+      );
+      toast.success('Learner Master List exported (.xlsx)!', { id: toastId });
+    } catch (err) {
+      console.error('Excel export error:', err);
+      toast.error('Failed to export Excel roster', { id: toastId });
+    } finally {
+      setExportingExcel(false);
+    }
+  };
+
   const filteredStudents = students.filter((s) => {
     const matchesSearch =
       `${s.firstName} ${s.lastName} ${s.admissionNumber}`
@@ -247,17 +289,28 @@ export const Students: React.FC = () => {
           </p>
         </div>
 
-        <Button
-          variant="primary"
-          size="sm"
-          onClick={() => {
-            setAdmissionNo(getNextAdmissionNumber(students, getCurrentAdmissionYear()));
-            setIsEnrollModalOpen(true);
-          }}
-          leftIcon={<UserPlus className="w-4 h-4" />}
-        >
-          Enroll New Student
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleExportExcel}
+            isLoading={exportingExcel}
+            leftIcon={<Download className="w-4 h-4" />}
+          >
+            Export Excel (.xlsx)
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => {
+              setAdmissionNo(getNextAdmissionNumber(students, getCurrentAdmissionYear()));
+              setIsEnrollModalOpen(true);
+            }}
+            leftIcon={<UserPlus className="w-4 h-4" />}
+          >
+            Enroll New Student
+          </Button>
+        </div>
       </div>
 
       {/* Filters and Search Bar */}
@@ -355,15 +408,40 @@ export const Students: React.FC = () => {
                       </Badge>
                     </td>
                     <td className="py-3.5 px-4 text-right">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedStudent(student);
-                        }}
-                        className="p-1.5 rounded-lg text-gray-400 hover:text-brand-500 hover:bg-gray-100 transition-colors"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExamCardStudent(student);
+                          }}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-brand-600 hover:bg-brand-50 transition-colors"
+                          title="Print Examination Card / ID"
+                        >
+                          <Printer className="w-4 h-4" />
+                        </button>
+                        {schools.length > 1 && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setTransferStudent(student);
+                            }}
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                            title="Inter-Branch Campus Transfer"
+                          >
+                            <ArrowRightLeft className="w-4 h-4" />
+                          </button>
+                        )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedStudent(student);
+                          }}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-brand-500 hover:bg-gray-100 transition-colors"
+                          title="View Learner Profile"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -560,7 +638,35 @@ export const Students: React.FC = () => {
               </p>
             </div>
 
-            <div className="flex justify-end pt-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-gray-200">
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => {
+                    const st = selectedStudent;
+                    setSelectedStudent(null);
+                    setExamCardStudent(st);
+                  }}
+                  leftIcon={<Printer className="w-3.5 h-3.5" />}
+                >
+                  Exam Card
+                </Button>
+                {schools.length > 1 && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      const st = selectedStudent;
+                      setSelectedStudent(null);
+                      setTransferStudent(st);
+                    }}
+                    leftIcon={<ArrowRightLeft className="w-3.5 h-3.5" />}
+                  >
+                    Transfer
+                  </Button>
+                )}
+              </div>
               <Button size="sm" onClick={() => setSelectedStudent(null)}>
                 Close
               </Button>
@@ -568,6 +674,29 @@ export const Students: React.FC = () => {
           </div>
         </Modal>
       )}
+
+      {/* Exam Card Modal */}
+      <ExamCardModal
+        isOpen={Boolean(examCardStudent)}
+        onClose={() => setExamCardStudent(null)}
+        student={examCardStudent}
+        schoolName={currentSchool?.name || 'School'}
+        schoolLogo={currentSchool?.branding?.logo}
+        schoolMotto={currentSchool?.branding?.motto}
+        templateKey={currentSchool?.branding?.examCardTemplate || 'classic'}
+        primaryColor={currentSchool?.branding?.primaryColor || '#1d5f99'}
+        secondaryColor={currentSchool?.branding?.secondaryColor || '#683669'}
+      />
+
+      {/* Campus Transfer Modal */}
+      <TransferStudentModal
+        isOpen={Boolean(transferStudent)}
+        onClose={() => setTransferStudent(null)}
+        student={transferStudent}
+        orgId={organization?.id || ''}
+        currentSchoolId={currentSchool?.id || ''}
+        availableSchools={schools}
+      />
     </div>
   );
 };

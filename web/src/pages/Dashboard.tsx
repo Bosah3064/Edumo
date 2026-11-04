@@ -19,6 +19,7 @@ import {
   FileSpreadsheet,
   TrendingUp,
 } from 'lucide-react';
+import { TeacherTaskTracker } from '../components/dashboard/TeacherTaskTracker';
 
 export const Dashboard: React.FC = () => {
   const { t } = useTranslation();
@@ -45,11 +46,31 @@ export const Dashboard: React.FC = () => {
     hasData: false,
   });
   const [loadingStats, setLoadingStats] = useState(true);
+  const [taskClasses, setTaskClasses] = useState<
+    Array<{ name: string; studentCount: number; attendanceMarked: boolean }>
+  >([]);
+  const [assignmentCount, setAssignmentCount] = useState<number>(0);
 
   useEffect(() => {
     if (!organization || !currentSchool) return;
 
     const todayDate = new Date().toISOString().split('T')[0];
+
+    let rawClassNames: string[] = [];
+    let studentCountsByClass: Record<string, number> = {};
+    let markedClassesToday = new Set<string>();
+
+    const updateClassTasks = () => {
+      const fallbackList = ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'];
+      const activeNames = rawClassNames.length > 0 ? rawClassNames : fallbackList;
+      setTaskClasses(
+        activeNames.map((name) => ({
+          name,
+          studentCount: studentCountsByClass[name] || 0,
+          attendanceMarked: markedClassesToday.has(name) || markedClassesToday.has(name.replace(/\s+/g, '_')),
+        }))
+      );
+    };
 
     const studentsRef = collection(
       db,
@@ -83,11 +104,26 @@ export const Dashboard: React.FC = () => {
       currentSchool.id,
       'attendance'
     );
+    const assignmentsRef = collection(
+      db,
+      'organizations',
+      organization.id,
+      'schools',
+      currentSchool.id,
+      'assignments'
+    );
 
     const unsubStudents = onSnapshot(
       studentsRef,
       (snap) => {
         setStudentCount(snap.size);
+        const counts: Record<string, number> = {};
+        snap.docs.forEach((d) => {
+          const cId = d.data().currentClassId;
+          if (cId) counts[cId] = (counts[cId] || 0) + 1;
+        });
+        studentCountsByClass = counts;
+        updateClassTasks();
         setLoadingStats(false);
       },
       (err) => console.error('Dashboard students count error:', err)
@@ -105,8 +141,18 @@ export const Dashboard: React.FC = () => {
       classesRef,
       (snap) => {
         setClassCount(snap.size);
+        rawClassNames = snap.docs.map((d) => d.data().name as string).filter(Boolean);
+        updateClassTasks();
       },
       (err) => console.error('Dashboard classes count error:', err)
+    );
+
+    const unsubAssignments = onSnapshot(
+      assignmentsRef,
+      (snap) => {
+        setAssignmentCount(snap.size);
+      },
+      (err) => console.error('Dashboard assignments error:', err)
     );
 
     const todayAttendanceQuery = query(attendanceRef, where('date', '==', todayDate));
@@ -117,14 +163,19 @@ export const Dashboard: React.FC = () => {
         let totalAbsent = 0;
         let totalLate = 0;
         let totalExcused = 0;
+        const markedSet = new Set<string>();
 
         snap.forEach((doc) => {
           const data = doc.data();
+          if (data.classId) markedSet.add(data.classId);
           totalPresent += data.totalPresent || 0;
           totalAbsent += data.totalAbsent || 0;
           totalLate += data.totalLate || 0;
           totalExcused += data.totalExcused || 0;
         });
+
+        markedClassesToday = markedSet;
+        updateClassTasks();
 
         const totalEnrolledMarked = totalPresent + totalAbsent + totalLate + totalExcused;
         if (totalEnrolledMarked > 0) {
@@ -156,6 +207,7 @@ export const Dashboard: React.FC = () => {
       unsubStaff();
       unsubClasses();
       unsubAttendance();
+      unsubAssignments();
     };
   }, [organization, currentSchool]);
 
@@ -292,6 +344,17 @@ export const Dashboard: React.FC = () => {
           </div>
         </Card>
       </div>
+
+      {/* Teacher Task Tracker (Master Spec Section 1 & 7.H) */}
+      <TeacherTaskTracker
+        classes={taskClasses}
+        assignmentCount={assignmentCount}
+        todayDateStr={new Date().toLocaleDateString('en-GB', {
+          weekday: 'short',
+          day: 'numeric',
+          month: 'short',
+        })}
+      />
 
       {/* Quick Action Hub & Multi-Branch Overview */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

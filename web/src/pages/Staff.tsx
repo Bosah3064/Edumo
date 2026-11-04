@@ -18,10 +18,12 @@ import {
   Copy,
   Check,
   Search,
+  Download,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatSchoolId, getNextSchoolId, getSchoolEmail } from '../utils/schoolId';
 import { getSchoolEmailDomain } from '../utils/admission';
+import { exportStaffDirectory } from '../utils/excelExport';
 
 interface StaffMember {
   id: string;
@@ -44,6 +46,7 @@ export const Staff: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [inviting, setInviting] = useState(false);
+  const [exportingExcel, setExportingExcel] = useState(false);
 
   // Invite Form
   const [inviteEmail, setInviteEmail] = useState('');
@@ -186,6 +189,35 @@ export const Staff: React.FC = () => {
     support: 'neutral',
   };
 
+  const handleExportStaff = async () => {
+    if (!currentSchool) return;
+    if (staffList.length === 0) {
+      toast.error('No staff members to export');
+      return;
+    }
+    setExportingExcel(true);
+    const toastId = toast.loading('Exporting Faculty & Staff Directory (.xlsx)...');
+    try {
+      await exportStaffDirectory(
+        currentSchool.name,
+        staffList.map((st) => ({
+          schoolId: st.schoolId || st.id,
+          name: st.name,
+          role: st.role,
+          email: st.email,
+          phone: st.phone,
+          status: st.status,
+        }))
+      );
+      toast.success('Staff Directory exported (.xlsx)!', { id: toastId });
+    } catch (err) {
+      console.error('Staff export error:', err);
+      toast.error('Failed to export Staff Directory', { id: toastId });
+    } finally {
+      setExportingExcel(false);
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -198,17 +230,29 @@ export const Staff: React.FC = () => {
           </p>
         </div>
 
-        <Button
-          variant="primary"
-          size="sm"
-          onClick={() => {
-            setGeneratedInviteCode(null);
-            setIsInviteModalOpen(true);
-          }}
-          leftIcon={<UserPlus className="w-4 h-4" />}
-        >
-          Invite Staff Member
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleExportStaff}
+            isLoading={exportingExcel}
+            leftIcon={<Download className="w-4 h-4" />}
+          >
+            Export Staff (.xlsx)
+          </Button>
+
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => {
+              setGeneratedInviteCode(null);
+              setIsInviteModalOpen(true);
+            }}
+            leftIcon={<UserPlus className="w-4 h-4" />}
+          >
+            Invite Staff Member
+          </Button>
+        </div>
       </div>
 
       {/* Search Bar */}

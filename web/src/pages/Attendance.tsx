@@ -23,8 +23,10 @@ import {
   Save,
   CheckCheck,
   Users,
+  Download,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { exportAttendanceRegister } from '../utils/excelExport';
 
 type AttendanceStatus = 'present' | 'absent' | 'late' | 'excused';
 
@@ -46,6 +48,7 @@ export const Attendance: React.FC = () => {
     return new Date().toISOString().split('T')[0];
   });
   const [saving, setSaving] = useState(false);
+  const [exportingExcel, setExportingExcel] = useState(false);
   const [allStudents, setAllStudents] = useState<Array<{
     id: string;
     admissionNumber: string;
@@ -283,6 +286,34 @@ export const Attendance: React.FC = () => {
     }
   };
 
+  const handleExportRegister = async () => {
+    if (!currentSchool) return;
+    if (roster.length === 0) {
+      toast.error('No learners in this class register to export');
+      return;
+    }
+    setExportingExcel(true);
+    const toastId = toast.loading('Exporting Attendance Register (.xlsx)...');
+    try {
+      await exportAttendanceRegister(
+        currentSchool.name,
+        selectedClass,
+        selectedDate,
+        roster.map((r) => ({
+          admissionNo: r.admissionNo,
+          name: r.name,
+          status: r.status,
+        }))
+      );
+      toast.success('Attendance Register exported (.xlsx)!', { id: toastId });
+    } catch (err) {
+      console.error('Attendance export error:', err);
+      toast.error('Failed to export Attendance Register', { id: toastId });
+    } finally {
+      setExportingExcel(false);
+    }
+  };
+
   const classOptions = availableClasses.length > 0
     ? availableClasses
     : ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Form 1'];
@@ -307,7 +338,18 @@ export const Attendance: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleExportRegister}
+            disabled={roster.length === 0}
+            isLoading={exportingExcel}
+            leftIcon={<Download className="w-4 h-4" />}
+          >
+            Export Register (.xlsx)
+          </Button>
+
           <Button
             variant="secondary"
             size="sm"
