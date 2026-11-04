@@ -22,6 +22,8 @@ import { Finance } from './pages/Finance';
 import { Admissions } from './pages/Admissions';
 import { Operations } from './pages/Operations';
 import { Messaging } from './pages/Messaging';
+import { ExtendedModules } from './pages/ExtendedModules';
+import { PlatformConsole } from './pages/PlatformConsole';
 
 export const router = createBrowserRouter([
   // Public routes
@@ -105,6 +107,14 @@ export const router = createBrowserRouter([
       {
         path: '/messaging',
         element: <Messaging />,
+      },
+      {
+        path: '/extended',
+        element: <ExtendedModules />,
+      },
+      {
+        path: '/platform-console',
+        element: <PlatformConsole />,
       },
       {
         path: '/parent-portal',

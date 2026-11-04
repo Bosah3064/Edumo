@@ -25,6 +25,8 @@ import {
   UserPlus,
   Bus,
   MessageSquare,
+  Layers,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -66,6 +68,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
     { to: '/admissions', label: sidebarLanguage === 'sw' ? 'Udahili na Usajili' : 'Admissions', icon: UserPlus },
     { to: '/operations', label: sidebarLanguage === 'sw' ? 'Uendeshaji wa Shule' : 'Operations & Fleet', icon: Bus },
     { to: '/messaging', label: sidebarLanguage === 'sw' ? 'Ujumbe na Wazazi' : 'Messages & Alerts', icon: MessageSquare },
+    { to: '/extended', label: sidebarLanguage === 'sw' ? 'Maktaba na Hosteli' : 'Extended Modules', icon: Layers },
+    { to: '/platform-console', label: sidebarLanguage === 'sw' ? 'Jopo la Usimamizi' : 'Platform Console', icon: ShieldCheck },
     { to: '/parent-portal', label: navTranslations.parentPortal, icon: HeartHandshake },
     { to: '/settings', label: navTranslations.settings, icon: Settings },
   ];

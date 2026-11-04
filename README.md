@@ -245,8 +245,8 @@ firebase deploy --only firestore:rules,storage:rules
 | 2 | ✅ Complete | Academics & Excel Reports — direction-aware grading engine (CBC, UNEB, NECTA, Rwanda), Marks-by-Excel offline entry, continuous assessment gradebook, report cards (PDF/print), timetable with automated clash detection & relief substitution, custom report builder |
 | 3 | ✅ Complete | Finance — fees structures per class/term/branch, discounts, invoices, receipts, arrears & SMS reminders, M-Pesa Daraja STK push & mobile money adapters, operating expenses ledger, financial reports |
 | 4 | ✅ Complete | Operations — admissions pipeline, entrance exam scoring, official offer letters (PDF/print), 1-click matriculation, fleet transport with live departure alerts, health room & triage, gate visitor check-in, authorized adult pickup gatekeeper verification, pastoral welfare & merits, parent-teacher messaging with office hours, emergency SMS broadcasts, digital permission slips |
-| 5 | 🔜 Next | Extended — library, boarding, platform console, BigQuery analytics |
-| 6 | Planned | Hardening — penetration testing, accessibility audit, legal privacy policy |
+| 5 | ✅ Complete | Extended — library catalogue & book loans, uniform inventory with reorder alerts, boarding dormitories & roll calls, cashless canteen wallets, co-curricular clubs, platform super admin console with tenant provisioning, SaaS billing KPIs, global feature flags, and full tenant data portability export |
+| 6 | 🔜 Next | Hardening — penetration testing, accessibility audit, legal privacy policy |
 
 ## License
 

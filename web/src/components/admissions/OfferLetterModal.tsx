@@ -227,3 +227,4 @@ export const OfferLetterModal: React.FC<OfferLetterModalProps> = ({
     </Modal>
   );
 };
+
