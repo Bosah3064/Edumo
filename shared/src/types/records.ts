@@ -108,7 +108,7 @@ export interface ReportCard extends DocMeta {
   pdfPath?: string;
 }
 
-/** Examination Series Configuration (Zeraki-Inspired) */
+/** Examination Series Configuration (Edumo Standard) */
 export interface ExamSeries extends Partial<DocMeta> {
   name: string;
   academicYearId: string;

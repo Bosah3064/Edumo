@@ -1,6 +1,6 @@
 // ============================================================
 // EDUMO SHARED TYPES — Digital Learning Platform (Phase 3)
-// Master Spec Section 4 (Zeraki Learning Equivalent)
+// Master Spec Section 4 (Edumo Digital Learning)
 // 1. Digital Resource Bank (Video Lessons, Notes, Past Papers, Schemes)
 // 2. Interactive Quiz Engine (MCQ, True/False, Short Answer, Timed, Auto-Marking)
 // 3. Assignment Submissions & Rubric Grading

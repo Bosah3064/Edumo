@@ -1,5 +1,5 @@
 // ============================================================
-// EDUMO SHARED — Advanced School Finance Engine (Zeraki-Inspired)
+// EDUMO SHARED — Advanced School Finance Engine
 // Master Spec Section 3 & 11
 // Core business rules:
 // 1. Strict separation of parent pledges from cashbook/revenue

@@ -16,6 +16,7 @@ import type {
   Permission,
 } from '@edumo/shared';
 import { DEFAULT_ROLE_PERMISSIONS } from '@edumo/shared';
+import { initializeSchoolTables } from '../utils/databaseInitializer';
 
 interface TenantContextType {
   organization: Organization | null;
@@ -151,6 +152,21 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return schools.find((s) => s.id === currentSchoolId) || schools[0] || null;
   }, [schools, currentSchoolId]);
 
+  // Ensure all core school database collections/tables are initialized in Firestore
+  useEffect(() => {
+    if (!organization || !currentSchool) return;
+    initializeSchoolTables(
+      db,
+      organization.id,
+      currentSchool.id,
+      currentSchool.name,
+      currentSchool.curriculumType,
+      currentSchool.country || organization.country
+    ).catch((err) => {
+      console.warn('Auto table initialization deferred:', err);
+    });
+  }, [organization?.id, currentSchool?.id]);
+
   // Apply school custom branding colors dynamically to CSS custom properties
   // Guarantees each school/branch has its own visual identity without affecting other schools
   useEffect(() => {
@@ -224,14 +240,27 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // Compute permissions for current role
   const userPermissions = useMemo<Permission[]>(() => {
     if (!currentRole) return Object.values(DEFAULT_ROLE_PERMISSIONS).flat();
-    if (currentRole === 'orgOwner' || currentRole === 'platformAdmin') {
+    if (
+      currentRole === 'orgOwner' ||
+      currentRole === 'platformAdmin' ||
+      (currentRole as string) === 'schoolAdmin' ||
+      (currentRole as string) === 'admin'
+    ) {
       return Object.values(DEFAULT_ROLE_PERMISSIONS).flat();
     }
     return (DEFAULT_ROLE_PERMISSIONS as Record<string, Permission[]>)[currentRole] || [];
   }, [currentRole]);
 
   const hasPermission = (permission: Permission): boolean => {
-    if (!currentRole || currentRole === 'orgOwner' || claims?.platformAdmin) return true;
+    if (
+      !currentRole ||
+      currentRole === 'orgOwner' ||
+      (currentRole as string) === 'schoolAdmin' ||
+      (currentRole as string) === 'admin' ||
+      claims?.platformAdmin
+    ) {
+      return true;
+    }
     return userPermissions.includes(permission);
   };
 

@@ -1,5 +1,5 @@
 // ============================================================
-// EDUMO SHARED — Digital Learning Platform Engine (Zeraki-Inspired)
+// EDUMO SHARED — Digital Learning Platform Engine
 // Master Spec Section 4
 // Logic for:
 // 1. Auto-marking MCQs, True/False, and Short Answers

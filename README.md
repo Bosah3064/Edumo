@@ -248,9 +248,9 @@ firebase deploy --only firestore:rules,storage:rules
 | 5 | ✅ Complete | Extended — library catalogue & book loans, uniform inventory with reorder alerts, boarding dormitories & roll calls, cashless canteen wallets, co-curricular clubs, platform super admin console with tenant provisioning, SaaS billing KPIs, global feature flags, and full tenant data portability export |
 | 6 | 🔜 Next | Hardening — penetration testing, accessibility audit, legal privacy policy |
 
-## Zeraki-Inspired Enhancement Suite
+## Edumo Comprehensive Educational Suite
 
-EDUMO integrates the capabilities of Zeraki Analytics, Zeraki Finance, and Zeraki Learning into one connected ecosystem:
+EDUMO integrates comprehensive Academic Analytics, Institutional Finance, and Digital Learning into one unified, offline-first ecosystem:
 
 | Enhancement Module | Status | Deliverables |
 | :--- | :--- | :--- |

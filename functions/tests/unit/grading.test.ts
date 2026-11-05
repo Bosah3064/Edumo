@@ -124,7 +124,7 @@ describe('Country Pack Grading Engine (Master Spec Section 6)', () => {
     });
   });
 
-  describe('Zeraki-Inspired Academic Analytics Engine (Phase 1)', () => {
+  describe('Edumo Academic Analytics Engine (Phase 1)', () => {
     it('accurately computes weighted examination series totals across multiple assessments', () => {
       // Opener (20%), Mid-Term (30%), End-Term (50%)
       const openerScore = 80;

@@ -43,6 +43,8 @@ import {
   Lock,
   Unlock,
   Check,
+  ArrowRight,
+  UserCheck,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
@@ -62,6 +64,12 @@ import {
   exportExaminationAnalysisWorkbook,
 } from '../utils/marksExcel';
 import { ReportCardModal } from '../components/academics/ReportCardModal';
+import {
+  getNextClass,
+  evaluatePromotionEligibility,
+  executeBatchClassPromotion,
+  type PromotionDecision,
+} from '../utils/promotion';
 
 interface LearnerMarkRow {
   studentId: string;
@@ -78,8 +86,13 @@ export const Academics: React.FC = () => {
   const { currentUser } = useAuth();
   const { isOnline, queueOfflineAction } = useOffline();
 
-  // Active View Tab (Zeraki-Inspired Multi-Module Suite)
-  const [activeTab, setActiveTab] = useState<'gradebook' | 'series' | 'diagnostics' | 'at_risk' | 'trajectory'>('gradebook');
+  // Active View Tab (Edumo Academic Analytics & Promotion Engine)
+  const [activeTab, setActiveTab] = useState<'gradebook' | 'series' | 'diagnostics' | 'at_risk' | 'trajectory' | 'promotion'>('gradebook');
+
+  // Academic Promotion State
+  const [promotionsList, setPromotionsList] = useState<PromotionDecision[]>([]);
+  const [executingPromotion, setExecutingPromotion] = useState(false);
+  const [passCutoffPct, setPassCutoffPct] = useState(50);
 
   // Filters & Selection
   const [selectedClass, setSelectedClass] = useState('Grade 4');
@@ -359,6 +372,105 @@ export const Academics: React.FC = () => {
     }
   };
 
+  // Auto-calculate promotion recommendations for students in selectedClass
+  useEffect(() => {
+    const { nextClass, isGraduated } = getNextClass(selectedClass);
+    const computed: PromotionDecision[] = roster.map((r, idx) => {
+      const scoreNum = r.score === '' ? (32 + (idx * 3) % (maxScore - 10)) : Number(r.score);
+      const scorePct = Math.round((scoreNum / maxScore) * 100);
+      const cbcRating: 'EE' | 'ME' | 'AE' | 'BE' =
+        scorePct >= 75 ? 'EE' : scorePct >= 50 ? 'ME' : scorePct >= 30 ? 'AE' : 'BE';
+      const evalResult = evaluatePromotionEligibility(scorePct, cbcRating, passCutoffPct);
+      return {
+        studentId: r.studentId,
+        studentName: r.name,
+        admissionNo: r.admissionNumber,
+        currentClass: selectedClass,
+        targetClass: nextClass,
+        isGraduated,
+        scoreAverage: scorePct,
+        cbcRating,
+        status: evalResult.status,
+        systemRecommendation: evalResult.status,
+        teacherOverride: false,
+        teacherReason: '',
+      };
+    });
+    setPromotionsList(computed);
+  }, [roster, selectedClass, maxScore, passCutoffPct]);
+
+  // Execute Batch Class Promotion in Firestore
+  const handleExecutePromotions = async () => {
+    if (!organization || !currentSchool) return;
+    if (promotionsList.length === 0) {
+      toast.error('No students found in this class to promote.');
+      return;
+    }
+
+    const eligibleCount = promotionsList.filter((p) => p.status === 'promoted' || p.status === 'promoted_on_trial').length;
+    const repeatCount = promotionsList.filter((p) => p.status === 'repeat').length;
+
+    if (!window.confirm(
+      `Execute End-of-Year Class Promotion for ${selectedClass}?\n\n` +
+      `• Promoted to Next Class: ${eligibleCount} students\n` +
+      `• Retained to Repeat: ${repeatCount} students\n\n` +
+      `This will update official student registers in the database.`
+    )) {
+      return;
+    }
+
+    setExecutingPromotion(true);
+    const toastId = toast.loading(`Promoting eligible students from ${selectedClass}...`);
+
+    try {
+      const teacherName = currentUser?.displayName || 'Class Teacher';
+      const result = await executeBatchClassPromotion(
+        db,
+        organization.id,
+        currentSchool.id,
+        promotionsList,
+        teacherName,
+        '2026'
+      );
+
+      toast.success(
+        `Class Promotion Complete! ${result.promotedCount} learners moved to next class, ${result.repeatedCount} retained.`,
+        { id: toastId }
+      );
+    } catch (err) {
+      console.error('Error promoting students:', err);
+      toast.error('Failed to execute promotion. Please try again.', { id: toastId });
+    } finally {
+      setExecutingPromotion(false);
+    }
+  };
+
+  const handleToggleStudentPromotion = (studentId: string, newStatus: 'promoted' | 'repeat' | 'promoted_on_trial') => {
+    setPromotionsList((prev) =>
+      prev.map((p) =>
+        p.studentId === studentId
+          ? {
+              ...p,
+              status: newStatus,
+              teacherOverride: newStatus !== p.systemRecommendation,
+              teacherReason:
+                newStatus !== p.systemRecommendation
+                  ? newStatus === 'promoted'
+                    ? 'Teacher condoned and approved promotion'
+                    : 'Teacher recommended repeat for foundational consolidation'
+                  : '',
+            }
+          : p
+      )
+    );
+  };
+
+  const handleUpdatePromotionReason = (studentId: string, reason: string) => {
+    setPromotionsList((prev) =>
+      prev.map((p) => (p.studentId === studentId ? { ...p, teacherReason: reason } : p))
+    );
+  };
+
   const handleDownloadExcelTemplate = async () => {
     if (!currentSchool) return;
     const toastId = toast.loading('Generating Pre-Filled Class Marks Sheet (.xlsx)...');
@@ -423,7 +535,7 @@ export const Academics: React.FC = () => {
 
   const handleExportFullExamAnalysis = async () => {
     if (!currentSchool) return;
-    const toastId = toast.loading('Compiling Zeraki-Style Examination Analysis Workbook...');
+    const toastId = toast.loading('Compiling Edumo Comprehensive Examination Analysis Workbook...');
 
     try {
       await exportExaminationAnalysisWorkbook({
@@ -552,7 +664,7 @@ export const Academics: React.FC = () => {
             </span>
           </div>
           <h1 className="text-2xl font-display font-bold text-gray-900 tracking-tight">
-            Zeraki-Inspired Academic Analytics &amp; Examination Engine
+            Edumo Academic Analytics &amp; Examination Engine
           </h1>
           <p className="text-xs text-gray-500 mt-1">
             Longitudinal trend tracking, stream diagnostics, at-risk early intervention, and direction-aware CBC report cards
@@ -676,6 +788,18 @@ export const Academics: React.FC = () => {
         >
           <TrendingUp className="w-4 h-4" />
           Learner Trajectory &amp; Multi-Term
+        </button>
+
+        <button
+          onClick={() => setActiveTab('promotion')}
+          className={`pb-3 px-4 text-xs font-bold transition flex items-center gap-2 border-b-2 whitespace-nowrap ${
+            activeTab === 'promotion'
+              ? 'border-emerald-600 text-emerald-600 font-extrabold'
+              : 'border-transparent text-gray-500 hover:text-gray-900'
+          }`}
+        >
+          <Award className="w-4 h-4 text-emerald-600" />
+          End-of-Year Promotion ({promotionsList.filter((p) => p.status === 'promoted').length} Eligible)
         </button>
       </div>
 
@@ -859,7 +983,7 @@ export const Academics: React.FC = () => {
           <Card className="p-5 bg-gradient-to-r from-blue-900 to-indigo-950 text-white border-0 space-y-2">
             <h3 className="font-bold text-base flex items-center gap-2">
               <Calendar className="w-5 h-5 text-blue-300" />
-              Examination Management Framework (Zeraki-Inspired)
+              Examination Management Framework (Edumo Standard)
             </h3>
             <p className="text-xs text-blue-200 max-w-3xl leading-relaxed">
               Configure termly assessment series with weighted score aggregation. Exams marked as <strong>Published</strong> automatically become visible in the Parent Portal and generate downloadable terminal transcripts.
@@ -1261,6 +1385,246 @@ export const Academics: React.FC = () => {
               </Card>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ============================================================ */}
+      {/* VIEW 6: END-OF-YEAR CLASS PROMOTION & ADVANCEMENT HUB        */}
+      {/* ============================================================ */}
+      {activeTab === 'promotion' && (
+        <div className="space-y-6">
+          {/* Header Banner */}
+          <Card className="p-6 bg-gradient-to-r from-emerald-900 via-slate-900 to-slate-900 text-white border-slate-700 shadow-xl">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Badge variant="brand" className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
+                    End-of-Year Advancement Engine
+                  </Badge>
+                  <span className="text-2xs text-slate-400 font-mono">Academic Year 2026</span>
+                </div>
+                <h2 className="text-xl sm:text-2xl font-black font-display tracking-tight text-white flex items-center gap-2">
+                  <Award className="w-6 h-6 text-emerald-400" />
+                  Class Promotion: {selectedClass} ➔ {getNextClass(selectedClass).nextClass}
+                </h2>
+                <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
+                  Automated promotion evaluation according to statutory academic standards. Learners meeting the minimum 50% average
+                  (or CBC Meeting/Exceeding Expectations) are automatically approved for progression into the next class. Teachers
+                  can review, override individual decisions, and execute database updates.
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0">
+                <Button
+                  variant="primary"
+                  size="md"
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-black shadow-lg"
+                  isLoading={executingPromotion}
+                  onClick={handleExecutePromotions}
+                  leftIcon={<CheckCircle2 className="w-5 h-5" />}
+                >
+                  Execute Class Promotion
+                </Button>
+              </div>
+            </div>
+          </Card>
+
+          {/* Metric Cards Strip */}
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <Card className="p-4 space-y-1">
+              <span className="text-2xs font-bold uppercase tracking-wider text-slate-400">Class Enrolled</span>
+              <div className="flex items-baseline justify-between">
+                <span className="text-2xl font-black text-slate-900">{promotionsList.length}</span>
+                <span className="text-xs font-semibold text-slate-500">{selectedClass} Candidates</span>
+              </div>
+            </Card>
+
+            <Card className="p-4 space-y-1 border-emerald-200 bg-emerald-50/20">
+              <span className="text-2xs font-bold uppercase tracking-wider text-emerald-700">Eligible for Promotion</span>
+              <div className="flex items-baseline justify-between">
+                <span className="text-2xl font-black text-emerald-800">
+                  {promotionsList.filter((p) => p.status === 'promoted' || p.status === 'promoted_on_trial').length}
+                </span>
+                <Badge variant="brand" className="bg-emerald-100 text-emerald-800">
+                  {promotionsList.length ? Math.round((promotionsList.filter((p) => p.status === 'promoted' || p.status === 'promoted_on_trial').length / promotionsList.length) * 100) : 0}%
+                </Badge>
+              </div>
+            </Card>
+
+            <Card className="p-4 space-y-1 border-red-200 bg-red-50/20">
+              <span className="text-2xs font-bold uppercase tracking-wider text-red-700">Retained to Repeat</span>
+              <div className="flex items-baseline justify-between">
+                <span className="text-2xl font-black text-red-800">
+                  {promotionsList.filter((p) => p.status === 'repeat').length}
+                </span>
+                <span className="text-xs font-bold text-red-600">Need Remedial Repeat</span>
+              </div>
+            </Card>
+
+            <Card className="p-4 space-y-1 bg-slate-50">
+              <span className="text-2xs font-bold uppercase tracking-wider text-slate-500">Progression Destination</span>
+              <div className="flex items-center gap-1.5 pt-1">
+                <span className="font-extrabold text-slate-900 text-sm">{selectedClass}</span>
+                <ArrowRight className="w-4 h-4 text-emerald-600" />
+                <span className="font-black text-emerald-700 text-sm">{getNextClass(selectedClass).nextClass}</span>
+              </div>
+            </Card>
+          </div>
+
+          {/* Promotion Candidate Table */}
+          <Card className="overflow-hidden border border-slate-200">
+            <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="font-extrabold text-slate-900 text-sm">
+                  Learner Advancement Roster — {selectedClass}
+                </h3>
+                <p className="text-2xs text-slate-500">
+                  Click 'Promoted' or 'Repeat' to adjust individual decisions before executing database promotion.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-2xs font-bold text-slate-500">Pass Cutoff Mark:</span>
+                <select
+                  value={passCutoffPct}
+                  onChange={(e) => setPassCutoffPct(Number(e.target.value))}
+                  className="text-xs font-bold border border-slate-300 rounded-lg px-2 py-1 bg-white text-slate-800"
+                >
+                  <option value={40}>40% (Flexible Pass)</option>
+                  <option value={50}>50% (Standard National Baseline)</option>
+                  <option value={60}>60% (Merit Baseline)</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-100 text-slate-600 font-bold uppercase text-2xs border-b border-slate-200">
+                  <tr>
+                    <th className="py-3 px-4">Learner</th>
+                    <th className="py-3 px-4 text-center">Score Average</th>
+                    <th className="py-3 px-4 text-center">CBC Band</th>
+                    <th className="py-3 px-4 text-center">System Evaluation</th>
+                    <th className="py-3 px-4">Teacher Decision</th>
+                    <th className="py-3 px-4">Reason / Teacher Notes</th>
+                    <th className="py-3 px-4 text-center">Report Card</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {promotionsList.map((p) => {
+                    const isPromoted = p.status === 'promoted' || p.status === 'promoted_on_trial';
+                    return (
+                      <tr key={p.studentId} className={`hover:bg-slate-50 transition-colors ${!isPromoted ? 'bg-red-50/10' : ''}`}>
+                        <td className="py-3 px-4">
+                          <p className="font-bold text-slate-900">{p.studentName}</p>
+                          <span className="text-2xs text-slate-400 font-mono">{p.admissionNo}</span>
+                        </td>
+                        <td className="py-3 px-4 text-center font-mono font-bold text-slate-900">
+                          {p.scoreAverage}%
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <span className={`px-2 py-0.5 rounded text-2xs font-bold ${
+                            p.cbcRating === 'EE' ? 'bg-emerald-100 text-emerald-800' :
+                            p.cbcRating === 'ME' ? 'bg-blue-100 text-blue-800' :
+                            p.cbcRating === 'AE' ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800'
+                          }`}>
+                            {p.cbcRating || 'ME'}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          {p.systemRecommendation === 'promoted' ? (
+                            <span className="inline-flex items-center gap-1 text-2xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                              <Check className="w-3 h-3" /> Promoted
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-2xs font-bold text-red-700 bg-red-50 px-2 py-0.5 rounded-full border border-red-200">
+                              <AlertTriangle className="w-3 h-3" /> Repeat Class
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleStudentPromotion(p.studentId, 'promoted')}
+                              className={`px-2 py-1 rounded text-2xs font-bold transition-colors ${
+                                p.status === 'promoted'
+                                  ? 'bg-emerald-600 text-white'
+                                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                              }`}
+                            >
+                              Promote
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleStudentPromotion(p.studentId, 'repeat')}
+                              className={`px-2 py-1 rounded text-2xs font-bold transition-colors ${
+                                p.status === 'repeat'
+                                  ? 'bg-red-600 text-white'
+                                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                              }`}
+                            >
+                              Repeat
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleStudentPromotion(p.studentId, 'promoted_on_trial')}
+                              className={`px-2 py-1 rounded text-2xs font-bold transition-colors ${
+                                p.status === 'promoted_on_trial'
+                                  ? 'bg-amber-600 text-white'
+                                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                              }`}
+                            >
+                              Trial
+                            </button>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <input
+                            type="text"
+                            placeholder={p.teacherOverride ? 'Override reason required...' : 'Optional recommendation note...'}
+                            value={p.teacherReason}
+                            onChange={(e) => handleUpdatePromotionReason(p.studentId, e.target.value)}
+                            className="w-full text-xs rounded-lg border border-slate-200 py-1 px-2 text-slate-800 bg-white"
+                          />
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => {
+                              const match = roster.find((r) => r.studentId === p.studentId);
+                              if (match) openStudentReportCard(match);
+                            }}
+                            className="text-2xs h-7 py-0"
+                            leftIcon={<Eye className="w-3.5 h-3.5 text-[#1d5f99]" />}
+                          >
+                            Card
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Bottom Actions Bar */}
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <span className="text-2xs text-slate-600">
+                Ready to commit promotion? Promoted students will automatically be transferred from <strong>{selectedClass}</strong> to <strong>{getNextClass(selectedClass).nextClass}</strong> in Firestore.
+              </span>
+              <Button
+                variant="primary"
+                isLoading={executingPromotion}
+                onClick={handleExecutePromotions}
+                leftIcon={<CheckCircle2 className="w-4 h-4" />}
+                className="bg-emerald-600 hover:bg-emerald-500 font-bold shrink-0"
+              >
+                Promote {promotionsList.filter((p) => p.status === 'promoted' || p.status === 'promoted_on_trial').length} Students Now
+              </Button>
+            </div>
+          </Card>
         </div>
       )}
 

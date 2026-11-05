@@ -1,6 +1,6 @@
 // ============================================================
 // EDUMO — Digital Learning Platform Unit Tests (Phase 3)
-// Master Spec Section 4 (Zeraki Learning Equivalent)
+// Master Spec Section 4 (Edumo Digital Learning Engine)
 // Tests:
 // 1. Quiz auto-marking calculation for MCQ, True/False, and Short Answer
 // 2. Topic-based diagnostic percentage breakdown

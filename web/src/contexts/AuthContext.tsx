@@ -7,7 +7,8 @@ import {
   signOut as fbSignOut,
   updateProfile,
 } from 'firebase/auth';
-import { auth } from '../firebase';
+import { doc, getDoc, collection, query, where, limit, getDocs } from 'firebase/firestore';
+import { auth, db } from '../firebase';
 import type { UserClaims, UserRole } from '@edumo/shared';
 
 interface AuthContextType {
@@ -43,6 +44,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (customClaims?.orgId) {
             setUserProfileOrgId(customClaims.orgId);
             localStorage.setItem('edumo_active_org_id', customClaims.orgId);
+          } else {
+            // Check Firestore for user profile membership or owned organization
+            try {
+              const userDoc = await getDoc(doc(db, 'users', user.uid));
+              if (userDoc.exists() && userDoc.data()?.memberships?.[0]?.orgId) {
+                const fetchedOrgId = userDoc.data().memberships[0].orgId;
+                setUserProfileOrgId(fetchedOrgId);
+                localStorage.setItem('edumo_active_org_id', fetchedOrgId);
+              } else {
+                // Check if user is the direct creator/owner of any organization
+                const orgsQuery = query(collection(db, 'organizations'), where('ownerId', '==', user.uid), limit(1));
+                const orgsSnap = await getDocs(orgsQuery);
+                if (!orgsSnap.empty) {
+                  const fetchedOrgId = orgsSnap.docs[0].id;
+                  setUserProfileOrgId(fetchedOrgId);
+                  localStorage.setItem('edumo_active_org_id', fetchedOrgId);
+                }
+              }
+            } catch (fsErr) {
+              console.warn('Could not resolve user organization from Firestore:', fsErr);
+            }
           }
         } catch (error) {
           console.error('Error fetching token claims:', error);

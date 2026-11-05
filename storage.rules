@@ -139,7 +139,7 @@ service firebase.storage {
         isUnderDocLimit();
     }
 
-    // Digital Learning Resources (Zeraki Learning notes, revision guides, media)
+    // Digital Learning Resources (Edumo Digital Notes, Revision Guides, Media)
     match /{orgId}/{schoolId}/resources/{resourceId}/{filename} {
       allow read: if hasSchoolAccess(orgId, schoolId);
       allow write: if hasSchoolAccess(orgId, schoolId) &&

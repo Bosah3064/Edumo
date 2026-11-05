@@ -1,5 +1,5 @@
 // ============================================================
-// EDUMO — Digital Learning Repository (Zeraki Learning)
+// EDUMO — Digital Learning Repository (Edumo Learning Engine)
 // Directive Section 3 & 4: Local-First Retrieval & Read Minimization
 // Manages digital resources, quizzes, and assignment submissions.
 // Checks IndexedDB first before querying Firestore.

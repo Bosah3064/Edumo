@@ -71,7 +71,7 @@ export interface Payment extends DocMeta {
   verifiedAt?: ISOTimestamp;
 }
 
-/** Parent Payment Pledge (Zeraki-Inspired) */
+/** Parent Payment Pledge (Edumo Standard) */
 export interface ParentPledge extends Partial<DocMeta> {
   id?: string;
   studentId: string;

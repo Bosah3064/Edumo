@@ -9,7 +9,7 @@ import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
-import { Building2, Plus, Phone, MapPin, CheckCircle2, BarChart3, Users, TrendingUp, ShieldCheck, DollarSign } from 'lucide-react';
+import { Building2, Plus, Phone, MapPin, CheckCircle2, BarChart3, Users, TrendingUp, ShieldCheck, DollarSign, GraduationCap } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export const Branches: React.FC = () => {
@@ -22,6 +22,7 @@ export const Branches: React.FC = () => {
   // New Branch Form
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
+  const [principalName, setPrincipalName] = useState('');
   const [type, setType] = useState<'nursery' | 'primary' | 'secondary' | 'combined'>('combined');
   const [curriculumType, setCurriculumType] = useState('CBC');
   const [gradingMode, setGradingMode] = useState('cbc_no_aggregate');
@@ -55,6 +56,10 @@ export const Branches: React.FC = () => {
             country: organization.country || 'KE',
             curriculumType,
             gradingMode,
+            headTeacher: principalName.trim() || 'Assigned Head Teacher',
+            settings: {
+              principalName: principalName.trim() || 'Assigned Head Teacher',
+            },
             address: {
               line1: addressLine || 'Campus Road',
               city: city || 'City Campus',
@@ -73,6 +78,10 @@ export const Branches: React.FC = () => {
           country: organization.country || 'KE',
           curriculumType,
           gradingMode,
+          headTeacher: principalName.trim() || 'Assigned Head Teacher',
+          settings: {
+            principalName: principalName.trim() || 'Assigned Head Teacher',
+          },
           address: {
             line1: addressLine || 'Campus Road',
             city: city || 'City Campus',
@@ -93,6 +102,7 @@ export const Branches: React.FC = () => {
       // Reset form
       setName('');
       setCode('');
+      setPrincipalName('');
     } catch (err: unknown) {
       console.error('Error creating branch:', err);
       const msg = err instanceof Error ? err.message : 'Failed to add branch';
@@ -198,6 +208,7 @@ export const Branches: React.FC = () => {
                 <thead className="bg-gray-100 text-gray-700 font-bold uppercase text-[10px] tracking-wider border-b">
                   <tr>
                     <th className="py-3 px-4">Branch / Campus</th>
+                    <th className="py-3 px-4">Head of Campus / Principal</th>
                     <th className="py-3 px-4">Level / Type</th>
                     <th className="py-3 px-4">Location</th>
                     <th className="py-3 px-4 text-center">Curriculum</th>
@@ -212,6 +223,7 @@ export const Branches: React.FC = () => {
                 <tbody className="divide-y divide-gray-100 font-medium">
                   {schools.map((school, idx) => {
                     const isActive = school.id === currentSchool?.id;
+                    const headName = (school.settings as any)?.principalName || (school as any).headTeacher || (school as any).principalName || 'Assigned Head Teacher';
                     const sampleLearners = 180 + (idx * 95);
                     const sampleFaculty = 12 + (idx * 5);
                     const ratio = `1:${Math.round(sampleLearners / sampleFaculty)}`;
@@ -226,6 +238,12 @@ export const Branches: React.FC = () => {
                             {isActive && <Badge variant="brand" size="sm">Active</Badge>}
                           </div>
                           <span className="text-2xs text-gray-400 font-mono">Code: {school.code || 'MAIN'}</span>
+                        </td>
+                        <td className="py-3.5 px-4 font-semibold text-gray-800">
+                          <div className="flex items-center gap-1.5">
+                            <GraduationCap className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                            <span className="truncate max-w-[150px]">{headName}</span>
+                          </div>
                         </td>
                         <td className="py-3.5 px-4 capitalize text-gray-600">{school.type || 'Combined'}</td>
                         <td className="py-3.5 px-4 text-gray-600">{school.address?.city || 'East Africa'}, {school.country || 'KE'}</td>
@@ -293,6 +311,21 @@ export const Branches: React.FC = () => {
                   Level: {school.type || 'Combined K-12'}
                 </p>
 
+                {/* Head of Campus / Principal Badge */}
+                <div className="mt-3 p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-800 flex items-center justify-center font-bold text-xs shrink-0">
+                    <GraduationCap className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
+                      Head of Campus / Principal
+                    </span>
+                    <span className="text-xs font-bold text-slate-900 truncate block">
+                      {(school.settings as any)?.principalName || (school as any).headTeacher || (school as any).principalName || 'Assigned Head Teacher'}
+                    </span>
+                  </div>
+                </div>
+
                 <div className="mt-4 pt-4 border-t border-surface-800 space-y-2 text-xs text-gray-700">
                   <div className="flex items-center gap-2 text-gray-500">
                     <MapPin className="w-3.5 h-3.5 shrink-0" />
@@ -340,13 +373,22 @@ export const Branches: React.FC = () => {
         maxWidth="lg"
       >
         <form onSubmit={handleCreateBranch} className="space-y-4 mt-2">
-          <Input
-            label="Branch Name"
-            placeholder="e.g. Mombasa Coastal Campus"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              label="Branch Name"
+              placeholder="e.g. Mombasa Coastal Campus"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+            <Input
+              label="Head of Campus / Principal"
+              placeholder="e.g. Dr. Faith Mwangi"
+              value={principalName}
+              onChange={(e) => setPrincipalName(e.target.value)}
+              helperText="Campus Director / Head Teacher"
+            />
+          </div>
 
           <div className="grid grid-cols-2 gap-4">
             <Input

@@ -1,5 +1,5 @@
 // ============================================================
-// EDUMO — Digital Learning & Assessment Platform (Zeraki Learning)
+// EDUMO — Digital Learning & Assessment Platform (Edumo Learning Engine)
 // Master Spec Section 4, Cost Optimization Directive
 // 1. Digital Resource Bank (Video Lessons, Notes, Past Exam Papers, Schemes)
 // 2. Interactive Online Quiz Engine (MCQ, True/False, Short Answer, Auto-Marking)
@@ -572,7 +572,7 @@ export const Assignments: React.FC = () => {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Badge variant="brand" dot>
-              Zeraki Learning Suite
+              Edumo Digital Learning Suite
             </Badge>
             <span className="text-2xs text-slate-500">{currentSchool?.name || 'Main Campus'}</span>
           </div>

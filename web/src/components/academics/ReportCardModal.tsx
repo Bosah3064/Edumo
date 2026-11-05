@@ -5,11 +5,13 @@
 // 2. Modern CBC Competency-Based (KICD CBA Rubric & Core Competencies)
 // 3. Executive Distinction (High-Security International Certificate)
 // 4. Compact Termly Slip (B&W Laser / Thermal Ink-Saving Slip)
-// 5. Visual Trajectory (Zeraki Analytics Longitudinal Visual Broadsheet)
+// 5. Visual Trajectory (Edumo Analytics Longitudinal Visual Broadsheet)
 // 6. Dual Curriculum (Integrated Secular & Faith-Based / Madrasa)
 // ============================================================
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../../firebase';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
@@ -25,9 +27,11 @@ import {
   FileText,
   CheckCircle2,
   Calendar,
+  AlertTriangle,
 } from 'lucide-react';
 import type { StudentAssessmentAggregate } from '@edumo/shared';
 import { useTenant } from '../../contexts/TenantContext';
+import { getNextClass, evaluatePromotionEligibility } from '../../utils/promotion';
 
 export type ReportTemplateId =
   | 'classic_crest'
@@ -93,7 +97,47 @@ export const ReportCardModal: React.FC<ReportCardModalProps> = ({
 
   const [activeTemplate, setActiveTemplate] = useState<ReportTemplateId>(defaultTemplate);
 
+  // Dynamically query school's subjects catalog to know Core vs Elective for each student
+  const [subjectsCatalog, setSubjectsCatalog] = useState<Record<string, { isMandatory: boolean; code?: string }>>({});
+
+  useEffect(() => {
+    if (!currentSchool) return;
+    const orgId = (currentSchool as any).organizationId || localStorage.getItem('edumo_active_org_id') || 'demo-org-edumo';
+    const subCol = collection(db, 'organizations', orgId, 'schools', currentSchool.id, 'subjects');
+    getDocs(subCol)
+      .then((snap) => {
+        const cat: Record<string, { isMandatory: boolean; code?: string }> = {};
+        snap.docs.forEach((d) => {
+          const data = d.data();
+          const nameKey = (data.name || '').toLowerCase().trim();
+          cat[nameKey] = {
+            isMandatory: data.isMandatory !== false,
+            code: data.code,
+          };
+        });
+        setSubjectsCatalog(cat);
+      })
+      .catch((err) => console.warn('Could not load subjects catalog for report card:', err));
+  }, [currentSchool?.id]);
+
   if (!reportData) return null;
+
+  const getSubjectIsMandatory = (subjectName: string): boolean => {
+    const key = (subjectName || '').toLowerCase().trim();
+    if (subjectsCatalog[key] !== undefined) {
+      return subjectsCatalog[key].isMandatory;
+    }
+    // Heuristic fallback for common optional electives
+    if (key.includes('french') || key.includes('german') || key.includes('arabic') ||
+        key.includes('cre') || key.includes('ire') || key.includes('music') ||
+        key.includes('computer') || key.includes('elective')) {
+      return false;
+    }
+    return true;
+  };
+
+  const coreUnitsCount = reportData.subjects.filter((s) => getSubjectIsMandatory(s.subjectName)).length;
+  const electiveUnitsCount = reportData.subjects.length - coreUnitsCount;
 
   const handlePrint = () => {
     window.print();
@@ -102,6 +146,14 @@ export const ReportCardModal: React.FC<ReportCardModalProps> = ({
   const isCBC = reportData.isNoAggregate;
   const primaryColor = currentSchool?.branding?.primaryColor || '#1d5f99';
   const secondaryColor = currentSchool?.branding?.secondaryColor || '#683669';
+
+  const { nextClass, isGraduated } = getNextClass(className);
+  const totalMaxMarks = reportData.subjects.reduce((sum, s) => sum + (s.maxScore || 100), 0) || 500;
+  const totalRawMarks = reportData.subjects.reduce((sum, s) => sum + (s.rawScore || 0), 0) || ((reportData as any).totalMarks || (reportData as any).totalScore || 370);
+  const averagePct = Math.round((totalRawMarks / totalMaxMarks) * 100);
+  const cbcRatingSample = isCBC ? (averagePct >= 75 ? 'EE' : averagePct >= 50 ? 'ME' : averagePct >= 25 ? 'AE' : 'BE') : undefined;
+  const promotionEval = evaluatePromotionEligibility(averagePct, cbcRatingSample, 50);
+  const isPromoted = promotionEval.status === 'promoted';
 
   const auditTimestamp = new Date().toLocaleString('en-GB', {
     day: '2-digit',
@@ -225,6 +277,12 @@ export const ReportCardModal: React.FC<ReportCardModalProps> = ({
                 </div>
               </div>
 
+              {/* Curriculum Breakdown Indicator (Core vs Electives) */}
+              <div className="flex flex-wrap items-center justify-between text-2xs text-slate-600 px-1 font-medium bg-slate-50/60 p-2 rounded-lg border border-slate-100">
+                <span>Enrolled Curriculum: <strong>{coreUnitsCount} Core (Mandatory) Units + {electiveUnitsCount} Elective (Optional) Units</strong></span>
+                <span>Total Evaluated: <strong>{reportData.subjects.length} Units</strong></span>
+              </div>
+
               {/* Academic Performance Table */}
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs border-collapse">
@@ -242,7 +300,20 @@ export const ReportCardModal: React.FC<ReportCardModalProps> = ({
                   <tbody className="divide-y divide-slate-200">
                     {reportData.subjects.map((s, idx) => (
                       <tr key={idx} className="hover:bg-slate-50/50">
-                        <td className="py-2.5 px-3 font-semibold text-slate-900">{s.subjectName}</td>
+                        <td className="py-2.5 px-3">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-slate-900">{s.subjectName}</span>
+                            <span
+                              className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${
+                                getSubjectIsMandatory(s.subjectName)
+                                  ? 'bg-blue-50 text-blue-800 border border-blue-200'
+                                  : 'bg-amber-50 text-amber-800 border border-amber-200'
+                              }`}
+                            >
+                              {getSubjectIsMandatory(s.subjectName) ? 'Core' : 'Elective'}
+                            </span>
+                          </div>
+                        </td>
                         <td className="py-2.5 px-3 text-center font-mono font-medium">
                           {s.rawScore} / {s.maxScore}
                         </td>
@@ -333,7 +404,20 @@ export const ReportCardModal: React.FC<ReportCardModalProps> = ({
                   <tbody className="divide-y divide-slate-200">
                     {reportData.subjects.map((s, idx) => (
                       <tr key={idx}>
-                        <td className="py-2.5 px-3 font-semibold text-slate-900">{s.subjectName}</td>
+                        <td className="py-2.5 px-3">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-slate-900">{s.subjectName}</span>
+                            <span
+                              className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${
+                                getSubjectIsMandatory(s.subjectName)
+                                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                                  : 'bg-amber-50 text-amber-800 border border-amber-200'
+                              }`}
+                            >
+                              {getSubjectIsMandatory(s.subjectName) ? 'Core' : 'Elective'}
+                            </span>
+                          </div>
+                        </td>
                         <td className="py-2.5 px-3 text-center">
                           <span
                             className="px-2.5 py-0.5 rounded-full text-xs font-bold"
@@ -419,7 +503,16 @@ export const ReportCardModal: React.FC<ReportCardModalProps> = ({
                 <tbody className="divide-y divide-slate-200 font-serif">
                   {reportData.subjects.map((s, idx) => (
                     <tr key={idx}>
-                      <td className="py-2 px-3 font-semibold text-slate-900">{s.subjectName}</td>
+                      <td className="py-2 px-3">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-slate-900">{s.subjectName}</span>
+                          <span className={`px-1.5 py-0.5 rounded text-[8px] font-sans font-bold uppercase ${
+                            getSubjectIsMandatory(s.subjectName) ? 'bg-blue-100 text-blue-900' : 'bg-amber-100 text-amber-900'
+                          }`}>
+                            {getSubjectIsMandatory(s.subjectName) ? 'Core' : 'Elective'}
+                          </span>
+                        </div>
+                      </td>
                       <td className="py-2 px-3 text-center font-mono">{s.rawScore}%</td>
                       <td className="py-2 px-3 text-center font-bold text-amber-900">
                         {s.rawScore >= 80 ? 'Distinction' : s.rawScore >= 65 ? 'Credit' : 'Pass'}
@@ -464,7 +557,9 @@ export const ReportCardModal: React.FC<ReportCardModalProps> = ({
                 <tbody>
                   {reportData.subjects.map((s, idx) => (
                     <tr key={idx} className="border-b border-dotted border-slate-400">
-                      <td className="py-1">{s.subjectName}</td>
+                      <td className="py-1">
+                        {s.subjectName} <span className="font-bold text-[9px]">[{getSubjectIsMandatory(s.subjectName) ? 'CORE' : 'ELEC'}]</span>
+                      </td>
                       <td className="py-1 text-center">{s.rawScore}</td>
                       <td className="py-1 text-center font-bold">{s.band?.code || '—'}</td>
                     </tr>
@@ -480,7 +575,7 @@ export const ReportCardModal: React.FC<ReportCardModalProps> = ({
           )}
 
           {/* ========================================================= */}
-          {/* TEMPLATE 5: VISUAL TRAJECTORY (ZERAKI ANALYTICS)         */}
+          {/* TEMPLATE 5: VISUAL TRAJECTORY (EDUMO ANALYTICS)           */}
           {/* ========================================================= */}
           {activeTemplate === 'visual_trajectory' && (
             <div className="p-8 space-y-6">
@@ -490,7 +585,7 @@ export const ReportCardModal: React.FC<ReportCardModalProps> = ({
                     {schoolName}
                   </h1>
                   <p className="text-xs font-bold text-slate-700 uppercase flex items-center gap-1.5 mt-0.5">
-                    <TrendingUp className="w-4 h-4 text-emerald-600" /> Zeraki-Inspired Visual Analytics Report Card
+                    <TrendingUp className="w-4 h-4 text-emerald-600" /> Edumo Longitudinal Visual Broadsheet
                   </p>
                 </div>
                 <Badge variant="brand">{termTitle} Trajectory</Badge>
@@ -506,7 +601,18 @@ export const ReportCardModal: React.FC<ReportCardModalProps> = ({
                   return (
                     <div key={idx} className="p-2.5 rounded-lg border border-slate-200 bg-slate-50 space-y-1">
                       <div className="flex justify-between text-xs font-semibold">
-                        <span className="text-slate-900">{s.subjectName}</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-slate-900">{s.subjectName}</span>
+                          <span
+                            className={`px-1.5 py-0.2 rounded text-[9px] font-bold uppercase ${
+                              getSubjectIsMandatory(s.subjectName)
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-amber-100 text-amber-800'
+                            }`}
+                          >
+                            {getSubjectIsMandatory(s.subjectName) ? 'Core' : 'Elective'}
+                          </span>
+                        </div>
                         <span className="font-mono">{pct}% ({s.band?.code || 'ME1'})</span>
                       </div>
                       <div className="w-full h-2 rounded-full bg-slate-200 overflow-hidden relative">
@@ -609,6 +715,90 @@ export const ReportCardModal: React.FC<ReportCardModalProps> = ({
               </div>
             </div>
           )}
+
+          {/* ========================================================= */}
+          {/* OFFICIAL PROMOTION & ACADEMIC ADVANCEMENT DECISION        */}
+          {/* ========================================================= */}
+          <div
+            className="mx-6 mb-3 p-4 rounded-xl border-2 print:m-2 print:p-3 transition-all"
+            style={{
+              backgroundColor: isPromoted ? 'rgba(16, 185, 129, 0.05)' : 'rgba(239, 68, 68, 0.05)',
+              borderColor: isPromoted ? '#10b981' : '#f87171',
+            }}
+          >
+            <div
+              className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-3 mb-3"
+              style={{ borderColor: isPromoted ? '#a7f3d0' : '#fecaca' }}
+            >
+              <div className="flex items-center gap-3">
+                <div
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-white shrink-0 shadow-xs ${
+                    isPromoted ? 'bg-emerald-600' : 'bg-red-600'
+                  }`}
+                >
+                  {isPromoted ? <CheckCircle2 className="w-6 h-6" /> : <AlertTriangle className="w-6 h-6" />}
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase tracking-wider font-extrabold text-slate-500 block">
+                    End-of-Year Academic Decision &amp; Board of Tutors Recommendation
+                  </span>
+                  <h3
+                    className={`text-base font-black tracking-tight ${
+                      isPromoted ? 'text-emerald-950' : 'text-red-950'
+                    }`}
+                  >
+                    {isPromoted
+                      ? isGraduated
+                        ? `GRADUATED / COURSE COMPLETED`
+                        : `PROMOTED TO: ${nextClass}`
+                      : `NOT PROMOTED — REPEAT: ${className}`}
+                  </h3>
+                </div>
+              </div>
+
+              <div className="sm:text-right">
+                <span
+                  className={`inline-block px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${
+                    isPromoted
+                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                      : 'bg-red-100 text-red-800 border border-red-300'
+                  }`}
+                >
+                  {isPromoted ? (isGraduated ? 'Honorable Exit' : 'Promoted') : 'Repeat Class'}
+                </span>
+                <p className="text-[10px] text-slate-500 font-mono mt-0.5">Average: {averagePct}% • Passing Baseline: 50.0%</p>
+              </div>
+            </div>
+
+            <div className="text-xs space-y-1.5 leading-relaxed text-slate-700">
+              <p>
+                <strong>Evaluation Summary:</strong> {promotionEval.reason}
+              </p>
+              <p className="text-2xs text-slate-500">
+                {isPromoted
+                  ? `The student has satisfied all mandatory subject benchmarks and competency areas for ${className}. Duly approved for progression into ${nextClass} for the upcoming academic cycle.`
+                  : `The student did not attain the statutory advancement threshold in key core learning areas. In accordance with institutional policy, repeating ${className} is prescribed for mastery consolidation.`}
+              </p>
+            </div>
+
+            <div
+              className="pt-3 mt-3 border-t grid grid-cols-2 gap-4 text-2xs text-slate-600"
+              style={{ borderColor: isPromoted ? '#a7f3d0' : '#fecaca' }}
+            >
+              <div>
+                <span className="font-bold block text-slate-900">Class Teacher Endorsement:</span>
+                <p className="italic text-slate-500 mt-1">
+                  "Recommended for {isPromoted ? (isGraduated ? 'graduation' : nextClass) : `remedial repetition of ${className}`}. {isPromoted ? 'Commendable effort.' : 'Dedicated revision required.'}"
+                </p>
+              </div>
+              <div className="text-right">
+                <span className="font-bold block text-slate-900">Head of Institution Seal:</span>
+                <span className="font-mono text-2xs text-emerald-800 font-bold block mt-1">
+                  {isPromoted ? '✓ APPROVED & SEALED' : 'REMEDIAL REPEAT DIRECTED'}
+                </span>
+              </div>
+            </div>
+          </div>
 
           {/* ========================================================= */}
           {/* UNIVERSAL SECURITY & ACCOUNTABILITY AUDIT TRAIL           */}

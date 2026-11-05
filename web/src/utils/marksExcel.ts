@@ -216,7 +216,7 @@ export async function parseUploadedMarksWorkbook(
 }
 
 /**
- * Zeraki-Inspired Comprehensive Examination Analysis Workbook (.xlsx)
+ * Edumo Comprehensive Examination Analysis Workbook (.xlsx)
  * Multi-sheet analysis: Executive Summary, Subject Performance, and Stream Matrix
  */
 export interface ExamAnalysisOptions {

@@ -5,6 +5,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { Badge } from '../components/ui/Badge';
+import { Modal } from '../components/ui/Modal';
 import {
   Settings as SettingsIcon,
   Globe,
@@ -38,12 +39,34 @@ import {
   Download,
   TrendingUp,
   BookOpen,
+  Eye,
+  Check,
+  ArrowRight,
+  GitMerge,
+  Plus,
+  Search,
+  Filter,
+  X,
+  RefreshCw,
+  Layers,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { collection, doc, getDocs, updateDoc } from 'firebase/firestore';
+import {
+  collection,
+  doc,
+  getDocs,
+  updateDoc,
+  onSnapshot,
+  setDoc,
+  deleteDoc,
+  writeBatch,
+  serverTimestamp,
+} from 'firebase/firestore';
 import { db, storage } from '../firebase';
 import { sanitizeSchoolEmailDomain } from '../utils/admission';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import { ReportCardModal, type ReportTemplateId } from '../components/academics/ReportCardModal';
+import type { Subject } from '@edumo/shared';
 
 /* ------------------------------------------------------------------ */
 /*  Section collapse helper                                           */
@@ -75,16 +98,258 @@ const SectionHeader: React.FC<{
   </button>
 );
 
+/* ------------------------------------------------------------------ */
+/*  Miniature Live Report Card Template Preview Component             */
+/* ------------------------------------------------------------------ */
+const MiniatureTemplatePreview: React.FC<{
+  templateId: string;
+  primaryColor: string;
+  secondaryColor: string;
+  schoolName: string;
+  logoUrl?: string;
+}> = ({ templateId, primaryColor, secondaryColor, schoolName }) => {
+  return (
+    <div
+      className="w-full h-36 rounded-lg border border-slate-200 overflow-hidden bg-white select-none pointer-events-none relative shadow-xs p-2 flex flex-col justify-between"
+      style={{ fontFamily: 'var(--font-main, sans-serif)' }}
+    >
+      {templateId === 'classic_crest' && (
+        <div className="h-full border border-double rounded p-1.5 flex flex-col justify-between" style={{ borderColor: primaryColor }}>
+          <div className="text-center border-b border-slate-200 pb-1">
+            <div className="flex items-center justify-center gap-1">
+              <Award className="w-3 h-3" style={{ color: primaryColor }} />
+              <span className="text-[8.5px] font-bold uppercase tracking-wider text-slate-800 truncate max-w-[130px]">
+                {schoolName || 'Edumo Academy'}
+              </span>
+            </div>
+            <span className="text-[7px] text-slate-400 italic block">Ad Astra Per Aspera</span>
+            <div className="text-[6.5px] font-bold uppercase tracking-widest text-white px-1 py-0.2 rounded mt-0.5 inline-block" style={{ backgroundColor: primaryColor }}>
+              Official Progress Report
+            </div>
+          </div>
+          <div className="my-1 space-y-0.5 text-[7px]">
+            <div className="flex justify-between px-1 py-0.5 font-bold text-white rounded-[2px]" style={{ backgroundColor: primaryColor }}>
+              <span>SUBJECT</span>
+              <span>SCORE</span>
+              <span>GRD</span>
+            </div>
+            <div className="flex justify-between px-1 text-slate-700 bg-slate-50">
+              <span className="truncate max-w-[80px]">Mathematics (Core)</span>
+              <span className="font-semibold">84%</span>
+              <span className="font-bold text-emerald-700">A</span>
+            </div>
+            <div className="flex justify-between px-1 text-slate-700">
+              <span className="truncate max-w-[80px]">English Lang (Core)</span>
+              <span className="font-semibold">78%</span>
+              <span className="font-bold text-blue-700">B+</span>
+            </div>
+            <div className="flex justify-between px-1 text-slate-700 bg-slate-50">
+              <span className="truncate max-w-[80px]">Integrated Sci (Core)</span>
+              <span className="font-semibold">91%</span>
+              <span className="font-bold text-emerald-700">A</span>
+            </div>
+          </div>
+          <div className="flex items-center justify-between pt-0.5 border-t border-slate-200 text-[6.5px] text-slate-500">
+            <span className="font-mono">Adm: 2026/0412</span>
+            <div className="flex items-center gap-1">
+              <span className="px-1 py-0.2 rounded border text-[6px] font-bold text-red-700 border-red-300 bg-red-50">SEAL</span>
+              <span>Principal: ✍️</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {templateId === 'modern_cbc' && (
+        <div className="h-full rounded flex flex-col justify-between">
+          <div className="bg-emerald-700 text-white p-1 rounded-t text-center">
+            <span className="text-[8px] font-black uppercase tracking-wider block">KENYA CBC PROGRESS REPORT</span>
+            <span className="text-[6.5px] text-emerald-100 block truncate">{schoolName || 'Edumo Demonstration'}</span>
+          </div>
+          <div className="grid grid-cols-4 gap-0.5 text-[6px] font-bold text-center my-0.5">
+            <span className="bg-emerald-100 text-emerald-800 rounded px-0.5 py-0.2">EE (4)</span>
+            <span className="bg-blue-100 text-blue-800 rounded px-0.5 py-0.2">ME (3)</span>
+            <span className="bg-amber-100 text-amber-800 rounded px-0.5 py-0.2">AE (2)</span>
+            <span className="bg-rose-100 text-rose-800 rounded px-0.5 py-0.2">BE (1)</span>
+          </div>
+          <div className="space-y-0.5 text-[7px] text-slate-700">
+            <div className="flex items-center justify-between px-1 bg-slate-50 rounded">
+              <span className="font-medium truncate max-w-[110px]">Mathematics (Core)</span>
+              <span className="font-bold text-emerald-700 text-[6.5px] bg-emerald-50 px-1 rounded">EE1 ✓</span>
+            </div>
+            <div className="flex items-center justify-between px-1 rounded">
+              <span className="font-medium truncate max-w-[110px]">English Literacy (Core)</span>
+              <span className="font-bold text-emerald-700 text-[6.5px] bg-emerald-50 px-1 rounded">EE2 ✓</span>
+            </div>
+            <div className="flex items-center justify-between px-1 bg-slate-50 rounded">
+              <span className="font-medium truncate max-w-[110px]">Integrated Science (Core)</span>
+              <span className="font-bold text-blue-700 text-[6.5px] bg-blue-50 px-1 rounded">ME1 ✓</span>
+            </div>
+          </div>
+          <div className="bg-slate-100 px-1 py-0.5 rounded text-[6px] text-slate-500 flex items-center justify-between">
+            <span className="font-bold text-emerald-700">CBC NO-AGGREGATE CERTIFIED</span>
+            <span>Values: ★★★★★</span>
+          </div>
+        </div>
+      )}
+
+      {templateId === 'executive_distinction' && (
+        <div className="h-full border border-amber-400 bg-linear-to-b from-amber-50/30 to-white rounded p-1.5 flex flex-col justify-between">
+          <div className="flex items-start justify-between border-b border-amber-200 pb-1">
+            <div>
+              <span className="text-[6.5px] font-bold text-amber-700 uppercase tracking-widest block">Executive Distinction</span>
+              <span className="text-[8px] font-black text-slate-900 truncate block max-w-[115px]">{schoolName}</span>
+            </div>
+            <div className="w-4 h-4 bg-slate-900 rounded-[2px] flex items-center justify-center text-white shrink-0">
+              <QrCode className="w-3 h-3 text-white" />
+            </div>
+          </div>
+          <div className="bg-slate-900 text-white rounded p-1 text-center my-0.5">
+            <span className="text-[6px] text-amber-300 font-bold tracking-wider uppercase block">Dean’s Honors List</span>
+            <span className="text-[8.5px] font-black tracking-tight text-white block">GPA 3.94 / 4.00</span>
+          </div>
+          <div className="grid grid-cols-2 gap-1 text-[6.5px] text-slate-700">
+            <div className="flex justify-between border-b border-slate-100">
+              <span>Pure Math (Core)</span>
+              <span className="font-bold text-amber-700">A</span>
+            </div>
+            <div className="flex justify-between border-b border-slate-100">
+              <span>Chemistry (Core)</span>
+              <span className="font-bold text-amber-700">A</span>
+            </div>
+          </div>
+          <div className="flex items-center justify-between text-[6px] text-amber-800 pt-0.5">
+            <span className="font-mono">Security ID: #ED-9041</span>
+            <span className="font-bold bg-amber-100 px-1 rounded text-amber-800">★ FIRST CLASS HONORS</span>
+          </div>
+        </div>
+      )}
+
+      {templateId === 'compact_slip' && (
+        <div className="h-full bg-slate-50 border border-slate-300 rounded font-mono p-1.5 flex flex-col justify-between text-[7px]">
+          <div className="text-center border-b border-dashed border-slate-300 pb-1">
+            <span className="font-bold text-[8px] text-slate-900 uppercase block tracking-wider">{schoolName || 'Edumo School'}</span>
+            <span className="text-[6px] text-slate-500 block">Term 1 Official Progress Slip</span>
+          </div>
+          <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 my-1 text-[6.5px] text-slate-700">
+            <div className="flex justify-between">
+              <span>MATH [Core]:</span>
+              <span className="font-bold">84% (A)</span>
+            </div>
+            <div className="flex justify-between">
+              <span>ENG [Core]:</span>
+              <span className="font-bold">78% (B+)</span>
+            </div>
+            <div className="flex justify-between">
+              <span>KISW [Core]:</span>
+              <span className="font-bold">74% (B)</span>
+            </div>
+            <div className="flex justify-between">
+              <span>SCI [Core]:</span>
+              <span className="font-bold">91% (A)</span>
+            </div>
+          </div>
+          <div className="border-t border-dashed border-slate-400 pt-0.5 text-[6px] text-slate-500">
+            <span className="block truncate text-slate-400">✂ - - - - - - - - - TEAR OFF - - - - - - - - -</span>
+            <div className="flex justify-between mt-0.5 text-slate-600 font-sans">
+              <span>Parent Sign: _________</span>
+              <span>Date: _____</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {templateId === 'visual_trajectory' && (
+        <div className="h-full border border-slate-200 rounded p-1.5 flex flex-col justify-between">
+          <div className="flex items-center justify-between border-b border-slate-200 pb-1">
+            <div>
+              <span className="text-[8px] font-bold text-slate-900 block truncate max-w-[115px]">{schoolName}</span>
+              <span className="text-[6.5px] text-slate-400 block font-medium">Trajectory &amp; Mastery Analytics</span>
+            </div>
+            <span className="text-[6.5px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 rounded">
+              +4.8% ▲
+            </span>
+          </div>
+          <div className="space-y-1 my-0.5 text-[6.5px]">
+            <div>
+              <div className="flex justify-between text-slate-600 font-semibold mb-0.5">
+                <span>Mathematics (Core)</span>
+                <span className="text-emerald-700 font-bold">86% (+5.2%)</span>
+              </div>
+              <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                <div className="h-full rounded-full bg-emerald-500" style={{ width: '86%' }} />
+              </div>
+            </div>
+            <div>
+              <div className="flex justify-between text-slate-600 font-semibold mb-0.5">
+                <span>Integrated Science (Core)</span>
+                <span className="text-emerald-700 font-bold">92% (+6.1%)</span>
+              </div>
+              <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                <div className="h-full rounded-full bg-blue-500" style={{ width: '92%' }} />
+              </div>
+            </div>
+            <div>
+              <div className="flex justify-between text-slate-600 font-semibold mb-0.5">
+                <span>English Language (Core)</span>
+                <span className="text-blue-700 font-bold">78% (+2.4%)</span>
+              </div>
+              <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                <div className="h-full rounded-full bg-indigo-500" style={{ width: '78%' }} />
+              </div>
+            </div>
+          </div>
+          <div className="text-[6px] text-slate-500 flex justify-between items-center pt-0.5 border-t border-slate-100">
+            <span>Baseline: 50% Competency</span>
+            <span className="font-bold text-emerald-700">Accelerating Growth</span>
+          </div>
+        </div>
+      )}
+
+      {templateId === 'dual_curriculum' && (
+        <div className="h-full border border-emerald-300 bg-emerald-50/20 rounded p-1.5 flex flex-col justify-between">
+          <div className="text-center border-b border-emerald-200 pb-0.5">
+            <span className="text-[8.5px] font-serif text-emerald-900 block leading-tight">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</span>
+            <span className="text-[7.5px] font-bold text-slate-800 uppercase block truncate">{schoolName || 'Integrated Academy'}</span>
+          </div>
+          <div className="grid grid-cols-2 gap-1 my-0.5 text-[6.5px]">
+            <div className="bg-white p-1 rounded border border-slate-200">
+              <span className="font-bold text-blue-900 block text-[6px] uppercase border-b border-slate-100 pb-0.5 mb-0.5">Table A: Secular</span>
+              <div className="space-y-0.5 text-slate-600">
+                <div className="flex justify-between"><span>Math (Core)</span><span className="font-bold">84%</span></div>
+                <div className="flex justify-between"><span>Science (Core)</span><span className="font-bold">88%</span></div>
+              </div>
+            </div>
+            <div className="bg-white p-1 rounded border border-emerald-200">
+              <span className="font-bold text-emerald-900 block text-[6px] uppercase border-b border-emerald-100 pb-0.5 mb-0.5">Table B: Islamic</span>
+              <div className="space-y-0.5 text-emerald-800">
+                <div className="flex justify-between"><span>Quran</span><span className="font-bold">96%</span></div>
+                <div className="flex justify-between"><span>Arabic</span><span className="font-bold">90%</span></div>
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-between items-center text-[5.5px] text-slate-500 pt-0.5 border-t border-emerald-100">
+            <span>Principal: [Stamp]</span>
+            <span className="text-emerald-800 font-bold">Mudir: [Approved]</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 /* ================================================================== */
 /*  Settings Page                                                      */
 /* ================================================================== */
 export const Settings: React.FC = () => {
-  const { organization, currentSchool } = useTenant();
+  const { organization, currentSchool, schools } = useTenant();
 
   /* ---- Section collapse state ---- */
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     registration: true,
     branding: true,
+    liveCampusSandbox: true,
+    reportCard: true,
+    unitsManagement: true,
     examCard: true,
     address: true,
     contacts: true,
@@ -171,6 +436,216 @@ export const Settings: React.FC = () => {
     currentSchool?.branding?.fontFamily || 'Plus Jakarta Sans'
   );
 
+  // Live Template Preview Modal State
+  const [previewTemplateModal, setPreviewTemplateModal] = useState<ReportTemplateId | null>(null);
+
+  // Immediate 1-Click Template Activation Handler
+  const handleApplyReportTemplate = async (tmplId: ReportTemplateId, tmplTitle: string) => {
+    setReportCardTemplate(tmplId);
+    if (!organization || !currentSchool) return;
+
+    const toastId = toast.loading(`Applying ${tmplTitle} across all school sections...`);
+    try {
+      await updateDoc(doc(db, 'organizations', organization.id, 'schools', currentSchool.id), {
+        'branding.reportCardTemplate': tmplId,
+      });
+      toast.success(`Active Report Form template set to "${tmplTitle}". Now active across all school sections!`, { id: toastId });
+    } catch (err) {
+      console.error('Error applying report template:', err);
+      toast.error('Failed to update template in database', { id: toastId });
+    }
+  };
+
+  /* ---- Curriculum Units Management & Branch Synchronization ---- */
+  const [schoolUnits, setSchoolUnits] = useState<Subject[]>([]);
+  const [loadingSchoolUnits, setLoadingSchoolUnits] = useState(true);
+  const [isMergingBranches, setIsMergingBranches] = useState(false);
+  const [isAddUnitModalOpen, setIsAddUnitModalOpen] = useState(false);
+  const [newUnitName, setNewUnitName] = useState('');
+  const [newUnitCode, setNewUnitCode] = useState('');
+  const [newUnitDept, setNewUnitDept] = useState('Sciences & Tech');
+  const [newUnitIsMandatory, setNewUnitIsMandatory] = useState(true);
+  const [newUnitPeriods, setNewUnitPeriods] = useState('4');
+
+  /* Filter & search state for curriculum units */
+  const [unitSearch, setUnitSearch] = useState('');
+  const [unitDeptFilter, setUnitDeptFilter] = useState('all');
+  const [unitTypeFilter, setUnitTypeFilter] = useState<'all' | 'mandatory' | 'optional'>('all');
+
+  // Real-time listener for school units/subjects
+  useEffect(() => {
+    if (!organization || !currentSchool) return;
+    const unitsRef = collection(db, 'organizations', organization.id, 'schools', currentSchool.id, 'subjects');
+    const unsub = onSnapshot(unitsRef, (snap) => {
+      const list: Subject[] = snap.docs.map((d) => ({
+        id: d.id,
+        ...(d.data() as any),
+      }));
+      setSchoolUnits(list);
+      setLoadingSchoolUnits(false);
+    });
+    return () => unsub();
+  }, [organization?.id, currentSchool?.id]);
+
+  // Merge Units to All Other Campus Branches
+  const handleMergeUnitsToOtherBranches = async () => {
+    if (!organization || !currentSchool) return;
+    if (schoolUnits.length === 0) {
+      toast.error('No curriculum units in this campus to replicate.');
+      return;
+    }
+
+    const otherBranches = schools.filter((s) => s.id !== currentSchool.id);
+    if (otherBranches.length === 0) {
+      toast.error('No other campus branches in this organization group. Add campus branches under Branch Switcher first.');
+      return;
+    }
+
+    if (!window.confirm(
+      `Replicate and merge ${schoolUnits.length} curriculum units from "${currentSchool.name}" to ${otherBranches.length} other campus branches?\n\n` +
+      `Target Branches:\n${otherBranches.map((b) => `• ${b.name}`).join('\n')}\n\n` +
+      `This guarantees aligned curriculum standards across all your schools.`
+    )) {
+      return;
+    }
+
+    setIsMergingBranches(true);
+    const toastId = toast.loading(`Merging ${schoolUnits.length} units to ${otherBranches.length} campus branches...`);
+
+    try {
+      const batch = writeBatch(db);
+      for (const branch of otherBranches) {
+        for (const unit of schoolUnits) {
+          const unitDocId = unit.id || (unit as any).code?.toLowerCase().replace(/[^a-z0-9]/g, '-') || 'unit';
+          const targetDocRef = doc(
+            db,
+            'organizations',
+            organization.id,
+            'schools',
+            branch.id,
+            'subjects',
+            unitDocId
+          );
+          batch.set(targetDocRef, {
+            ...unit,
+            updatedAt: serverTimestamp(),
+          }, { merge: true });
+        }
+      }
+
+      await batch.commit();
+      toast.success(
+        `Successfully merged ${schoolUnits.length} units across ${otherBranches.length} campus branches!`,
+        { id: toastId }
+      );
+    } catch (err) {
+      console.error('Error merging units to branches:', err);
+      toast.error('Failed to merge units to other branches', { id: toastId });
+    } finally {
+      setIsMergingBranches(false);
+    }
+  };
+
+  const handleToggleUnitMandatory = async (unit: Subject) => {
+    if (!organization || !currentSchool || !unit.id) return;
+    const newMandatory = !unit.isMandatory;
+    try {
+      await updateDoc(doc(db, 'organizations', organization.id, 'schools', currentSchool.id, 'subjects', unit.id), {
+        isMandatory: newMandatory,
+        type: newMandatory ? 'core' : 'elective',
+        updatedAt: serverTimestamp(),
+      });
+      toast.success(`${unit.name} set as ${newMandatory ? 'MANDATORY (Core)' : 'OPTIONAL (Elective)'}`);
+    } catch (err) {
+      console.error('Error updating unit:', err);
+      toast.error('Failed to update unit requirement');
+    }
+  };
+
+  const handleDeleteUnit = async (unit: Subject) => {
+    if (!organization || !currentSchool || !unit.id) return;
+    if (!window.confirm(`Delete unit "${unit.name}" from this school's curriculum?`)) return;
+    try {
+      await deleteDoc(doc(db, 'organizations', organization.id, 'schools', currentSchool.id, 'subjects', unit.id));
+      toast.success(`Unit ${unit.name} deleted.`);
+    } catch (err) {
+      console.error('Error deleting unit:', err);
+      toast.error('Failed to delete unit');
+    }
+  };
+
+  const handleCreateUnitInSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!organization || !currentSchool) return;
+    if (!newUnitName.trim() || !newUnitCode.trim()) {
+      toast.error('Unit name and code are required');
+      return;
+    }
+
+    const toastId = toast.loading('Registering curriculum unit...');
+    try {
+      const unitId = newUnitCode.toLowerCase().replace(/[^a-z0-9]/g, '-');
+      await setDoc(doc(db, 'organizations', organization.id, 'schools', currentSchool.id, 'subjects', unitId), {
+        id: unitId,
+        name: newUnitName.trim(),
+        code: newUnitCode.trim().toUpperCase(),
+        isMandatory: newUnitIsMandatory,
+        type: newUnitIsMandatory ? 'core' : 'elective',
+        department: newUnitDept,
+        weeklyPeriods: Number(newUnitPeriods) || 4,
+        teacherName: 'Assigned Instructor',
+        createdAt: serverTimestamp(),
+      });
+      toast.success(`Unit ${newUnitCode.toUpperCase()} created!`, { id: toastId });
+      setIsAddUnitModalOpen(false);
+      setNewUnitName('');
+      setNewUnitCode('');
+    } catch (err) {
+      console.error('Error creating unit:', err);
+      toast.error('Failed to create unit', { id: toastId });
+    }
+  };
+
+  const handleBulkSeedUnits = async () => {
+    if (!organization || !currentSchool) return;
+    const standardCurriculumUnits = [
+      { id: 'math-101', code: 'MATH-101', name: 'Mathematics', isMandatory: true, department: 'Sciences & Tech', weeklyPeriods: 5 },
+      { id: 'eng-102', code: 'ENG-102', name: 'English Language & Literacy', isMandatory: true, department: 'Languages', weeklyPeriods: 5 },
+      { id: 'kisw-103', code: 'KISW-103', name: 'Kiswahili & Fasihi', isMandatory: true, department: 'Languages', weeklyPeriods: 4 },
+      { id: 'sci-201', code: 'SCI-201', name: 'Integrated Science', isMandatory: true, department: 'Sciences & Tech', weeklyPeriods: 4 },
+      { id: 'sst-202', code: 'SST-202', name: 'Social Studies & Citizenship', isMandatory: true, department: 'Humanities', weeklyPeriods: 3 },
+      { id: 'agri-301', code: 'AGRI-301', name: 'Agriculture & Nutrition', isMandatory: true, department: 'Applied Sciences', weeklyPeriods: 3 },
+      { id: 'arts-302', code: 'ARTS-302', name: 'Creative Arts & Sports', isMandatory: true, department: 'Creative Arts', weeklyPeriods: 3 },
+      { id: 'ptech-303', code: 'PTECH-303', name: 'Pre-Technical & Digital Studies', isMandatory: true, department: 'Sciences & Tech', weeklyPeriods: 4 },
+      { id: 'cre-104', code: 'CRE-104', name: 'Christian Religious Education', isMandatory: false, department: 'Religious Studies', weeklyPeriods: 2 },
+      { id: 'ire-105', code: 'IRE-105', name: 'Islamic Religious Education', isMandatory: false, department: 'Religious Studies', weeklyPeriods: 2 },
+      { id: 'frn-203', code: 'FRN-203', name: 'French & Foreign Languages', isMandatory: false, department: 'Languages', weeklyPeriods: 3 },
+      { id: 'comp-204', code: 'COMP-204', name: 'Computer Science & ICT', isMandatory: false, department: 'Sciences & Tech', weeklyPeriods: 3 },
+      { id: 'bst-208', code: 'BST-208', name: 'Business Studies & Financial Literacy', isMandatory: false, department: 'Humanities', weeklyPeriods: 3 },
+      { id: 'mus-207', code: 'MUS-207', name: 'Music & Performing Arts', isMandatory: false, department: 'Creative Arts', weeklyPeriods: 2 },
+    ];
+
+    const toastId = toast.loading('Seeding standard curriculum units...');
+    try {
+      const batch = writeBatch(db);
+      for (const unit of standardCurriculumUnits) {
+        const docRef = doc(db, 'organizations', organization.id, 'schools', currentSchool.id, 'subjects', unit.id);
+        batch.set(docRef, {
+          ...unit,
+          type: unit.isMandatory ? 'core' : 'elective',
+          teacherName: 'Assigned Instructor',
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      }
+      await batch.commit();
+      toast.success('Successfully seeded 14 standard curriculum units for this campus!', { id: toastId });
+    } catch (err) {
+      console.error('Error seeding units:', err);
+      toast.error('Failed to seed curriculum units', { id: toastId });
+    }
+  };
+
   // Apply chosen colors, fonts, and sidebar theme to DOM in real-time so administrator sees instant live feedback
   useEffect(() => {
     if (primaryColor) {
@@ -231,7 +706,7 @@ export const Settings: React.FC = () => {
   const [examCardTemplate, setExamCardTemplate] = useState<string>(
     currentSchool?.branding?.examCardTemplate || 'classic_crest'
   );
-  const [previewTab, setPreviewTab] = useState<'dashboard' | 'examCard'>('examCard');
+  const [previewTab, setPreviewTab] = useState<'reportCard' | 'examCard' | 'dashboard'>('reportCard');
 
   /* ---- Academic Calendar ---- */
   const [termsPerYear, setTermsPerYear] = useState<number>(3);
@@ -1145,7 +1620,7 @@ export const Settings: React.FC = () => {
         </Card>
 
         {/* ============================================================ */}
-        {/*  2. REPORT CARD & LEARNER PROGRESS TEMPLATES (ZERAKI SUITE)  */}
+        {/*  2. REPORT CARD & LEARNER PROGRESS TEMPLATES (EDUMO SUITE)   */}
         {/* ============================================================ */}
         <Card className="space-y-4">
           <SectionHeader
@@ -1160,7 +1635,8 @@ export const Settings: React.FC = () => {
             <div className="space-y-4 pt-2">
               <p className="text-xs text-slate-500">
                 Select your school’s preferred report card design. Teachers, administrators, and parents will see this format
-                when printing and generating official termly report cards. This choice applies specifically to{' '}
+                when printing and generating official termly report cards. You can preview each template live and click{' '}
+                <strong>Apply to Campus</strong> to immediately activate it across all modules for{' '}
                 <strong>{currentSchool?.name || 'this campus'}</strong>.
               </p>
 
@@ -1201,7 +1677,7 @@ export const Settings: React.FC = () => {
                   {
                     id: 'visual_trajectory',
                     title: 'Visual Trajectory Analytics',
-                    category: 'Zeraki-Inspired',
+                    category: 'Edumo Analytics',
                     badge: 'Visual Broadsheet',
                     description: 'Visual progress bars showing subject mastery relative to 50% competency baseline, term-over-term trajectory deltas, and early intervention alerts.',
                     icon: TrendingUp,
@@ -1220,17 +1696,23 @@ export const Settings: React.FC = () => {
                   return (
                     <div
                       key={tmpl.id}
-                      onClick={() => {
-                        setReportCardTemplate(tmpl.id);
-                        setBrandingSaved(false);
-                      }}
+                      onClick={() => handleApplyReportTemplate(tmpl.id as ReportTemplateId, tmpl.title)}
                       className={`rounded-xl border p-4 cursor-pointer transition-all flex flex-col justify-between ${
                         isSelected
                           ? 'border-blue-600 ring-2 ring-blue-500/20 bg-blue-50/20 shadow-xs'
                           : 'border-slate-200 bg-white hover:border-slate-300'
                       }`}
                     >
-                      <div className="space-y-2">
+                      <div className="space-y-3">
+                        {/* Live Miniature Visual Preview Canvas */}
+                        <MiniatureTemplatePreview
+                          templateId={tmpl.id}
+                          primaryColor={primaryColor}
+                          secondaryColor={secondaryColor}
+                          schoolName={currentSchool?.name || orgName || 'Edumo Academy'}
+                          logoUrl={logoPreviewUrl || logoUrl}
+                        />
+
                         <div className="flex items-start justify-between gap-2">
                           <div
                             className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-white shadow-2xs"
@@ -1248,13 +1730,286 @@ export const Settings: React.FC = () => {
                             {isSelected && <span className="text-xs font-bold text-emerald-600">✓ Active</span>}
                           </div>
                           <span className="text-[10px] text-slate-500 block font-medium mt-0.5">{tmpl.category}</span>
-                          <p className="text-2xs text-slate-600 mt-1.5 leading-relaxed">{tmpl.description}</p>
+                          <p className="text-2xs text-slate-600 mt-1 leading-relaxed">{tmpl.description}</p>
                         </div>
+                      </div>
+
+                      {/* Interactive Actions Strip: Live Preview + Apply */}
+                      <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPreviewTemplateModal(tmpl.id as ReportTemplateId);
+                          }}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-2xs font-bold transition-colors"
+                        >
+                          <Eye className="w-3.5 h-3.5 text-[#1d5f99]" />
+                          Preview
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleApplyReportTemplate(tmpl.id as ReportTemplateId, tmpl.title);
+                          }}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-2xs font-bold transition-colors ${
+                            isSelected
+                              ? 'bg-emerald-600 text-white'
+                              : 'bg-[#1d5f99] hover:bg-blue-700 text-white'
+                          }`}
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                          {isSelected ? 'Applied' : 'Apply to Campus'}
+                        </button>
                       </div>
                     </div>
                   );
                 })}
               </div>
+            </div>
+          )}
+        </Card>
+
+        {/* ============================================================ */}
+        {/*  2.5 CURRICULUM UNITS & CROSS-CAMPUS BRANCH MERGE            */}
+        {/* ============================================================ */}
+        <Card className="space-y-4">
+          <SectionHeader
+            icon={<BookOpen className="w-4 h-4 text-brand-700" />}
+            title="Curriculum Units &amp; Learning Areas Management"
+            subtitle="Configure mandatory (core) vs optional (elective) units, seed national curricula, and sync across campuses"
+            isOpen={openSections.unitsManagement !== false}
+            onToggle={() => toggle('unitsManagement')}
+          />
+
+          {openSections.unitsManagement !== false && (
+            <div className="space-y-4 pt-2">
+              <p className="text-xs text-slate-500">
+                Setup and manage the academic learning areas offered at <strong>{currentSchool?.name || 'this campus'}</strong>.
+                Units marked as <strong>Mandatory (Core)</strong> are required for every learner and evaluated in official progression,
+                while <strong>Optional (Elective)</strong> units allow learner specialisation. You can replicate this entire curriculum catalog
+                to all other campus branches with 1-click synchronization.
+              </p>
+
+              {/* KPI Stat Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="p-3 rounded-xl border border-slate-200 bg-slate-50/70">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Total Units</span>
+                  <span className="text-xl font-bold font-mono text-slate-900">{schoolUnits.length}</span>
+                  <span className="text-[10px] text-slate-500 block mt-0.5">Active in curriculum</span>
+                </div>
+                <div className="p-3 rounded-xl border border-emerald-200 bg-emerald-50/50">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 block">Mandatory (Core)</span>
+                  <span className="text-xl font-bold font-mono text-emerald-700">
+                    {schoolUnits.filter((u) => u.isMandatory).length}
+                  </span>
+                  <span className="text-[10px] text-emerald-600 block mt-0.5">Required for all learners</span>
+                </div>
+                <div className="p-3 rounded-xl border border-purple-200 bg-purple-50/50">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-purple-700 block">Optional (Elective)</span>
+                  <span className="text-xl font-bold font-mono text-purple-700">
+                    {schoolUnits.filter((u) => !u.isMandatory).length}
+                  </span>
+                  <span className="text-[10px] text-purple-600 block mt-0.5">Specialized selections</span>
+                </div>
+                <div className="p-3 rounded-xl border border-blue-200 bg-blue-50/50">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700 block">Campus Branches</span>
+                  <span className="text-xl font-bold font-mono text-blue-700">{schools.length}</span>
+                  <span className="text-[10px] text-blue-600 block mt-0.5">Sync targets ready</span>
+                </div>
+              </div>
+
+              {/* Action Toolbar */}
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pt-2">
+                <div className="flex flex-wrap items-center gap-2 flex-1">
+                  <div className="relative min-w-[200px] flex-1 max-w-xs">
+                    <Input
+                      placeholder="Search units by name or code..."
+                      value={unitSearch}
+                      onChange={(e) => setUnitSearch(e.target.value)}
+                      leftIcon={<Search className="w-3.5 h-3.5" />}
+                      className="!py-1.5 text-xs"
+                    />
+                  </div>
+
+                  <select
+                    value={unitDeptFilter}
+                    onChange={(e) => setUnitDeptFilter(e.target.value)}
+                    className="text-xs rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 font-semibold text-slate-700"
+                  >
+                    <option value="all">All Departments</option>
+                    <option value="Sciences & Tech">Sciences &amp; Tech</option>
+                    <option value="Languages">Languages</option>
+                    <option value="Humanities">Humanities</option>
+                    <option value="Applied Sciences">Applied Sciences</option>
+                    <option value="Creative Arts">Creative Arts</option>
+                    <option value="Religious Studies">Religious Studies</option>
+                  </select>
+
+                  <div className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5 text-xs font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => setUnitTypeFilter('all')}
+                      className={`px-2 py-1 rounded-md transition ${unitTypeFilter === 'all' ? 'bg-slate-900 text-white font-bold' : 'text-slate-600 hover:text-slate-900'}`}
+                    >
+                      All
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setUnitTypeFilter('mandatory')}
+                      className={`px-2 py-1 rounded-md transition ${unitTypeFilter === 'mandatory' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-600 hover:text-slate-900'}`}
+                    >
+                      Core Only
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setUnitTypeFilter('optional')}
+                      className={`px-2 py-1 rounded-md transition ${unitTypeFilter === 'optional' ? 'bg-purple-600 text-white font-bold' : 'text-slate-600 hover:text-slate-900'}`}
+                    >
+                      Electives Only
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={handleBulkSeedUnits}
+                    leftIcon={<Layers className="w-3.5 h-3.5" />}
+                  >
+                    Seed Standard National Units
+                  </Button>
+
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="primary"
+                    onClick={() => setIsAddUnitModalOpen(true)}
+                    leftIcon={<Plus className="w-3.5 h-3.5" />}
+                  >
+                    Add Single Unit
+                  </Button>
+
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={handleMergeUnitsToOtherBranches}
+                    isLoading={isMergingBranches}
+                    className="!bg-indigo-50 !border-indigo-200 !text-indigo-700 hover:!bg-indigo-100"
+                    leftIcon={<GitMerge className="w-3.5 h-3.5 text-indigo-700" />}
+                  >
+                    Merge to Other Branches ({schools.filter((s) => s.id !== currentSchool?.id).length})
+                  </Button>
+                </div>
+              </div>
+
+              {/* Units Table */}
+              {loadingSchoolUnits ? (
+                <div className="p-8 text-center text-xs text-slate-500">Loading curriculum units...</div>
+              ) : schoolUnits.length === 0 ? (
+                <div className="p-8 text-center border-2 border-dashed border-slate-200 rounded-xl">
+                  <BookOpen className="w-10 h-10 mx-auto text-slate-300 mb-2" />
+                  <p className="text-sm font-bold text-slate-800">No Curriculum Units Registered Yet</p>
+                  <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+                    Click "Seed Standard National Units" to automatically populate standard CBC/8-4-4 subjects,
+                    or click "Add Single Unit" to register a custom unit.
+                  </p>
+                  <div className="mt-4 flex justify-center gap-2">
+                    <Button size="sm" variant="primary" onClick={handleBulkSeedUnits} leftIcon={<Layers className="w-3.5 h-3.5" />}>
+                      Seed 14 Standard Units
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-xl border border-slate-200">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200">
+                      <tr>
+                        <th className="py-2.5 px-3">Unit Code</th>
+                        <th className="py-2.5 px-3">Subject / Unit Name</th>
+                        <th className="py-2.5 px-3">Department</th>
+                        <th className="py-2.5 px-3">Weekly Periods</th>
+                        <th className="py-2.5 px-3">Requirement Status (Click to Toggle)</th>
+                        <th className="py-2.5 px-3 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-medium">
+                      {schoolUnits
+                        .filter((u) => {
+                          const matchesSearch =
+                            u.name.toLowerCase().includes(unitSearch.toLowerCase()) ||
+                            u.code.toLowerCase().includes(unitSearch.toLowerCase()) ||
+                            (u.department || '').toLowerCase().includes(unitSearch.toLowerCase());
+                          const matchesDept = unitDeptFilter === 'all' || u.department === unitDeptFilter;
+                          const matchesType =
+                            unitTypeFilter === 'all' ||
+                            (unitTypeFilter === 'mandatory' && u.isMandatory) ||
+                            (unitTypeFilter === 'optional' && !u.isMandatory);
+                          return matchesSearch && matchesDept && matchesType;
+                        })
+                        .map((unit) => (
+                          <tr key={unit.id} className="hover:bg-slate-50/70 transition">
+                            <td className="py-2.5 px-3">
+                              <span className="font-mono font-bold text-2xs px-2 py-0.5 rounded bg-slate-100 text-slate-800 border border-slate-200">
+                                {unit.code}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 font-bold text-slate-900">
+                              {unit.name}
+                            </td>
+                            <td className="py-2.5 px-3 text-slate-600">
+                              <span className="text-2xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-medium">
+                                {unit.department || 'General'}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 font-mono text-slate-700">
+                              {unit.weeklyPeriods || 4} pds/wk
+                            </td>
+                            <td className="py-2.5 px-3">
+                              <button
+                                type="button"
+                                onClick={() => handleToggleUnitMandatory(unit)}
+                                title="Click to switch requirement status"
+                                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-2xs font-bold transition-all border ${
+                                  unit.isMandatory
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100'
+                                    : 'bg-purple-50 text-purple-700 border-purple-300 hover:bg-purple-100'
+                                }`}
+                              >
+                                {unit.isMandatory ? (
+                                  <>
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                    MANDATORY (Core)
+                                  </>
+                                ) : (
+                                  <>
+                                    <Sparkles className="w-3 h-3 text-purple-600" />
+                                    OPTIONAL (Elective)
+                                  </>
+                                )}
+                              </button>
+                            </td>
+                            <td className="py-2.5 px-3 text-right">
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteUnit(unit)}
+                                className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                                title="Delete unit"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
         </Card>
@@ -2044,6 +2799,208 @@ export const Settings: React.FC = () => {
           </Button>
         </div>
       </form>
+
+      {/* ============================================================ */}
+      {/*  LIVE REPORT FORM TEMPLATE PREVIEW MODAL                     */}
+      {/* ============================================================ */}
+      {previewTemplateModal && (
+        <ReportCardModal
+          isOpen={previewTemplateModal !== null}
+          onClose={() => setPreviewTemplateModal(null)}
+          template={previewTemplateModal}
+          schoolName={currentSchool?.name || 'Edumo Demonstration Academy'}
+          schoolLogo={logoPreviewUrl || logoUrl || currentSchool?.branding?.logo}
+          schoolMotto={schoolMotto || currentSchool?.branding?.motto || 'Knowledge, Character and Excellence'}
+          schoolPhone={schoolPhone || currentSchool?.contacts?.phone || '+254 700 000 000'}
+          schoolEmail={schoolEmail || currentSchool?.contacts?.email || 'info@edumo.demo.ac.ke'}
+          schoolAddress={`${city || 'Nairobi'}, ${county || 'Nairobi County'}, Kenya`}
+          schoolCode={currentSchool?.code || 'MAIN'}
+          termTitle="Term 3 Final Assessment & Promotion Evaluation"
+          academicYear="2026"
+          className="Grade 4 West"
+          attendancePresent={68}
+          attendanceTotal={70}
+          reportData={{
+            studentId: 'sample-preview-learner',
+            studentName: 'Emmanuel Kiprono Kosgei',
+            admissionNumber: '2026/0042',
+            className: 'Grade 4 West',
+            academicYearId: '2026',
+            termId: 'term3',
+            totalScore: 438,
+            maxScore: 500,
+            averageScore: 87.6,
+            meanGrade: 'EE',
+            rankInClass: 2,
+            rankInStream: 1,
+            classSize: 45,
+            subjects: [
+              {
+                subjectId: 'math',
+                subjectName: 'Mathematics',
+                code: 'MATH-101',
+                score: 92,
+                maxMarks: 100,
+                grade: 'EE',
+                points: 4,
+                rubricLevel: 'Exceeding Expectations',
+                teacherRemarks: 'Exemplary mathematical logic and rapid computational accuracy.',
+              },
+              {
+                subjectId: 'eng',
+                subjectName: 'English Language & Literacy',
+                code: 'ENG-102',
+                score: 88,
+                maxMarks: 100,
+                grade: 'EE',
+                points: 4,
+                rubricLevel: 'Exceeding Expectations',
+                teacherRemarks: 'Fluent oral presentation and creative narrative composition.',
+              },
+              {
+                subjectId: 'kisw',
+                subjectName: 'Kiswahili & Fasihi',
+                code: 'KISW-103',
+                score: 84,
+                maxMarks: 100,
+                grade: 'EE',
+                points: 4,
+                rubricLevel: 'Exceeding Expectations',
+                teacherRemarks: 'Uelewa mzuri wa sarufi na msamiati mpana wa Kiswahili.',
+              },
+              {
+                subjectId: 'sci',
+                subjectName: 'Integrated Science',
+                code: 'SCI-201',
+                score: 89,
+                maxMarks: 100,
+                grade: 'EE',
+                points: 4,
+                rubricLevel: 'Exceeding Expectations',
+                teacherRemarks: 'Keen scientific curiosity during laboratory experiments.',
+              },
+              {
+                subjectId: 'sst',
+                subjectName: 'Social Studies & Citizenship',
+                code: 'SST-202',
+                score: 85,
+                maxMarks: 100,
+                grade: 'EE',
+                points: 4,
+                rubricLevel: 'Exceeding Expectations',
+                teacherRemarks: 'Active community engagement and high civic awareness.',
+              },
+            ],
+            teacherComments: 'Emmanuel is an outstanding, disciplined learner who consistently demonstrates academic excellence and cooperative leadership.',
+            principalComments: 'Excellent performance! Successfully met all CBC competency standards. Recommended for immediate academic advancement.',
+            isPromoted: true,
+            nextClass: 'Grade 5',
+            generatedAt: new Date().toISOString(),
+          } as any}
+        />
+      )}
+
+      {/* ============================================================ */}
+      {/*  ADD CURRICULUM UNIT / LEARNING AREA MODAL                   */}
+      {/* ============================================================ */}
+      <Modal
+        isOpen={isAddUnitModalOpen}
+        onClose={() => setIsAddUnitModalOpen(false)}
+        title="Register New Curriculum Unit / Learning Area"
+        description={`Add a new academic subject to ${currentSchool?.name || 'this campus'}. Configured units instantly apply across grading, marks entry, and report forms.`}
+      >
+        <form onSubmit={handleCreateUnitInSettings} className="space-y-4 text-left">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              label="Unit / Learning Area Name *"
+              placeholder="e.g. Coding & Robotics"
+              value={newUnitName}
+              onChange={(e) => setNewUnitName(e.target.value)}
+              required
+            />
+            <Input
+              label="Unit Code *"
+              placeholder="e.g. CODE-201"
+              value={newUnitCode}
+              onChange={(e) => setNewUnitCode(e.target.value.toUpperCase())}
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Select
+              label="Academic Department"
+              value={newUnitDept}
+              onChange={(e) => setNewUnitDept(e.target.value)}
+              options={[
+                { value: 'Sciences & Tech', label: 'Sciences & Tech (STEM)' },
+                { value: 'Languages', label: 'Languages & Literacy' },
+                { value: 'Humanities', label: 'Humanities & Citizenship' },
+                { value: 'Applied Sciences', label: 'Applied Sciences & Agriculture' },
+                { value: 'Creative Arts', label: 'Creative Arts & Sports' },
+                { value: 'Religious Studies', label: 'Religious Studies (CRE/IRE/HRE)' },
+                { value: 'Business Studies', label: 'Business Studies & Economics' },
+                { value: 'Specialized', label: 'Specialized / Technical' },
+              ]}
+            />
+
+            <Input
+              label="Weekly Periods / Lessons"
+              type="number"
+              min="1"
+              max="10"
+              value={newUnitPeriods}
+              onChange={(e) => setNewUnitPeriods(e.target.value)}
+              placeholder="4"
+            />
+          </div>
+
+          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+            <label className="text-xs font-bold text-gray-800 block mb-2">
+              Learning Area Classification
+            </label>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 text-xs font-medium text-gray-700 cursor-pointer">
+                <input
+                  type="radio"
+                  name="unitClassification"
+                  checked={newUnitIsMandatory}
+                  onChange={() => setNewUnitIsMandatory(true)}
+                  className="text-brand-600 focus:ring-brand-500"
+                />
+                <span><strong className="text-brand-900">Core / Mandatory:</strong> Taken by all enrolled learners</span>
+              </label>
+              <label className="flex items-center gap-2 text-xs font-medium text-gray-700 cursor-pointer">
+                <input
+                  type="radio"
+                  name="unitClassification"
+                  checked={!newUnitIsMandatory}
+                  onChange={() => setNewUnitIsMandatory(false)}
+                  className="text-brand-600 focus:ring-brand-500"
+                />
+                <span><strong className="text-purple-900">Elective / Optional:</strong> Selected individually per student</span>
+              </label>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setIsAddUnitModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              leftIcon={<Plus className="w-4 h-4" />}
+            >
+              Register &amp; Save Unit
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };

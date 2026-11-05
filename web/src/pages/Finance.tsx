@@ -111,7 +111,7 @@ export const Finance: React.FC = () => {
   const [activeVoucherModal, setActiveVoucherModal] = useState<PaymentVoucher | null>(null);
   const [activeOrderModal, setActiveOrderModal] = useState<PurchaseOrder | null>(null);
 
-  // Parent Pledges State (Zeraki Finance centerpiece)
+  // Parent Pledges State (Edumo Finance Commitment Tracking)
   const [pledges, setPledges] = useState<ParentPledge[]>([
     {
       id: 'plg-01',
@@ -214,7 +214,7 @@ export const Finance: React.FC = () => {
     },
   ]);
 
-  // Payment Vouchers (Zeraki-Style Expenditure Control)
+  // Payment Vouchers (Edumo Expenditure Control)
   const [vouchers, setVouchers] = useState<PaymentVoucher[]>([
     {
       id: 'pv-01',
@@ -595,7 +595,7 @@ export const Finance: React.FC = () => {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Badge variant="accent" dot>
-              Zeraki Finance Suite
+              Edumo Institutional Finance Suite
             </Badge>
             <span className="text-2xs text-gray-500">{currentSchool?.name || 'Main Campus'}</span>
           </div>
@@ -930,14 +930,14 @@ export const Finance: React.FC = () => {
         </Card>
       )}
 
-      {/* TAB 3: Parent Pledges Management (Zeraki-Inspired Centerpiece) */}
+      {/* TAB 3: Parent Pledges Management (Fee Commitment Tracking) */}
       {activeTab === 'pledges' && (
         <div className="space-y-6">
           {/* Architectural Notice: Strict Segregation */}
           <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 flex items-start gap-3 text-xs text-amber-950">
             <AlertCircle className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
             <div>
-              <span className="font-bold">Accounting Rule (Master Spec Section 3 &amp; Zeraki Finance):</span> Parent pledges are tracking commitments of promised future payments. Under statutory GAAP standards, <strong>a pledge is never treated as received revenue or recorded in the active cashbook</strong> until verified payment arrives.
+              <span className="font-bold">Accounting Rule (Statutory Standards &amp; Edumo Finance):</span> Parent pledges are tracking commitments of promised future payments. Under statutory GAAP standards, <strong>a pledge is never treated as received revenue or recorded in the active cashbook</strong> until verified payment arrives.
             </div>
           </div>
 
