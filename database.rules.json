@@ -1,0 +1,75 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "presence": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['state', 'lastChanged']) && (newData.child('state').val() === 'online' || newData.child('state').val() === 'offline')"
+      }
+    },
+
+    "users": {
+      "$uid": {
+        "notifications": {
+          ".read": "auth != null && auth.uid === $uid",
+          ".write": "auth != null && (auth.uid === $uid || auth.token.platformAdmin === true)",
+          "$notifId": {
+            ".validate": "newData.hasChildren(['title', 'timestamp', 'read'])"
+          }
+        },
+        "sync_state": {
+          ".read": "auth != null && auth.uid === $uid",
+          ".write": "auth != null && auth.uid === $uid"
+        }
+      }
+    },
+
+    "schools": {
+      "$schoolId": {
+        ".read": "auth != null && (auth.token.orgRole === 'orgOwner' || (auth.token.schoolRoles != null && auth.token.schoolRoles[$schoolId] != null))",
+
+        "presence": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid",
+            ".validate": "newData.hasChildren(['state', 'timestamp'])"
+          }
+        },
+
+        "sync_events": {
+          ".write": "auth != null && (auth.token.orgRole === 'orgOwner' || (auth.token.schoolRoles != null && auth.token.schoolRoles[$schoolId] != null))",
+          "$eventId": {
+            ".validate": "newData.hasChildren(['type', 'entity', 'timestamp'])"
+          }
+        },
+
+        "live_announcements": {
+          ".write": "auth != null && (auth.token.orgRole === 'orgOwner' || (auth.token.schoolRoles != null && (auth.token.schoolRoles[$schoolId] === 'principal' || auth.token.schoolRoles[$schoolId] === 'deputy' || auth.token.schoolRoles[$schoolId] === 'admin')))",
+          "$announcementId": {
+            ".validate": "newData.hasChildren(['title', 'content', 'createdAt', 'priority'])"
+          }
+        },
+
+        "live_classroom": {
+          "$sessionId": {
+            ".write": "auth != null && (auth.token.orgRole === 'orgOwner' || (auth.token.schoolRoles != null && (auth.token.schoolRoles[$schoolId] === 'principal' || auth.token.schoolRoles[$schoolId] === 'deputy' || auth.token.schoolRoles[$schoolId] === 'teacher')))",
+            "responses": {
+              "$studentUid": {
+                ".write": "auth != null && auth.uid === $studentUid"
+              }
+            }
+          }
+        },
+
+        "alerts": {
+          ".write": "auth != null && (auth.token.orgRole === 'orgOwner' || (auth.token.schoolRoles != null && (auth.token.schoolRoles[$schoolId] === 'principal' || auth.token.schoolRoles[$schoolId] === 'deputy')))",
+          "$alertId": {
+            ".validate": "newData.hasChildren(['severity', 'message', 'timestamp'])"
+          }
+        }
+      }
+    }
+  }
+}

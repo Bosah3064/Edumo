@@ -4,6 +4,7 @@ import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
+import { Badge } from '../components/ui/Badge';
 import {
   Settings as SettingsIcon,
   Globe,
@@ -35,6 +36,8 @@ import {
   ShieldCheck,
   History,
   Download,
+  TrendingUp,
+  BookOpen,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { collection, doc, getDocs, updateDoc } from 'firebase/firestore';
@@ -144,11 +147,85 @@ export const Settings: React.FC = () => {
   /* ---- Branding ---- */
   const [primaryColor, setPrimaryColor] = useState(currentSchool?.branding?.primaryColor || '#1d5f99');
   const [secondaryColor, setSecondaryColor] = useState(currentSchool?.branding?.secondaryColor || '#683669');
+  const [accentColor, setAccentColor] = useState(currentSchool?.branding?.accentColor || '#10B981');
   const [schoolMotto, setSchoolMotto] = useState(currentSchool?.branding?.motto || '');
   const [logoUrl, setLogoUrl] = useState(currentSchool?.branding?.logo || '');
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState('');
   const [brandingSaved, setBrandingSaved] = useState(false);
+
+  /* ---- Portal Visual Theme & Fonts ---- */
+  const [reportCardTemplate, setReportCardTemplate] = useState<string>(
+    currentSchool?.branding?.reportCardTemplate || 'classic_crest'
+  );
+  const [sidebarTheme, setSidebarTheme] = useState<string>(
+    currentSchool?.branding?.sidebarTheme || 'school_primary'
+  );
+  const [sidebarBg, setSidebarBg] = useState<string>(
+    currentSchool?.branding?.sidebarBg || currentSchool?.branding?.primaryColor || '#1d5f99'
+  );
+  const [sidebarText, setSidebarText] = useState<string>(
+    currentSchool?.branding?.sidebarText || '#ffffff'
+  );
+  const [fontFamily, setFontFamily] = useState<string>(
+    currentSchool?.branding?.fontFamily || 'Plus Jakarta Sans'
+  );
+
+  // Apply chosen colors, fonts, and sidebar theme to DOM in real-time so administrator sees instant live feedback
+  useEffect(() => {
+    if (primaryColor) {
+      document.documentElement.style.setProperty('--school-primary', primaryColor);
+      document.documentElement.style.setProperty('--color-blue', primaryColor);
+    }
+    if (secondaryColor) {
+      document.documentElement.style.setProperty('--school-secondary', secondaryColor);
+      document.documentElement.style.setProperty('--color-purple', secondaryColor);
+    }
+    if (accentColor) {
+      document.documentElement.style.setProperty('--school-accent', accentColor);
+    }
+
+    // Font
+    const fontStack = fontFamily === 'Outfit'
+      ? "'Outfit', 'Plus Jakarta Sans', sans-serif"
+      : fontFamily === 'Lexend'
+      ? "'Lexend', 'Inter', sans-serif"
+      : fontFamily === 'Inter'
+      ? "'Inter', system-ui, sans-serif"
+      : "'Plus Jakarta Sans', 'Inter', system-ui, sans-serif";
+    document.documentElement.style.setProperty('--font-main', fontStack);
+
+    // Sidebar
+    if (sidebarTheme === 'school_primary') {
+      document.documentElement.style.setProperty('--sidebar-bg', primaryColor);
+      document.documentElement.style.setProperty('--sidebar-text', '#ffffff');
+      document.documentElement.style.setProperty('--sidebar-text-muted', 'rgba(255, 255, 255, 0.75)');
+      document.documentElement.style.setProperty('--sidebar-active-bg', 'rgba(255, 255, 255, 0.18)');
+      document.documentElement.style.setProperty('--sidebar-active-text', '#ffffff');
+      document.documentElement.style.setProperty('--sidebar-border', 'rgba(255, 255, 255, 0.12)');
+    } else if (sidebarTheme === 'dark_slate') {
+      document.documentElement.style.setProperty('--sidebar-bg', '#0f172a');
+      document.documentElement.style.setProperty('--sidebar-text', '#f1f5f9');
+      document.documentElement.style.setProperty('--sidebar-text-muted', '#94a3b8');
+      document.documentElement.style.setProperty('--sidebar-active-bg', primaryColor);
+      document.documentElement.style.setProperty('--sidebar-active-text', '#ffffff');
+      document.documentElement.style.setProperty('--sidebar-border', '#1e293b');
+    } else if (sidebarTheme === 'custom') {
+      document.documentElement.style.setProperty('--sidebar-bg', sidebarBg);
+      document.documentElement.style.setProperty('--sidebar-text', sidebarText);
+      document.documentElement.style.setProperty('--sidebar-text-muted', 'rgba(255, 255, 255, 0.7)');
+      document.documentElement.style.setProperty('--sidebar-active-bg', 'rgba(255, 255, 255, 0.18)');
+      document.documentElement.style.setProperty('--sidebar-active-text', '#ffffff');
+      document.documentElement.style.setProperty('--sidebar-border', 'rgba(255, 255, 255, 0.15)');
+    } else {
+      document.documentElement.style.setProperty('--sidebar-bg', '#ffffff');
+      document.documentElement.style.setProperty('--sidebar-text', '#334155');
+      document.documentElement.style.setProperty('--sidebar-text-muted', '#64748b');
+      document.documentElement.style.setProperty('--sidebar-active-bg', `color-mix(in srgb, ${primaryColor} 12%, white)`);
+      document.documentElement.style.setProperty('--sidebar-active-text', primaryColor);
+      document.documentElement.style.setProperty('--sidebar-border', '#e2e8f0');
+    }
+  }, [primaryColor, secondaryColor, accentColor, sidebarTheme, sidebarBg, sidebarText, fontFamily]);
 
   /* ---- Exam Card Template ---- */
   const [examCardTemplate, setExamCardTemplate] = useState<string>(
@@ -194,6 +271,12 @@ export const Settings: React.FC = () => {
     // Branding
     setPrimaryColor(currentSchool.branding?.primaryColor || '#1d5f99');
     setSecondaryColor(currentSchool.branding?.secondaryColor || '#683669');
+    setAccentColor(currentSchool.branding?.accentColor || '#10B981');
+    setReportCardTemplate(currentSchool.branding?.reportCardTemplate || 'classic_crest');
+    setSidebarTheme(currentSchool.branding?.sidebarTheme || 'school_primary');
+    setSidebarBg(currentSchool.branding?.sidebarBg || currentSchool.branding?.primaryColor || '#1d5f99');
+    setSidebarText(currentSchool.branding?.sidebarText || '#ffffff');
+    setFontFamily(currentSchool.branding?.fontFamily || 'Plus Jakarta Sans');
     setSchoolMotto(currentSchool.branding?.motto || '');
     setLogoUrl(currentSchool.branding?.logo || '');
     setLogoFile(null);
@@ -386,10 +469,16 @@ export const Settings: React.FC = () => {
           gradingMode,
           gradingConfig: { ...currentSchool.gradingConfig, scale: gradingScale },
 
-          // Branding (per-school)
+          // Branding (strictly isolated per-school)
           branding: {
             primaryColor,
             secondaryColor,
+            accentColor,
+            sidebarTheme,
+            sidebarBg,
+            sidebarText,
+            fontFamily,
+            reportCardTemplate,
             motto: schoolMotto.trim(),
             logo: savedLogoUrl,
             examCardTemplate,
@@ -825,10 +914,22 @@ export const Settings: React.FC = () => {
                 )}
               </div>
 
-              {/* Colour Pickers */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Branch Isolation Notice */}
+              <div className="p-3.5 rounded-xl bg-blue-50 border border-blue-200/80 flex items-start gap-2.5 text-xs text-blue-900">
+                <Building2 className="w-4 h-4 text-blue-700 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold">Campus-Isolated Theme &amp; Branding:</span>
+                  <p className="text-2xs text-blue-800 mt-0.5 leading-relaxed">
+                    Colours, sidebar themes, fonts, and report form templates selected here apply strictly to{' '}
+                    <strong>{currentSchool?.name || 'this campus'}</strong>. They will never alter or interfere with other school branches in your organization.
+                  </p>
+                </div>
+              </div>
+
+              {/* Colour Pickers: Primary, Secondary, Accent */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Primary Campus Colour
+                  Primary Brand Colour
                   <div className="mt-1.5 flex gap-2">
                     <input
                       type="color"
@@ -837,7 +938,7 @@ export const Settings: React.FC = () => {
                         setPrimaryColor(e.target.value);
                         setBrandingSaved(false);
                       }}
-                      className="block h-11 w-20 rounded-xl border border-gray-200 bg-white p-1 cursor-pointer"
+                      className="block h-10 w-16 rounded-lg border border-gray-200 bg-white p-1 cursor-pointer"
                     />
                     <input
                       type="text"
@@ -849,13 +950,13 @@ export const Settings: React.FC = () => {
                           setBrandingSaved(false);
                         }
                       }}
-                      className="block h-11 min-w-0 flex-1 rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold text-gray-900"
+                      className="block h-10 min-w-0 flex-1 rounded-lg border border-gray-200 bg-white px-3 text-xs font-bold text-gray-900"
                     />
                   </div>
                 </label>
 
                 <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Secondary Campus Colour
+                  Secondary Colour
                   <div className="mt-1.5 flex gap-2">
                     <input
                       type="color"
@@ -864,7 +965,7 @@ export const Settings: React.FC = () => {
                         setSecondaryColor(e.target.value);
                         setBrandingSaved(false);
                       }}
-                      className="block h-11 w-20 rounded-xl border border-gray-200 bg-white p-1 cursor-pointer"
+                      className="block h-10 w-16 rounded-lg border border-gray-200 bg-white p-1 cursor-pointer"
                     />
                     <input
                       type="text"
@@ -876,10 +977,134 @@ export const Settings: React.FC = () => {
                           setBrandingSaved(false);
                         }
                       }}
-                      className="block h-11 min-w-0 flex-1 rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold text-gray-900"
+                      className="block h-10 min-w-0 flex-1 rounded-lg border border-gray-200 bg-white px-3 text-xs font-bold text-gray-900"
                     />
                   </div>
                 </label>
+
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  Accent / Highlight Colour
+                  <div className="mt-1.5 flex gap-2">
+                    <input
+                      type="color"
+                      value={accentColor}
+                      onChange={(e) => {
+                        setAccentColor(e.target.value);
+                        setBrandingSaved(false);
+                      }}
+                      className="block h-10 w-16 rounded-lg border border-gray-200 bg-white p-1 cursor-pointer"
+                    />
+                    <input
+                      type="text"
+                      value={accentColor.toUpperCase()}
+                      maxLength={7}
+                      onChange={(e) => {
+                        if (/^#[0-9a-fA-F]{6}$/.test(e.target.value)) {
+                          setAccentColor(e.target.value);
+                          setBrandingSaved(false);
+                        }
+                      }}
+                      className="block h-10 min-w-0 flex-1 rounded-lg border border-gray-200 bg-white px-3 text-xs font-bold text-gray-900"
+                    />
+                  </div>
+                </label>
+              </div>
+
+              {/* Sidebar Theme & Typography Customization */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-xl border border-slate-200 bg-slate-50/50">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+                    Sidebar Portal Theme
+                  </label>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    {[
+                      { id: 'school_primary', label: 'Primary Brand Color', desc: 'Uses campus primary color' },
+                      { id: 'dark_slate', label: 'Dark Slate Enterprise', desc: 'Classic midnight slate #0f172a' },
+                      { id: 'clean_light', label: 'Clean Light / White', desc: 'Minimalist crisp white theme' },
+                      { id: 'custom', label: 'Custom Palette', desc: 'Specify background & text' },
+                    ].map((st) => (
+                      <button
+                        key={st.id}
+                        type="button"
+                        onClick={() => {
+                          setSidebarTheme(st.id);
+                          setBrandingSaved(false);
+                        }}
+                        className={`p-2.5 rounded-lg border text-left transition-all ${
+                          sidebarTheme === st.id
+                            ? 'border-blue-600 ring-2 ring-blue-500/20 bg-white font-bold text-blue-900 shadow-2xs'
+                            : 'border-slate-200 bg-white/70 text-slate-700 hover:border-slate-300'
+                        }`}
+                      >
+                        <span className="block font-semibold text-xs">{st.label}</span>
+                        <span className="block text-[10px] text-slate-500 font-normal">{st.desc}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {sidebarTheme === 'custom' && (
+                    <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-slate-200">
+                      <label className="text-2xs font-semibold text-slate-600">
+                        Sidebar Background
+                        <input
+                          type="color"
+                          value={sidebarBg}
+                          onChange={(e) => {
+                            setSidebarBg(e.target.value);
+                            setBrandingSaved(false);
+                          }}
+                          className="block h-8 w-full rounded mt-1 p-0.5 cursor-pointer"
+                        />
+                      </label>
+                      <label className="text-2xs font-semibold text-slate-600">
+                        Sidebar Text Color
+                        <input
+                          type="color"
+                          value={sidebarText}
+                          onChange={(e) => {
+                            setSidebarText(e.target.value);
+                            setBrandingSaved(false);
+                          }}
+                          className="block h-8 w-full rounded mt-1 p-0.5 cursor-pointer"
+                        />
+                      </label>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+                    Portal Preferred Typography Font
+                  </label>
+                  <div className="space-y-2">
+                    {[
+                      { id: 'Plus Jakarta Sans', label: 'Plus Jakarta Sans', desc: 'Modern High-Tech SaaS & Fintech (Recommended)' },
+                      { id: 'Inter', label: 'Inter', desc: 'Clean, neutral and ultra-legible' },
+                      { id: 'Outfit', label: 'Outfit', desc: 'Friendly, rounded modern display typography' },
+                      { id: 'Lexend', label: 'Lexend', desc: 'Engineered for reading fluency in education' },
+                    ].map((f) => (
+                      <button
+                        key={f.id}
+                        type="button"
+                        onClick={() => {
+                          setFontFamily(f.id);
+                          setBrandingSaved(false);
+                        }}
+                        className={`w-full p-2.5 rounded-lg border text-left transition-all flex items-center justify-between ${
+                          fontFamily === f.id
+                            ? 'border-blue-600 ring-2 ring-blue-500/20 bg-white font-bold text-blue-900 shadow-2xs'
+                            : 'border-slate-200 bg-white/70 text-slate-700 hover:border-slate-300'
+                        }`}
+                      >
+                        <div>
+                          <span className="block font-semibold text-xs">{f.label}</span>
+                          <span className="block text-[10px] text-slate-500 font-normal">{f.desc}</span>
+                        </div>
+                        {fontFamily === f.id && <span className="text-xs font-bold text-emerald-600">✓</span>}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               {/* Motto & Logo */}
@@ -920,7 +1145,122 @@ export const Settings: React.FC = () => {
         </Card>
 
         {/* ============================================================ */}
-        {/*  2. EXAM CARDS TEMPLATES SELECTOR (NEW)                      */}
+        {/*  2. REPORT CARD & LEARNER PROGRESS TEMPLATES (ZERAKI SUITE)  */}
+        {/* ============================================================ */}
+        <Card className="space-y-4">
+          <SectionHeader
+            icon={<FileText className="w-4 h-4 text-brand-700" />}
+            title="Official Report Form &amp; Progress Card Templates"
+            subtitle="Choose the layout design for termly report forms and academic transcripts for this campus"
+            isOpen={openSections.reportCard !== false}
+            onToggle={() => toggle('reportCard')}
+          />
+
+          {openSections.reportCard !== false && (
+            <div className="space-y-4 pt-2">
+              <p className="text-xs text-slate-500">
+                Select your school’s preferred report card design. Teachers, administrators, and parents will see this format
+                when printing and generating official termly report cards. This choice applies specifically to{' '}
+                <strong>{currentSchool?.name || 'this campus'}</strong>.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                {[
+                  {
+                    id: 'classic_crest',
+                    title: 'Classic Crest & Honors',
+                    category: 'Traditional Prestige',
+                    badge: 'Most Popular',
+                    description: 'Traditional double-border crest, Latin motto banner, subject grades, and physical headmaster seal box. Ideal for KCSE, 8-4-4, and traditional academies.',
+                    icon: Award,
+                  },
+                  {
+                    id: 'modern_cbc',
+                    title: 'Modern CBC Competency Rubric',
+                    category: 'KICD / MoE Standard',
+                    badge: 'CBC Compliance',
+                    description: 'Official 8-level competency matrix (EE1..BE2), rubric strand descriptors, core values evaluation, and strict no-aggregate compliance.',
+                    icon: Sparkles,
+                  },
+                  {
+                    id: 'executive_distinction',
+                    title: 'Executive Distinction Certificate',
+                    category: 'Cambridge & International',
+                    badge: 'High Security QR',
+                    description: 'Decorative guilloche security border, cryptographic verification QR code, dean’s honors stamp, and weighted GPA/percentage scale.',
+                    icon: ShieldCheck,
+                  },
+                  {
+                    id: 'compact_slip',
+                    title: 'Compact Termly Slip',
+                    category: 'Eco & Ink-Saving',
+                    badge: 'Low-Data & Thermal',
+                    description: 'High-density, ink-efficient single-page layout optimized for black & white printing or thermal paper with parent acknowledgement tear-off slip.',
+                    icon: FileText,
+                  },
+                  {
+                    id: 'visual_trajectory',
+                    title: 'Visual Trajectory Analytics',
+                    category: 'Zeraki-Inspired',
+                    badge: 'Visual Broadsheet',
+                    description: 'Visual progress bars showing subject mastery relative to 50% competency baseline, term-over-term trajectory deltas, and early intervention alerts.',
+                    icon: TrendingUp,
+                  },
+                  {
+                    id: 'dual_curriculum',
+                    title: 'Dual Curriculum (Secular & Madrasa)',
+                    category: 'Integrated Academy',
+                    badge: 'Bilingual Calligraphy',
+                    description: 'Dual header calligraphy, side-by-side Table A (Secular Sciences & Languages) and Table B (Islamic Religious Education, Arabic & Tarbiyah conduct).',
+                    icon: BookOpen,
+                  },
+                ].map((tmpl) => {
+                  const isSelected = reportCardTemplate === tmpl.id;
+                  const Icon = tmpl.icon;
+                  return (
+                    <div
+                      key={tmpl.id}
+                      onClick={() => {
+                        setReportCardTemplate(tmpl.id);
+                        setBrandingSaved(false);
+                      }}
+                      className={`rounded-xl border p-4 cursor-pointer transition-all flex flex-col justify-between ${
+                        isSelected
+                          ? 'border-blue-600 ring-2 ring-blue-500/20 bg-blue-50/20 shadow-xs'
+                          : 'border-slate-200 bg-white hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div
+                            className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-white shadow-2xs"
+                            style={{ backgroundColor: primaryColor }}
+                          >
+                            <Icon className="w-4 h-4" />
+                          </div>
+                          <Badge variant={isSelected ? 'brand' : 'neutral'}>
+                            {tmpl.badge}
+                          </Badge>
+                        </div>
+                        <div>
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-bold text-slate-900 text-xs">{tmpl.title}</h4>
+                            {isSelected && <span className="text-xs font-bold text-emerald-600">✓ Active</span>}
+                          </div>
+                          <span className="text-[10px] text-slate-500 block font-medium mt-0.5">{tmpl.category}</span>
+                          <p className="text-2xs text-slate-600 mt-1.5 leading-relaxed">{tmpl.description}</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </Card>
+
+        {/* ============================================================ */}
+        {/*  3. EXAM CARDS TEMPLATES SELECTOR (NEW)                      */}
         {/* ============================================================ */}
         <Card className="space-y-4">
           <SectionHeader

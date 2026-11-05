@@ -63,8 +63,14 @@ export interface Branding {
   logo?: string; // Storage path
   primaryColor?: string; // Hex
   secondaryColor?: string; // Hex
+  accentColor?: string; // Hex
+  sidebarTheme?: 'school_primary' | 'dark_slate' | 'clean_light' | 'custom';
+  sidebarBg?: string; // Custom hex
+  sidebarText?: string; // Custom hex
+  fontFamily?: 'Plus Jakarta Sans' | 'Inter' | 'Outfit' | 'Lexend';
   motto?: string;
   examCardTemplate?: string; // 'classic_crest' | 'modern_qr' | 'compact_slip' | 'executive_distinction'
+  reportCardTemplate?: 'classic_crest' | 'modern_cbc' | 'executive_distinction' | 'compact_slip' | 'visual_trajectory' | 'dual_curriculum';
 }
 
 /** Attendance status options */

@@ -57,6 +57,24 @@
     font-family: inherit;
   }
 
+  /* Form & Dialog spacing improvements to prevent top border squeezing */
+  form {
+    padding-top: 0.25rem;
+  }
+
+  .form-group {
+    margin-bottom: 1.25rem;
+  }
+
+  .form-group:last-child {
+    margin-bottom: 0;
+  }
+
+  /* Prevent first input from hugging dialog / card top border */
+  form > *:first-child {
+    margin-top: 0.25rem;
+  }
+
   a {
     transition: var(--transition);
   }

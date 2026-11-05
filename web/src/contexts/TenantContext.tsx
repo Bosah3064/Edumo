@@ -151,6 +151,67 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return schools.find((s) => s.id === currentSchoolId) || schools[0] || null;
   }, [schools, currentSchoolId]);
 
+  // Apply school custom branding colors dynamically to CSS custom properties
+  // Guarantees each school/branch has its own visual identity without affecting other schools
+  useEffect(() => {
+    if (!currentSchool) return;
+    const b = currentSchool.branding || {};
+    const primary = b.primaryColor || '#1d5f99';
+    const secondary = b.secondaryColor || '#683669';
+    const accent = b.accentColor || '#10B981';
+    const font = b.fontFamily || 'Plus Jakarta Sans';
+    const sidebarTheme = b.sidebarTheme || 'school_primary';
+
+    const root = document.documentElement;
+    root.style.setProperty('--school-primary', primary);
+    root.style.setProperty('--school-secondary', secondary);
+    root.style.setProperty('--school-accent', accent);
+    root.style.setProperty('--color-blue', primary);
+    root.style.setProperty('--color-purple', secondary);
+
+    // Apply font
+    const fontStack = font === 'Outfit'
+      ? "'Outfit', 'Plus Jakarta Sans', sans-serif"
+      : font === 'Lexend'
+      ? "'Lexend', 'Inter', sans-serif"
+      : font === 'Inter'
+      ? "'Inter', system-ui, sans-serif"
+      : "'Plus Jakarta Sans', 'Inter', system-ui, sans-serif";
+    root.style.setProperty('--font-main', fontStack);
+
+    // Apply sidebar theme
+    if (sidebarTheme === 'school_primary') {
+      root.style.setProperty('--sidebar-bg', primary);
+      root.style.setProperty('--sidebar-text', '#ffffff');
+      root.style.setProperty('--sidebar-text-muted', 'rgba(255, 255, 255, 0.75)');
+      root.style.setProperty('--sidebar-active-bg', 'rgba(255, 255, 255, 0.18)');
+      root.style.setProperty('--sidebar-active-text', '#ffffff');
+      root.style.setProperty('--sidebar-border', 'rgba(255, 255, 255, 0.12)');
+    } else if (sidebarTheme === 'dark_slate') {
+      root.style.setProperty('--sidebar-bg', '#0f172a');
+      root.style.setProperty('--sidebar-text', '#f1f5f9');
+      root.style.setProperty('--sidebar-text-muted', '#94a3b8');
+      root.style.setProperty('--sidebar-active-bg', primary);
+      root.style.setProperty('--sidebar-active-text', '#ffffff');
+      root.style.setProperty('--sidebar-border', '#1e293b');
+    } else if (sidebarTheme === 'custom' && b.sidebarBg) {
+      root.style.setProperty('--sidebar-bg', b.sidebarBg);
+      root.style.setProperty('--sidebar-text', b.sidebarText || '#ffffff');
+      root.style.setProperty('--sidebar-text-muted', 'rgba(255, 255, 255, 0.7)');
+      root.style.setProperty('--sidebar-active-bg', 'rgba(255, 255, 255, 0.18)');
+      root.style.setProperty('--sidebar-active-text', '#ffffff');
+      root.style.setProperty('--sidebar-border', 'rgba(255, 255, 255, 0.15)');
+    } else {
+      // clean_light default
+      root.style.setProperty('--sidebar-bg', '#ffffff');
+      root.style.setProperty('--sidebar-text', '#334155');
+      root.style.setProperty('--sidebar-text-muted', '#64748b');
+      root.style.setProperty('--sidebar-active-bg', `color-mix(in srgb, ${primary} 12%, white)`);
+      root.style.setProperty('--sidebar-active-text', primary);
+      root.style.setProperty('--sidebar-border', '#e2e8f0');
+    }
+  }, [currentSchool]);
+
   // Determine current user's role in this school
   const currentRole = useMemo<UserRole | null>(() => {
     if (!claims) return 'orgOwner';

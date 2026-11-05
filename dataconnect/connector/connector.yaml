@@ -1,0 +1,5 @@
+connectorId: "edumo-connector"
+generate:
+  javascriptSdk:
+    outputDir: "../../web/src/dataconnect-generated"
+    package: "@edumo/dataconnect"

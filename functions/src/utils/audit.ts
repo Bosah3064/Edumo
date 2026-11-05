@@ -15,6 +15,8 @@ export interface AuditEntry {
   actorRole?: string;
   targetType: string;
   targetId: string;
+  reason?: string; // Reason / justification for the action for accountability
+  actionDescription?: string;
   before?: Record<string, unknown>;
   after?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
@@ -25,6 +27,7 @@ export interface AuditEntry {
 /**
  * Write an audit log entry. This is the ONLY way audit logs are created.
  * Called exclusively from Cloud Functions after sensitive operations.
+ * Records: WHO did WHAT at WHAT TIME with WHAT REASON for complete accountability.
  */
 export async function writeAuditLog(entry: AuditEntry): Promise<string> {
   const docRef = db.collection('auditLogs').doc();
@@ -33,6 +36,7 @@ export async function writeAuditLog(entry: AuditEntry): Promise<string> {
     ...entry,
     actorName: entry.actorName || 'Unknown',
     actorRole: entry.actorRole || 'unknown',
+    reason: entry.reason || 'Operational action execution',
     timestamp: FieldValue.serverTimestamp(),
   });
 

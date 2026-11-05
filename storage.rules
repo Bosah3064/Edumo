@@ -44,6 +44,11 @@ service firebase.storage {
         'application/vnd\\.openxmlformats-officedocument\\.spreadsheetml\\.sheet');
     }
 
+    function isMediaType() {
+      return request.resource.contentType.matches(
+        '(video/(mp4|webm)|audio/(mpeg|mp3|m4a|wav)|application/(pdf|vnd\\.openxmlformats-officedocument\\.presentationml\\.presentation|vnd\\.ms-powerpoint)|image/(jpeg|png|webp))');
+    }
+
     // 5 MB for photos
     function isUnderPhotoLimit() {
       return request.resource.size < 5 * 1024 * 1024;
@@ -54,8 +59,12 @@ service firebase.storage {
       return request.resource.size < 25 * 1024 * 1024;
     }
 
-    // 50 MB for imports
+    // 50 MB for imports and multimedia resources
     function isUnderImportLimit() {
+      return request.resource.size < 50 * 1024 * 1024;
+    }
+
+    function isUnderMediaLimit() {
       return request.resource.size < 50 * 1024 * 1024;
     }
 
@@ -119,6 +128,30 @@ service firebase.storage {
       allow read: if hasSchoolAccess(orgId, schoolId);
       allow write: if hasSchoolAccess(orgId, schoolId) &&
         isDocumentType() &&
+        isUnderDocLimit();
+    }
+
+    // Student assignment submissions & homework uploads
+    match /{orgId}/{schoolId}/assignments/{assignmentId}/submissions/{studentId}/{filename} {
+      allow read: if hasSchoolAccess(orgId, schoolId);
+      allow write: if hasSchoolAccess(orgId, schoolId) &&
+        isDocumentType() &&
+        isUnderDocLimit();
+    }
+
+    // Digital Learning Resources (Zeraki Learning notes, revision guides, media)
+    match /{orgId}/{schoolId}/resources/{resourceId}/{filename} {
+      allow read: if hasSchoolAccess(orgId, schoolId);
+      allow write: if hasSchoolAccess(orgId, schoolId) &&
+        (isMediaType() || isDocumentType()) &&
+        isUnderMediaLimit();
+    }
+
+    // Financial Attachments (Deposit slips, payment vouchers, supplier invoices)
+    match /{orgId}/{schoolId}/finance/{docType}/{docId}/{filename} {
+      allow read: if hasSchoolAccess(orgId, schoolId);
+      allow write: if hasSchoolAccess(orgId, schoolId) &&
+        (isDocumentType() || isImageType()) &&
         isUnderDocLimit();
     }
 

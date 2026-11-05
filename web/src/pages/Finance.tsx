@@ -1679,6 +1679,14 @@ export const Finance: React.FC = () => {
         schoolName={currentSchool?.name || 'School'}
         schoolLogo={currentSchool?.branding?.logo}
         schoolMotto={currentSchool?.branding?.motto}
+        schoolPhone={currentSchool?.contacts?.phone}
+        schoolEmail={currentSchool?.contacts?.email}
+        schoolAddress={
+          currentSchool?.address
+            ? `${currentSchool.address.line1 || ''}${currentSchool.address.city ? ', ' + currentSchool.address.city : ''}`.trim()
+            : undefined
+        }
+        schoolCode={currentSchool?.code}
       />
 
       {/* Official Printable Voucher Modal */}
@@ -1689,6 +1697,14 @@ export const Finance: React.FC = () => {
         schoolName={currentSchool?.name || 'School'}
         schoolLogo={currentSchool?.branding?.logo}
         schoolMotto={currentSchool?.branding?.motto}
+        schoolPhone={currentSchool?.contacts?.phone}
+        schoolEmail={currentSchool?.contacts?.email}
+        schoolAddress={
+          currentSchool?.address
+            ? `${currentSchool.address.line1 || ''}${currentSchool.address.city ? ', ' + currentSchool.address.city : ''}`.trim()
+            : undefined
+        }
+        schoolCode={currentSchool?.code}
       />
 
       {/* Official Printable LPO Modal */}
@@ -1699,6 +1715,14 @@ export const Finance: React.FC = () => {
         schoolName={currentSchool?.name || 'School'}
         schoolLogo={currentSchool?.branding?.logo}
         schoolMotto={currentSchool?.branding?.motto}
+        schoolPhone={currentSchool?.contacts?.phone}
+        schoolEmail={currentSchool?.contacts?.email}
+        schoolAddress={
+          currentSchool?.address
+            ? `${currentSchool.address.line1 || ''}${currentSchool.address.city ? ', ' + currentSchool.address.city : ''}`.trim()
+            : undefined
+        }
+        schoolCode={currentSchool?.code}
       />
     </div>
   );

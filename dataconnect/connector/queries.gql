@@ -1,0 +1,84 @@
+# ============================================================
+# EDUMO — Firebase Data Connect Security Directives & Queries
+# Rules: Zero-Trust Multi-Tenant Auth on all relational queries
+# ============================================================
+
+query GetSchoolStudents($schoolId: UUID!)
+  @auth(
+    level: USER
+    expr: "auth.token != null && (auth.token.orgRole == 'orgOwner' || (auth.token.schoolIds != null && auth.token.schoolIds.includes(schoolId.value)))"
+  ) {
+  students(where: { schoolId: { eq: $schoolId } }) {
+    id
+    admissionNumber
+    firstName
+    lastName
+    currentClass
+    status
+    createdAt
+  }
+}
+
+query GetSchoolStaff($schoolId: UUID!)
+  @auth(
+    level: USER
+    expr: "auth.token != null && (auth.token.orgRole == 'orgOwner' || (auth.token.schoolIds != null && auth.token.schoolIds.includes(schoolId.value)))"
+  ) {
+  staffs(where: { schoolId: { eq: $schoolId } }) {
+    id
+    uid
+    firstName
+    lastName
+    role
+    department
+    status
+  }
+}
+
+query GetStudentInvoices($schoolId: UUID!, $studentId: UUID!)
+  @auth(
+    level: USER
+    expr: "auth.token != null && (auth.token.orgRole == 'orgOwner' || (auth.token.schoolIds != null && auth.token.schoolIds.includes(schoolId.value)))"
+  ) {
+  feeInvoices(
+    where: {
+      schoolId: { eq: $schoolId }
+      studentId: { eq: $studentId }
+    }
+  ) {
+    id
+    invoiceNumber
+    totalAmount
+    paidAmount
+    balance
+    status
+    dueDate
+  }
+}
+
+mutation RecordStudent(
+  $schoolId: UUID!
+  $admissionNumber: String!
+  $firstName: String!
+  $lastName: String!
+  $gender: String!
+  $currentClass: String!
+)
+  @auth(
+    level: USER
+    expr: "auth.token != null && (auth.token.orgRole == 'orgOwner' || (auth.token.schoolRoles != null && (auth.token.schoolRoles[schoolId.value] == 'principal' || auth.token.schoolRoles[schoolId.value] == 'admin')))"
+  ) {
+  student_insert(
+    data: {
+      schoolId: $schoolId
+      admissionNumber: $admissionNumber
+      firstName: $firstName
+      lastName: $lastName
+      gender: $gender
+      currentClass: $currentClass
+      status: "active"
+    }
+  ) {
+    id
+  }
+}

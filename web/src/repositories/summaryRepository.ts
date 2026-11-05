@@ -142,3 +142,4 @@ export async function updateTenantSummary<T extends Record<string, unknown>>(
     console.error(`[SummaryRepository] Failed to update summary ${summaryId}:`, err);
   }
 }
+

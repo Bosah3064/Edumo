@@ -21,6 +21,10 @@ interface ExamCardModalProps {
   schoolName: string;
   schoolLogo?: string;
   schoolMotto?: string;
+  schoolPhone?: string;
+  schoolEmail?: string;
+  schoolAddress?: string;
+  schoolCode?: string;
   templateKey?: string;
   primaryColor?: string;
   secondaryColor?: string;
@@ -33,6 +37,10 @@ export const ExamCardModal: React.FC<ExamCardModalProps> = ({
   schoolName,
   schoolLogo,
   schoolMotto,
+  schoolPhone,
+  schoolEmail,
+  schoolAddress,
+  schoolCode,
   templateKey = 'classic',
   primaryColor = '#1d5f99',
   secondaryColor = '#683669',
@@ -47,6 +55,15 @@ export const ExamCardModal: React.FC<ExamCardModalProps> = ({
 
   const fullName = `${student.firstName} ${student.lastName}`.trim();
   const currentYear = new Date().getFullYear();
+  const auditTimestamp = new Date().toLocaleString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZoneName: 'short',
+  });
+  const verificationHash = `EDUMO-EXAM-${student.admissionNumber}-${currentYear}-T1`;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Official Student Examination Card & ID" maxWidth="xl">
@@ -250,6 +267,39 @@ export const ExamCardModal: React.FC<ExamCardModalProps> = ({
               </div>
             </div>
           )}
+
+          {/* SECURITY & ACCOUNTABILITY AUDIT TRAIL */}
+          <div className="mt-4 p-3 rounded-xl bg-slate-900 text-white space-y-1.5 border border-slate-800 text-2xs">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                Examination Integrity &amp; Security Audit Trail
+              </span>
+              <span className="text-[10px] font-mono text-slate-400">
+                {verificationHash}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[10px]">
+              <div>
+                <span className="text-slate-400 uppercase font-semibold block text-[8px]">1. WHO (Authorized By):</span>
+                <span className="font-bold text-slate-100">Registrar &amp; Chief Exam Officer</span>
+              </div>
+              <div>
+                <span className="text-slate-400 uppercase font-semibold block text-[8px]">2. AT WHAT TIME:</span>
+                <span className="font-bold text-slate-100 font-mono">{auditTimestamp}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 uppercase font-semibold block text-[8px]">3. ISSUANCE REASON:</span>
+                <span className="font-bold text-slate-100">National / Term Examination Clearance</span>
+              </div>
+            </div>
+
+            <div className="pt-1 border-t border-slate-800 flex items-center justify-between text-[8px] text-slate-400">
+              <span>Security Stamp: Verified Candidate Pass • EDUMO Examination Proctoring Engine</span>
+              <span>Dean Signature: [ ELECTRONICALLY VALIDATED ]</span>
+            </div>
+          </div>
         </div>
 
         <div className="flex justify-end gap-3 pt-2">

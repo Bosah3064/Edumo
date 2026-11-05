@@ -210,7 +210,7 @@ export interface ExportJob {
   completedAt?: ISOTimestamp;
 }
 
-/** Audit log entry */
+/** Audit log entry (Who did what at what time with what reason) */
 export interface AuditLog {
   id?: string;
   orgId: string;
@@ -222,6 +222,7 @@ export interface AuditLog {
   actorRole: string;
   targetType: string;
   targetId: string;
+  reason?: string;
   before?: Record<string, unknown>;
   after?: Record<string, unknown>;
   metadata?: Record<string, unknown>;

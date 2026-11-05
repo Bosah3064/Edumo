@@ -219,6 +219,46 @@
         { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "lastName", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "pledges",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "paymentVouchers",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "preparedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "learningResources",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "category", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "quizzes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cashbookEntries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "account", "order": "ASCENDING" },
+        { "fieldPath": "transactionDate", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": [

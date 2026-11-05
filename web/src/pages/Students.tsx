@@ -683,6 +683,14 @@ export const Students: React.FC = () => {
         schoolName={currentSchool?.name || 'School'}
         schoolLogo={currentSchool?.branding?.logo}
         schoolMotto={currentSchool?.branding?.motto}
+        schoolPhone={currentSchool?.contacts?.phone}
+        schoolEmail={currentSchool?.contacts?.email}
+        schoolAddress={
+          currentSchool?.address
+            ? `${currentSchool.address.line1 || ''}${currentSchool.address.city ? ', ' + currentSchool.address.city : ''}`.trim()
+            : undefined
+        }
+        schoolCode={currentSchool?.code}
         templateKey={currentSchool?.branding?.examCardTemplate || 'classic'}
         primaryColor={currentSchool?.branding?.primaryColor || '#1d5f99'}
         secondaryColor={currentSchool?.branding?.secondaryColor || '#683669'}

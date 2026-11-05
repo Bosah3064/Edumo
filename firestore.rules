@@ -341,6 +341,29 @@ service cloud.firestore {
           allow delete: if false;
         }
 
+        // ===== FINANCIAL ACCOUNTS (Bank, Cash Office, M-Pesa Till) =====
+        match /accounts/{accountId} {
+          allow read: if hasSchoolAccess(orgId, schoolId);
+          allow create, update: if hasSchoolRole(orgId, schoolId,
+            ['principal', 'bursar']) || hasPermission('fees.write');
+          allow delete: if hasSchoolRole(orgId, schoolId, ['principal']);
+        }
+
+        // ===== SCHOOL NOTIFICATIONS =====
+        match /notifications/{notifId} {
+          allow read: if hasSchoolAccess(orgId, schoolId) && (
+            resource.data.recipientUid == request.auth.uid ||
+            resource.data.userId == request.auth.uid ||
+            hasSchoolRole(orgId, schoolId, ['principal', 'deputy', 'admin'])
+          );
+          allow create: if hasSchoolRole(orgId, schoolId, ['principal', 'deputy', 'admin', 'teacher']);
+          allow update: if hasSchoolAccess(orgId, schoolId) && (
+            resource.data.recipientUid == request.auth.uid ||
+            resource.data.userId == request.auth.uid
+          );
+          allow delete: if false;
+        }
+
         // ===== ANNOUNCEMENTS =====
         match /announcements/{announcementId} {
           allow read: if hasSchoolAccess(orgId, schoolId) ||
@@ -359,19 +382,51 @@ service cloud.firestore {
         // ===== ASSIGNMENTS =====
         match /assignments/{assignmentId} {
           allow read: if hasSchoolAccess(orgId, schoolId);
-          allow create, update, delete: if false; // Via create/update callable only
+          allow create, update, delete: if hasSchoolRole(orgId, schoolId,
+            ['principal', 'deputy', 'admin', 'teacher']);
 
-          // Answer keys and marking metadata are never readable from clients
+          // Answer keys and marking metadata are never readable by students
           match /_private/{documentId} {
-            allow read, write: if false;
+            allow read, write: if hasSchoolRole(orgId, schoolId,
+              ['principal', 'deputy', 'admin', 'teacher']);
           }
 
           match /submissions/{submissionId} {
             allow read: if hasSchoolAccess(orgId, schoolId) && (
+              resource.data.studentId == request.auth.uid ||
               resource.data.studentUid == request.auth.uid ||
               hasSchoolRole(orgId, schoolId, ['principal', 'deputy', 'admin', 'teacher'])
             );
-            allow create, update, delete: if false; // Via submission callable only
+            allow create, update: if hasSchoolAccess(orgId, schoolId);
+            allow delete: if false;
+          }
+        }
+
+        // ===== DIGITAL LEARNING RESOURCES (Zeraki Learning) =====
+        match /learningResources/{resourceId} {
+          allow read: if hasSchoolAccess(orgId, schoolId) || isGuardianInSchool(orgId, schoolId);
+          allow create, update: if hasSchoolRole(orgId, schoolId, ['principal', 'deputy', 'admin', 'teacher']);
+          allow delete: if hasSchoolRole(orgId, schoolId, ['principal', 'admin']);
+        }
+
+        // ===== INTERACTIVE QUIZZES & QUESTION BANK =====
+        match /quizzes/{quizId} {
+          allow read: if hasSchoolAccess(orgId, schoolId);
+          allow create, update, delete: if hasSchoolRole(orgId, schoolId, ['principal', 'deputy', 'admin', 'teacher']);
+
+          // Subcollection: Answer keys (_private) — STRICTLY DENIED TO STUDENTS
+          match /_private/{docId} {
+            allow read, write: if hasSchoolRole(orgId, schoolId, ['principal', 'deputy', 'admin', 'teacher']);
+          }
+
+          // Subcollection: Student attempts & topic diagnostics
+          match /attempts/{attemptId} {
+            allow read: if hasSchoolAccess(orgId, schoolId) && (
+              resource.data.studentId == request.auth.uid ||
+              hasSchoolRole(orgId, schoolId, ['principal', 'deputy', 'admin', 'teacher'])
+            );
+            allow create: if hasSchoolAccess(orgId, schoolId);
+            allow update, delete: if false;
           }
         }
 
@@ -613,6 +668,20 @@ service cloud.firestore {
       // NEVER writable or readable from client
       // Read access provided via callable functions
       allow read, write: if false;
+    }
+
+    // ===== USER NOTIFICATIONS (global) =====
+    match /notifications/{notifId} {
+      allow read: if isAuthenticated() && (
+        resource.data.recipientUid == request.auth.uid ||
+        resource.data.userId == request.auth.uid
+      );
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (
+        resource.data.recipientUid == request.auth.uid ||
+        resource.data.userId == request.auth.uid
+      );
+      allow delete: if false;
     }
 
     // ===== PLATFORM =====

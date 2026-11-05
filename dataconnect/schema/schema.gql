@@ -1,0 +1,74 @@
+# ============================================================
+# EDUMO — Firebase Data Connect Relational Schema (PostgreSQL)
+# Multi-tenant zero-trust schema with tenant foreign keys
+# ============================================================
+
+type Organization @table {
+  id: UUID! @default(expr: "uuid_generate_v4()")
+  name: String!
+  slug: String!
+  type: String!
+  country: String!
+  ownerId: String!
+  createdAt: Timestamp! @default(expr: "request.time")
+}
+
+type School @table {
+  id: UUID! @default(expr: "uuid_generate_v4()")
+  organization: Organization!
+  name: String!
+  code: String!
+  type: String!
+  curriculumType: String!
+  gradingMode: String!
+  createdAt: Timestamp! @default(expr: "request.time")
+}
+
+type Student @table {
+  id: UUID! @default(expr: "uuid_generate_v4()")
+  school: School!
+  admissionNumber: String!
+  firstName: String!
+  lastName: String!
+  gender: String!
+  currentClass: String!
+  status: String! @default(value: "active")
+  createdAt: Timestamp! @default(expr: "request.time")
+}
+
+type Staff @table {
+  id: UUID! @default(expr: "uuid_generate_v4()")
+  school: School!
+  uid: String!
+  firstName: String!
+  lastName: String!
+  role: String!
+  department: String
+  status: String! @default(value: "active")
+  createdAt: Timestamp! @default(expr: "request.time")
+}
+
+type AttendanceRecord @table {
+  id: UUID! @default(expr: "uuid_generate_v4()")
+  school: School!
+  classId: String!
+  date: Date!
+  type: String!
+  presentCount: Int!
+  absentCount: Int!
+  markedBy: String!
+  createdAt: Timestamp! @default(expr: "request.time")
+}
+
+type FeeInvoice @table {
+  id: UUID! @default(expr: "uuid_generate_v4()")
+  school: School!
+  student: Student!
+  invoiceNumber: String!
+  totalAmount: Float!
+  paidAmount: Float! @default(value: 0.0)
+  balance: Float!
+  status: String!
+  dueDate: Date!
+  createdAt: Timestamp! @default(expr: "request.time")
+}

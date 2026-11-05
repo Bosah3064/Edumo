@@ -43,8 +43,9 @@ export {
   markAttendance,
 } from './callable/attendance';
 
-// === Auth Triggers ===
+// === Auth Triggers & Blocking Functions ===
 export { onUserCreate } from './triggers/onUserCreate';
+export { beforeCreate, beforeSignIn } from './triggers/authBlocking';
 
 export { createAssignment, releaseAssignmentResults, submitAssignment } from './callable/assignment';
 export { bulkImport, rollbackImport } from './callable/import';
