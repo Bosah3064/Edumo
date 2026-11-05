@@ -26,6 +26,7 @@ import { ExtendedModules } from './pages/ExtendedModules';
 import { PlatformConsole } from './pages/PlatformConsole';
 import { Profile } from './pages/Profile';
 import { EducatorPortal } from './pages/EducatorPortal';
+import { PrivacyPolicy } from './pages/PrivacyPolicy';
 
 export const router = createBrowserRouter([
   // Public routes
@@ -40,6 +41,10 @@ export const router = createBrowserRouter([
   {
     path: '/register',
     element: <Register />,
+  },
+  {
+    path: '/privacy-policy',
+    element: <PrivacyPolicy />,
   },
 
   // Authenticated App Shell routes
@@ -133,6 +138,10 @@ export const router = createBrowserRouter([
       {
         path: '/profile',
         element: <Profile />,
+      },
+      {
+        path: '/privacy-policy',
+        element: <PrivacyPolicy />,
       },
     ],
   },

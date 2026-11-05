@@ -8,11 +8,14 @@ import { PWAInstallBanner } from '../pwa/PWAInstallBanner';
 import { useTenant } from '../../contexts/TenantContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { Spinner } from '../ui/Spinner';
+import { usePINLock } from '../../hooks/usePINLock';
+import { PINLockScreen } from '../security/PINLockScreen';
 
 export const AppShell: React.FC = () => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const { currentSchool } = useTenant();
   const { currentUser, loading } = useAuth();
+  const { isLocked } = usePINLock();
   const location = useLocation();
 
   useEffect(() => {
@@ -47,6 +50,10 @@ export const AppShell: React.FC = () => {
 
   if (!currentUser) {
     return <Navigate to="/login" replace state={{ from: location }} />;
+  }
+
+  if (isLocked) {
+    return <PINLockScreen />;
   }
 
   return (

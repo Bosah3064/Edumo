@@ -26,12 +26,15 @@ import {
   EyeOff,
   LogOut,
   Settings,
+  Smartphone,
+  Fingerprint,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { updateProfile, updatePassword } from 'firebase/auth';
 import { doc, getDoc, updateDoc, collection, getDocs, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { Link } from 'react-router-dom';
+import { usePINLock } from '../hooks/usePINLock';
 
 export const Profile: React.FC = () => {
   const { currentUser, claims, signOut } = useAuth();
@@ -48,6 +51,38 @@ export const Profile: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [updatingPassword, setUpdatingPassword] = useState(false);
+
+  // 4-Digit Quick PIN State
+  const { isPinSet, lock, setPin, removePin } = usePINLock();
+  const [isPinModalOpen, setIsPinModalOpen] = useState(false);
+  const [newPin, setNewPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+  const [settingPin, setSettingPin] = useState(false);
+
+  const handleSavePin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPin.length !== 4 || !/^\d{4}$/.test(newPin)) {
+      toast.error('PIN must be exactly 4 numeric digits');
+      return;
+    }
+    if (newPin !== confirmPin) {
+      toast.error('PINs do not match');
+      return;
+    }
+
+    setSettingPin(true);
+    try {
+      await setPin(newPin);
+      toast.success('4-Digit Security PIN configured successfully!');
+      setIsPinModalOpen(false);
+      setNewPin('');
+      setConfirmPin('');
+    } catch {
+      toast.error('Failed to configure PIN');
+    } finally {
+      setSettingPin(false);
+    }
+  };
 
   // Teaching Portfolio State (if teacher/staff)
   const [teachingClasses, setTeachingClasses] = useState<Array<{
@@ -450,6 +485,78 @@ export const Profile: React.FC = () => {
             </div>
           </Card>
 
+          {/* Quick 4-Digit Mobile PIN Lock Card */}
+          <Card className="p-5 space-y-3 border-slate-200 bg-gradient-to-br from-white to-slate-50/60">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                <Smartphone className="w-4 h-4 text-[#1d5f99]" />
+                Mobile 4-Digit PIN Lock
+              </h3>
+              {isPinSet ? (
+                <Badge variant="success">PIN Active</Badge>
+              ) : (
+                <Badge variant="neutral">Not Configured</Badge>
+              )}
+            </div>
+
+            <p className="text-2xs text-slate-500 leading-relaxed">
+              {isPinSet
+                ? 'Your device is protected with a 4-digit PIN. You can unlock your phone app instantly without entering your full email and password.'
+                : 'Protect your mobile phone session with a quick 4-digit security PIN for fast 1-tap unlock.'}
+            </p>
+
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              {isPinSet ? (
+                <>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      lock();
+                      toast.success('App locked with PIN');
+                    }}
+                    leftIcon={<Lock className="w-3.5 h-3.5" />}
+                  >
+                    Lock Now
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setIsPinModalOpen(true)}
+                  >
+                    Change PIN
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    onClick={() => {
+                      if (confirm('Disable 4-digit PIN protection on this device?')) {
+                        removePin();
+                        toast.success('PIN lock removed');
+                      }
+                    }}
+                  >
+                    Disable PIN
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="primary"
+                  onClick={() => setIsPinModalOpen(true)}
+                  leftIcon={<KeyRound className="w-3.5 h-3.5" />}
+                >
+                  Configure 4-Digit PIN
+                </Button>
+              )}
+            </div>
+          </Card>
+
           {/* Security & Account Session */}
           <Card className="p-5 space-y-3 border-slate-200">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
@@ -514,6 +621,48 @@ export const Profile: React.FC = () => {
             </Button>
             <Button type="submit" variant="primary" isLoading={updatingPassword}>
               Update Password
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ============================================================ */}
+      {/* MODAL: SETUP / CHANGE 4-DIGIT PIN                            */}
+      {/* ============================================================ */}
+      <Modal
+        isOpen={isPinModalOpen}
+        onClose={() => setIsPinModalOpen(false)}
+        title={isPinSet ? 'Change 4-Digit Security PIN' : 'Setup 4-Digit Security PIN'}
+        description="Fast mobile unlock for phones and tablets. Use 4 numeric digits."
+      >
+        <form onSubmit={handleSavePin} className="space-y-4">
+          <Input
+            label="New 4-Digit PIN"
+            type="password"
+            maxLength={4}
+            value={newPin}
+            onChange={(e) => setNewPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+            placeholder="e.g. 1234"
+            required
+            autoFocus
+          />
+
+          <Input
+            label="Confirm 4-Digit PIN"
+            type="password"
+            maxLength={4}
+            value={confirmPin}
+            onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+            placeholder="Re-enter 4 digits"
+            required
+          />
+
+          <div className="flex justify-end gap-3 pt-3 border-t">
+            <Button type="button" variant="ghost" onClick={() => setIsPinModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" isLoading={settingPin}>
+              Save PIN
             </Button>
           </div>
         </form>
