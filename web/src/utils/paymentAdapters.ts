@@ -101,7 +101,7 @@ export async function processFeePayment(
       method: req.method,
       providerRef: req.referenceNumber || `MPESA-${Date.now().toString().slice(-6)}`,
       receiptNumber,
-      status: 'verified' as PaymentStatus,
+      status: 'confirmed' as PaymentStatus,
       idempotencyKey,
       receivedBy: req.payerName || 'Guardian',
       phoneNumber: req.phoneNumber || null,

@@ -71,6 +71,105 @@ export interface Payment extends DocMeta {
   verifiedAt?: ISOTimestamp;
 }
 
+/** Parent Payment Pledge (Zeraki-Inspired) */
+export interface ParentPledge extends Partial<DocMeta> {
+  id?: string;
+  studentId: string;
+  studentName: string;
+  admissionNumber: string;
+  guardianName: string;
+  guardianPhone: string;
+  amountPledged: number;
+  currency: string;
+  dueDate: string;
+  status: 'pending' | 'partially_fulfilled' | 'fulfilled' | 'defaulted';
+  amountFulfilled: number;
+  balanceRemaining: number;
+  linkedInvoiceId?: string;
+  notes?: string;
+  recordedBy: string;
+  recordedAt: ISOTimestamp;
+  fulfillmentHistory?: PledgePaymentLink[];
+}
+
+export interface PledgePaymentLink {
+  paymentId: string;
+  receiptNumber: string;
+  amount: number;
+  date: string;
+}
+
+/** Approved School Supplier / Vendor */
+export interface Supplier extends Partial<DocMeta> {
+  id?: string;
+  name: string;
+  category: 'food_provisions' | 'stationery' | 'uniforms' | 'lab_equipment' | 'construction' | 'transport_fuel' | 'utilities' | 'other';
+  contactPerson: string;
+  phone: string;
+  email?: string;
+  taxPin?: string;
+  bankAccount?: string;
+  bankName?: string;
+  status: 'active' | 'suspended';
+}
+
+/** Local Purchase Order (LPO) / Local Service Order (LSO) */
+export interface PurchaseOrder extends Partial<DocMeta> {
+  id?: string;
+  orderNumber: string; // e.g. LPO-2026-0042
+  type: 'lpo' | 'lso';
+  supplierId: string;
+  supplierName: string;
+  orderDate: string;
+  expectedDeliveryDate?: string;
+  items: Array<{
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    total: number;
+  }>;
+  totalAmount: number;
+  currency: string;
+  status: 'draft' | 'approved' | 'delivered' | 'cancelled';
+  approvedBy?: string;
+  approvedAt?: string;
+}
+
+/** Official Expense Payment Voucher */
+export interface PaymentVoucher extends Partial<DocMeta> {
+  id?: string;
+  voucherNumber: string; // e.g. PV-2026-018
+  purchaseOrderId?: string;
+  payeeName: string;
+  category: 'provisions' | 'stationery' | 'repairs' | 'utilities' | 'fuel' | 'sports' | 'welfare' | 'other';
+  amount: number;
+  currency: string;
+  paymentMethod: 'mpesa_paybill' | 'bank_transfer' | 'cash' | 'cheque';
+  referenceNumber?: string;
+  description: string;
+  status: 'draft' | 'pending_approval' | 'approved' | 'paid' | 'rejected';
+  preparedBy: string;
+  preparedAt: string;
+  approvedBy?: string;
+  approvedAt?: string;
+  paidAt?: string;
+}
+
+/** Real-time School Cashbook Ledger Entry */
+export interface CashbookEntry {
+  id?: string;
+  date: string;
+  type: 'inflow' | 'outflow';
+  category: string;
+  description: string;
+  sourceDocType: 'payment_receipt' | 'payment_voucher' | 'canteen' | 'other';
+  sourceDocRef: string;
+  amount: number;
+  runningBalance: number;
+  currency: string;
+  reconciled: boolean;
+}
+
 /** Import job */
 export interface ImportJob {
   id?: string;

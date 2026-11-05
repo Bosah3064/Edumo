@@ -82,8 +82,8 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['Outfit', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
-        display: ['Outfit', 'sans-serif'],
+        sans: ['"Plus Jakarta Sans"', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        display: ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'],
       },
       fontSize: {
         '2xs': ['0.625rem', { lineHeight: '0.875rem' }],

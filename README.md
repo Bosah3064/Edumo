@@ -255,10 +255,19 @@ EDUMO integrates the capabilities of Zeraki Analytics, Zeraki Finance, and Zerak
 | Enhancement Module | Status | Deliverables |
 | :--- | :--- | :--- |
 | **Academic Analytics & Exam Engine** | ✅ Complete | Examination series management (Opener 20%, Mid-Term 30%, End-Term 50%), stream diagnostics, subject comparative matrix, automated at-risk early detection (drops $\ge 15\%$), multi-term learner trajectories, Excel exam analysis (.xlsx), strict CBC No-Aggregate compliance |
-| **Advanced School Finance** | 🔜 Next | Parent pledges (strictly separated from actual collections), payment vouchers with multi-step approval, LPOs/LSOs, supplier registry, cashbooks, cash flow forecasts |
-| **Digital Learning Platform** | Planned | Student/teacher LMS portals, video lessons, revision notes, past paper question bank, interactive timed quizzes with auto-marking |
+| **Advanced School Finance** | ✅ Complete | Parent pledges (strictly segregated from cashbook & revenue), 3-tier payment vouchers (Draft -> Pending -> Approved -> Paid), LPOs/LSOs, supplier registry, double-entry cashbook with running balance, aging debtors analysis (0-30, 31-60, 61-90, 90+ days), M-Pesa Daraja STK Push & idempotent receipting |
+| **Digital Learning Platform** | 🔜 Next | Student/teacher LMS portals, video lessons, revision notes, past paper question bank, interactive timed quizzes with auto-marking & protected answer keys |
 | **Parent Experience & Reach** | Planned | Longitudinal child progress tracking, 1-click report card PDF download, digital receipt drawer, low-data mode |
 | **Reporting & Dashboards** | Planned | 9 role-tailored dashboards, BigQuery streaming views, executive examination broadsheets |
+
+## Global Firebase Cost Optimization & Local-First Architecture
+
+EDUMO enforces a strict engineering standard to eliminate redundant Firebase operations:
+- **Local-First IndexedDB Persistence**: All records and summaries are cached locally in IndexedDB with TTL policies.
+- **Request Deduplication**: In-flight promise pooling prevents concurrent identical queries across components.
+- **Zero Raw Collection Scans**: Dashboards load pre-aggregated `/summaries/{summaryId}` documents instead of scanning thousands of records.
+- **Zero-Read Security Rules**: Role-based access control relies entirely on JWT Custom Claims (`orgId`, `schoolIds`, `schoolRoles`), requiring 0 Firestore document lookups in rules.
+- **Enterprise Design & Polish**: Plus Jakarta Sans typography, refined enterprise palette, clean microcopy, accessible forms, and high-contrast badges.
 
 ## License
 

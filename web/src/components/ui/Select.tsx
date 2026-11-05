@@ -20,24 +20,24 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
     const selectId = id || props.name || Math.random().toString(36).substring(2, 9);
 
     return (
-      <div className="w-full space-y-1.5">
+      <div className="w-full space-y-1">
         {label && (
           <label
             htmlFor={selectId}
-            className="block text-xs font-medium text-gray-600 uppercase tracking-wider"
+            className="block text-xs font-semibold text-slate-700 tracking-normal"
           >
             {label}
           </label>
         )}
-        <div className="relative rounded-xl">
+        <div className="relative rounded-lg">
           <select
             ref={ref}
             id={selectId}
             className={clsx(
-              'w-full appearance-none rounded-xl bg-gray-50 border text-gray-800 text-sm py-2.5 pl-4 pr-10 transition-all duration-200 focus:outline-none focus:ring-2 focus:bg-white cursor-pointer',
+              'w-full appearance-none rounded-lg bg-white border text-slate-900 text-sm h-9.5 py-2 pl-3.5 pr-9 transition-all duration-150 focus:outline-none focus:ring-3 cursor-pointer',
               error
-                ? 'border-danger-500/80 focus:border-danger-500 focus:ring-danger-500/20'
-                : 'border-gray-200 focus:border-brand-500 focus:ring-brand-500/20 hover:border-gray-300',
+                ? 'border-red-500 focus:border-red-600 focus:ring-red-500/15'
+                : 'border-slate-300 hover:border-slate-400 focus:border-[#1d5f99] focus:ring-[#1d5f99]/15 shadow-2xs',
               className
             )}
             {...props}
@@ -47,20 +47,22 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
                 key={opt.value}
                 value={opt.value}
                 disabled={opt.disabled}
-                className="bg-white text-gray-800"
+                className="bg-white text-slate-900"
               >
                 {opt.label}
               </option>
             ))}
           </select>
-          <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-gray-400">
+          <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
             <ChevronDown className="w-4 h-4" />
           </div>
         </div>
         {error ? (
-          <p className="text-xs text-red-500 mt-1 animate-fade-in">{error}</p>
+          <p className="text-xs text-red-600 font-medium flex items-center gap-1 mt-1">
+            <span>•</span> {error}
+          </p>
         ) : helperText ? (
-          <p className="text-xs text-gray-500 mt-1">{helperText}</p>
+          <p className="text-xs text-slate-500 mt-1">{helperText}</p>
         ) : null}
       </div>
     );

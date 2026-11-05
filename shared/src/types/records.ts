@@ -134,6 +134,7 @@ export interface SubjectPerformance {
 
 /** Early Academic Intervention Alert */
 export interface AtRiskLearnerAlert {
+  id?: string;
   studentId: string;
   studentName: string;
   admissionNumber: string;

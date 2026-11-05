@@ -10,3 +10,4 @@ export * from './types/countryPack';
 export * from './types/finance';
 export * from './data/countryPacks';
 export * from './utils/grading';
+export * from './utils/finance';

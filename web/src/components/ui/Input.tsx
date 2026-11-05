@@ -36,7 +36,6 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     const isPassword = type === 'password';
     const computedType = isPassword ? (showPassword ? 'text' : 'password') : type;
 
-    // Calculate basic password strength if showStrength is true
     const getStrength = (val: string): 'weak' | 'fair' | 'good' | 'strong' | null => {
       if (!val || val.length === 0) return null;
       if (val.length < 6) return 'weak';
@@ -54,18 +53,18 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     const strength = showStrength && typeof value === 'string' ? getStrength(value) : null;
 
     return (
-      <div className="w-full space-y-1.5">
+      <div className="w-full space-y-1">
         {label && (
           <label
             htmlFor={inputId}
-            className="block text-xs font-semibold text-gray-600 uppercase tracking-wider"
+            className="block text-xs font-semibold text-slate-700 tracking-normal"
           >
             {label}
           </label>
         )}
-        <div className="relative rounded-xl">
+        <div className="relative rounded-lg">
           {leftIcon && (
-            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
               {leftIcon}
             </div>
           )}
@@ -75,24 +74,23 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             type={computedType}
             value={value}
             className={clsx(
-              'w-full rounded-xl bg-gray-50 border text-gray-800 placeholder-gray-400 text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:bg-white',
-              leftIcon ? 'pl-10' : 'pl-4',
-              isPassword || rightIcon ? 'pr-11' : 'pr-4',
-              'py-2.5',
+              'w-full rounded-lg bg-white border text-slate-900 placeholder:text-slate-400 text-sm transition-all duration-150 focus:outline-none focus:ring-3 focus:bg-white',
+              leftIcon ? 'pl-9' : 'pl-3.5',
+              isPassword || rightIcon ? 'pr-10' : 'pr-3.5',
+              'py-2 h-9.5',
               error
-                ? 'border-danger-500/80 focus:border-danger-500 focus:ring-danger-500/20'
-                : 'border-gray-200 focus:border-brand-500 focus:ring-brand-500/20 hover:border-gray-300',
+                ? 'border-red-500 focus:border-red-600 focus:ring-red-500/15'
+                : 'border-slate-300 hover:border-slate-400 focus:border-[#1d5f99] focus:ring-[#1d5f99]/15 shadow-2xs',
               className
             )}
             {...props}
           />
 
-          {/* Password Eye Toggle */}
           {isPassword && showPasswordToggle ? (
             <button
               type="button"
               onClick={() => setShowPassword((prev) => !prev)}
-              className="password-eye-btn text-gray-400 hover:text-brand-500 focus:outline-none"
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none"
               title={showPassword ? 'Hide password' : 'Show password'}
               tabIndex={-1}
             >
@@ -100,45 +98,41 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             </button>
           ) : (
             rightIcon && (
-              <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 pointer-events-none">
+              <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
                 {rightIcon}
               </div>
             )
           )}
         </div>
 
-        {/* Optional Password Strength Bar */}
         {showStrength && strength && (
-          <div className="pt-1">
-            <div className="flex gap-1.5 h-1">
-              <div className={clsx('strength-bar', strength)} />
+          <div className="pt-1 flex items-center gap-1.5">
+            <div className="flex-1 h-1 rounded-full bg-slate-200 overflow-hidden flex gap-0.5">
               <div
                 className={clsx(
-                  'strength-bar',
-                  strength === 'fair' || strength === 'good' || strength === 'strong'
-                    ? strength
-                    : ''
+                  'h-full transition-all duration-300',
+                  strength === 'weak' && 'w-1/4 bg-red-500',
+                  strength === 'fair' && 'w-2/4 bg-amber-500',
+                  strength === 'good' && 'w-3/4 bg-blue-500',
+                  strength === 'strong' && 'w-full bg-emerald-500'
                 )}
               />
-              <div
-                className={clsx(
-                  'strength-bar',
-                  strength === 'good' || strength === 'strong' ? strength : ''
-                )}
-              />
-              <div className={clsx('strength-bar', strength === 'strong' ? strength : '')} />
             </div>
-            <p className="text-[10px] text-gray-500 mt-1 capitalize">
-              Password strength: <span className="font-semibold text-gray-700">{strength}</span>
-            </p>
+            <span className="text-2xs font-medium text-slate-500 capitalize">
+              {strength}
+            </span>
           </div>
         )}
 
         {error ? (
-          <p className="text-xs text-red-500 mt-1 animate-fade-in">{error}</p>
-        ) : helperText ? (
-          <p className="text-xs text-gray-500 mt-1">{helperText}</p>
-        ) : null}
+          <p className="text-xs text-red-600 font-medium flex items-center gap-1 mt-1">
+            <span>•</span> {error}
+          </p>
+        ) : (
+          helperText && (
+            <p className="text-xs text-slate-500 mt-1">{helperText}</p>
+          )
+        )}
       </div>
     );
   }

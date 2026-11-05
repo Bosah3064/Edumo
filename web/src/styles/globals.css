@@ -2,89 +2,59 @@
 @tailwind components;
 @tailwind utilities;
 
-/* System-wide readable text. Utility classes are only changed here so the
-   light school theme stays consistent across every page and screen size. */
-.text-2xs { font-size: 0.75rem !important; line-height: 1rem !important; }
-.text-xs { font-size: 0.8125rem !important; line-height: 1.125rem !important; }
-.text-sm { font-size: 0.9375rem !important; line-height: 1.35rem !important; }
-.text-base { font-size: 1rem !important; line-height: 1.5rem !important; }
-.text-lg { font-size: 1.125rem !important; line-height: 1.625rem !important; }
-.text-xl { font-size: 1.25rem !important; line-height: 1.75rem !important; }
-.text-2xl { font-size: 1.5rem !important; line-height: 2rem !important; }
-.text-\[8px\], .text-\[9px\], .text-\[10px\], .text-\[11px\] {
-  font-size: 0.75rem !important;
-  line-height: 1rem !important;
-}
-
-.text-gray-400, .text-gray-500, .text-surface-400, .text-surface-500 {
-  color: #374151 !important;
-}
-.text-gray-600, .text-surface-600 {
-  color: #334155 !important;
-}
-.text-gray-300, .text-surface-300 {
-  color: #475569 !important;
-}
-
-body {
-  font-size: 15px;
-  color: #1f2937;
-}
-button, input, select, textarea, label {
-  font-size: 0.9375rem;
-}
-button { font-weight: 600; }
-
-@media (min-width: 1280px) {
-  body { font-size: 16px; }
-  .text-xs { font-size: 0.875rem !important; line-height: 1.25rem !important; }
-  .text-sm { font-size: 1rem !important; line-height: 1.45rem !important; }
-}
-
 @layer base {
   :root {
     --color-blue: #1d5f99;
+    --color-blue-dark: #154672;
     --color-red: #a5243d;
     --color-purple: #683669;
-    --color-dark: #1f2937;
-    --color-gray: #f3f4f6;
-    --color-text: #4b5563;
+    --color-dark: #0f172a;
+    --color-gray: #f8fafc;
+    --color-text: #334155;
+    --color-text-muted: #64748b;
     --color-white: #ffffff;
-    --font-main: 'Outfit', sans-serif;
-    --transition: all 0.3s ease;
+    --font-main: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+    --transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 
-    --bg-primary: #f3f4f6;
+    --bg-primary: #f8fafc;
     --bg-secondary: #ffffff;
     --bg-card: #ffffff;
-    --border-color: #e5e7eb;
-    --text-primary: #1f2937;
-    --text-secondary: #4b5563;
+    --border-color: #e2e8f0;
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
     --accent: #1d5f99;
     --accent-purple: #683669;
     --accent-red: #a5243d;
   }
 
   html {
-    font-family: var(--font-main), 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: var(--font-main);
     color-scheme: light;
     scroll-behavior: smooth;
-  }
-
-  body {
-    font-family: var(--font-main), sans-serif;
-    background-color: var(--color-gray);
-    color: var(--color-text);
-    min-height: 100vh;
-    overflow-x: hidden;
-    line-height: 1.6;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
+  body {
+    font-family: var(--font-main);
+    background-color: var(--bg-primary);
+    color: var(--text-secondary);
+    min-height: 100vh;
+    overflow-x: hidden;
+    line-height: 1.5;
+    font-size: 0.9375rem;
+  }
+
   h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-main), sans-serif;
-    color: var(--color-dark);
+    font-family: var(--font-main);
+    color: var(--text-primary);
     font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  button, input, select, textarea {
+    font-family: inherit;
   }
 
   a {

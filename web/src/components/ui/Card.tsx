@@ -16,10 +16,10 @@ export const Card: React.FC<CardProps> = ({
   return (
     <div
       className={clsx(
-        'rounded-2xl p-6 transition-all duration-300 bg-white border border-gray-200 shadow-sm hover:shadow-md',
+        'rounded-xl p-5 sm:p-6 transition-all duration-150 bg-white border border-slate-200/80 shadow-2xs',
         variant === 'interactive' &&
-          'cursor-pointer hover:border-brand-500/40 hover:-translate-y-1',
-        glow && 'ring-1 ring-brand-500/30 shadow-glow',
+          'cursor-pointer hover:border-slate-300 hover:shadow-xs active:bg-slate-50/50',
+        glow && 'ring-1 ring-[#1d5f99]/20 shadow-xs',
         className
       )}
       {...props}

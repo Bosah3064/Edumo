@@ -300,6 +300,47 @@ service cloud.firestore {
           allow create, update, delete: if false; // Via callable only
         }
 
+        // ===== PARENT PLEDGES (Zeraki Finance-Inspired) =====
+        match /pledges/{pledgeId} {
+          allow read: if hasSchoolAccess(orgId, schoolId) ||
+            isVerifiedGuardianOf(orgId, schoolId, resource.data.studentId);
+          allow create, update: if hasSchoolRole(orgId, schoolId,
+            ['principal', 'bursar', 'admin']) || hasPermission('fees.write');
+          allow delete: if hasSchoolRole(orgId, schoolId, ['principal', 'bursar']);
+        }
+
+        // ===== SUPPLIERS & VENDORS =====
+        match /suppliers/{supplierId} {
+          allow read: if hasSchoolAccess(orgId, schoolId);
+          allow create, update: if hasSchoolRole(orgId, schoolId,
+            ['principal', 'bursar', 'admin']) || hasPermission('fees.write');
+          allow delete: if hasSchoolRole(orgId, schoolId, ['principal']);
+        }
+
+        // ===== PURCHASE ORDERS (LPOs & LSOs) =====
+        match /purchaseOrders/{poId} {
+          allow read: if hasSchoolAccess(orgId, schoolId);
+          allow create, update: if hasSchoolRole(orgId, schoolId,
+            ['principal', 'bursar']) || hasPermission('fees.write');
+          allow delete: if hasSchoolRole(orgId, schoolId, ['principal']);
+        }
+
+        // ===== PAYMENT VOUCHERS =====
+        match /paymentVouchers/{voucherId} {
+          allow read: if hasSchoolAccess(orgId, schoolId);
+          allow create, update: if hasSchoolRole(orgId, schoolId,
+            ['principal', 'bursar']) || hasPermission('fees.write');
+          allow delete: if hasSchoolRole(orgId, schoolId, ['principal']);
+        }
+
+        // ===== CASHBOOK LEDGER =====
+        match /cashbookEntries/{entryId} {
+          allow read: if hasSchoolAccess(orgId, schoolId);
+          allow create, update: if hasSchoolRole(orgId, schoolId,
+            ['principal', 'bursar']) || hasPermission('fees.write');
+          allow delete: if false;
+        }
+
         // ===== ANNOUNCEMENTS =====
         match /announcements/{announcementId} {
           allow read: if hasSchoolAccess(orgId, schoolId) ||
