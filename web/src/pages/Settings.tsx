@@ -338,6 +338,216 @@ const MiniatureTemplatePreview: React.FC<{
 };
 
 /* ================================================================== */
+/*  Standard School Levels and Classes for Unit Assignment            */
+/* ================================================================== */
+const ALL_SCHOOL_CLASSES = [
+  'PP1', 'PP2',
+  'Grade 1', 'Grade 2', 'Grade 3',
+  'Grade 4', 'Grade 5', 'Grade 6',
+  'Grade 7', 'Grade 8', 'Grade 9',
+  'Form 1', 'Form 2', 'Form 3', 'Form 4'
+];
+
+/* ================================================================== */
+/*  Live Miniature Visual Preview for Examination Admit Cards         */
+/* ================================================================== */
+const MiniatureExamCardPreview: React.FC<{
+  templateId: string;
+  primaryColor: string;
+  secondaryColor: string;
+  schoolName: string;
+}> = ({ templateId, primaryColor, secondaryColor, schoolName }) => {
+  return (
+    <div
+      className="w-full h-36 rounded-lg border border-slate-200 overflow-hidden bg-white select-none pointer-events-none relative shadow-xs p-2 flex flex-col justify-between"
+      style={{ fontFamily: 'var(--font-main, sans-serif)' }}
+    >
+      {templateId === 'classic_crest' && (
+        <div className="h-full border-2 border-double rounded p-1.5 flex flex-col justify-between" style={{ borderColor: primaryColor }}>
+          <div className="flex items-center justify-between border-b border-slate-200 pb-1">
+            <div className="flex items-center gap-1">
+              <Award className="w-3 h-3" style={{ color: primaryColor }} />
+              <div className="truncate max-w-[100px]">
+                <span className="text-[7.5px] font-extrabold uppercase tracking-tight text-slate-800 block truncate">{schoolName || 'Edumo Academy'}</span>
+                <span className="text-[6px] font-bold uppercase text-white px-1 py-0.2 rounded" style={{ backgroundColor: primaryColor }}>
+                  EXAMINATION ADMIT CARD
+                </span>
+              </div>
+            </div>
+            <div className="w-6 h-7 border border-slate-300 rounded-[2px] bg-slate-100 flex items-center justify-center text-[5.5px] text-slate-400 font-bold">
+              PHOTO
+            </div>
+          </div>
+          <div className="my-0.5 space-y-0.5 text-[6.5px]">
+            <div className="flex justify-between bg-slate-50 px-1 py-0.5 font-mono text-slate-700 rounded-[2px]">
+              <span>CANDIDATE: <strong>E. Kiprono</strong></span>
+              <span>INDEX: <strong>2026/042</strong></span>
+            </div>
+            <div className="flex justify-between text-white font-bold px-1 py-0.2 rounded-[2px]" style={{ backgroundColor: primaryColor }}>
+              <span>SUBJECT</span>
+              <span>ROOM</span>
+              <span>SIGN</span>
+            </div>
+            <div className="flex justify-between px-1 text-slate-600 bg-slate-50">
+              <span className="truncate max-w-[70px]">101 Mathematics</span>
+              <span>Lab A</span>
+              <span>✍️</span>
+            </div>
+            <div className="flex justify-between px-1 text-slate-600">
+              <span className="truncate max-w-[70px]">102 English Lang</span>
+              <span>Hall 1</span>
+              <span>✍️</span>
+            </div>
+          </div>
+          <div className="flex items-center justify-between pt-0.5 border-t border-slate-200 text-[6px] text-slate-500">
+            <span className="font-bold text-red-700 bg-red-50 border border-red-200 px-1 rounded">SEAL APPROVED</span>
+            <span>Principal: ✍️ Official</span>
+          </div>
+        </div>
+      )}
+
+      {templateId === 'modern_qr' && (
+        <div className="h-full rounded border border-blue-200 bg-slate-50/60 p-1.5 flex flex-col justify-between">
+          <div className="flex items-center justify-between border-b border-blue-200 pb-1">
+            <div className="truncate max-w-[105px]">
+              <span className="text-[7.5px] font-black uppercase text-blue-900 block truncate">{schoolName || 'Edumo Academy'}</span>
+              <span className="text-[6px] font-bold text-emerald-700 flex items-center gap-0.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> SECURE BIOMETRIC PASS
+              </span>
+            </div>
+            <div className="w-7 h-7 bg-white border border-slate-300 rounded p-0.5 flex items-center justify-center">
+              <QrCode className="w-5 h-5 text-slate-900" />
+            </div>
+          </div>
+          <div className="bg-blue-900 text-white rounded p-1 text-[6.5px] flex items-center justify-between my-0.5">
+            <div>
+              <span className="text-[5.5px] text-blue-200 block uppercase">Candidate Seat</span>
+              <span className="font-mono font-black text-[7.5px]">HALL B • DESK 14</span>
+            </div>
+            <span className="font-mono font-bold text-amber-300">ID: #KNEC-994</span>
+          </div>
+          <div className="text-[6px] space-y-0.5 text-slate-700">
+            <div className="flex justify-between px-1 bg-white rounded border border-slate-100">
+              <span>Candidate: Emmanuel Kiprono</span>
+              <span className="font-mono font-bold">Grade 7W</span>
+            </div>
+            <div className="flex justify-between px-1 font-mono text-[5.5px] text-slate-400">
+              <span>SCAN QR TO VALIDATE ENTRY</span>
+              <span>AUTHENTICATED</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {templateId === 'executive_distinction' && (
+        <div className="h-full border border-amber-400 bg-linear-to-b from-amber-50/20 to-white rounded p-1.5 flex flex-col justify-between">
+          <div className="flex items-center justify-between border-b border-amber-300 pb-1">
+            <div>
+              <span className="text-[6px] font-bold text-amber-700 uppercase tracking-widest block">Executive Academy Pass</span>
+              <span className="text-[7.5px] font-black text-slate-900 truncate block max-w-[100px]">{schoolName || 'International Academy'}</span>
+            </div>
+            <ShieldCheck className="w-4 h-4 text-amber-600" />
+          </div>
+          <div className="my-0.5 space-y-0.5 text-[6.5px]">
+            <div className="border border-amber-200 bg-amber-50/50 rounded px-1 py-0.5 flex justify-between font-mono">
+              <span className="font-bold text-amber-900">Emmanuel Kiprono</span>
+              <span className="text-amber-800">CANDIDATE #042</span>
+            </div>
+            <div className="grid grid-cols-2 gap-1 text-[6px] text-slate-600">
+              <span className="bg-slate-50 px-1 py-0.2 rounded">Desk: Executive 08</span>
+              <span className="bg-slate-50 px-1 py-0.2 rounded">Center: KE-9042</span>
+            </div>
+          </div>
+          <div className="flex items-center justify-between pt-0.5 border-t border-amber-200 text-[6px] text-amber-800">
+            <span className="font-bold tracking-tight">★ CAMBRIDGE / IB DISTINCTION</span>
+            <span>Registrar: ✍️</span>
+          </div>
+        </div>
+      )}
+
+      {templateId === 'compact_slip' && (
+        <div className="h-full border border-dashed border-slate-400 bg-slate-50/80 rounded font-mono p-1.5 flex flex-col justify-between text-[6.5px]">
+          <div className="border-b border-dashed border-slate-300 pb-0.5 flex justify-between items-center">
+            <span className="font-bold text-[7.5px] uppercase truncate max-w-[105px] text-slate-900">{schoolName || 'Edumo School'}</span>
+            <span className="text-[5.5px] font-bold bg-slate-200 px-1 rounded text-slate-700">A4 SLIP 1/2</span>
+          </div>
+          <div className="space-y-0.5 text-slate-700">
+            <div className="flex justify-between">
+              <span>NAME: E. Kiprono</span>
+              <span>ADM: 2026/042</span>
+            </div>
+            <div className="flex justify-between text-[6px] bg-white p-0.5 rounded border border-slate-200">
+              <span>MATH • ENG • SCI • SST • CRE</span>
+              <span>HALL A</span>
+            </div>
+            <div className="text-[5.5px] text-slate-500 italic">
+              "Student affirms full compliance with exam rules"
+            </div>
+          </div>
+          <div className="border-t border-dashed border-slate-300 pt-0.5 flex justify-between text-[5.5px] text-slate-500">
+            <span>TEAR-OFF DESK PASS</span>
+            <span>INVIGILATOR: ✍️</span>
+          </div>
+        </div>
+      )}
+
+      {templateId === 'cbc_competency' && (
+        <div className="h-full rounded border border-emerald-300 bg-emerald-50/30 p-1.5 flex flex-col justify-between">
+          <div className="bg-emerald-700 text-white rounded-t p-1 flex justify-between items-center">
+            <div>
+              <span className="text-[6px] text-emerald-200 uppercase font-bold block">KICD ASSESSMENT CENTER</span>
+              <span className="text-[7.5px] font-black truncate max-w-[100px] block">{schoolName || 'CBC School'}</span>
+            </div>
+            <Sparkles className="w-3.5 h-3.5 text-emerald-200" />
+          </div>
+          <div className="space-y-0.5 text-[6.5px] text-slate-700 my-0.5">
+            <div className="flex justify-between bg-white px-1 py-0.5 rounded border border-emerald-100">
+              <span>UPI: <strong>UPI-701042-26</strong></span>
+              <span className="text-emerald-800 font-bold">Grade 7 JSS</span>
+            </div>
+            <div className="flex justify-between text-[6px] px-1 text-slate-600">
+              <span>Pathway: STEM &amp; Arts</span>
+              <span>Desk #14</span>
+            </div>
+          </div>
+          <div className="bg-emerald-100 px-1 py-0.5 rounded text-[6px] text-emerald-800 flex justify-between font-bold">
+            <span>CBA COMPLIANT</span>
+            <span>Center Code: 20410</span>
+          </div>
+        </div>
+      )}
+
+      {templateId === 'integrated_values' && (
+        <div className="h-full border border-purple-300 bg-linear-to-b from-purple-50/40 to-white rounded p-1.5 flex flex-col justify-between">
+          <div className="flex items-center justify-between border-b border-purple-200 pb-0.5">
+            <div>
+              <span className="text-[5.5px] font-bold text-purple-700 uppercase tracking-widest block">INTEGRATED MORAL VALUES PASS</span>
+              <span className="text-[7.5px] font-black text-slate-900 truncate block max-w-[100px]">{schoolName || 'Values Academy'}</span>
+            </div>
+            <div className="w-5 h-5 rounded-full bg-purple-100 flex items-center justify-center text-purple-800 font-bold text-[8px]">
+              ☪/✝
+            </div>
+          </div>
+          <div className="text-[6.5px] space-y-0.5 text-slate-700 my-0.5">
+            <div className="flex justify-between bg-white px-1 py-0.5 rounded border border-purple-100 font-mono">
+              <span className="font-bold">E. Kiprono Kosgei</span>
+              <span>Grade 7</span>
+            </div>
+            <div className="text-[5.5px] text-purple-900 italic bg-purple-50 p-0.5 rounded border border-purple-100">
+              "Honesty and integrity are the crown of knowledge."
+            </div>
+          </div>
+          <div className="flex items-center justify-between pt-0.5 border-t border-purple-200 text-[6px] text-purple-800">
+            <span className="font-bold">HONOR CODE PLEDGED</span>
+            <span>Supervisor: ✍️</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ================================================================== */
 /*  Settings Page                                                      */
 /* ================================================================== */
 export const Settings: React.FC = () => {
@@ -466,6 +676,15 @@ export const Settings: React.FC = () => {
   const [newUnitDept, setNewUnitDept] = useState('Sciences & Tech');
   const [newUnitIsMandatory, setNewUnitIsMandatory] = useState(true);
   const [newUnitPeriods, setNewUnitPeriods] = useState('4');
+  const [newUnitClasses, setNewUnitClasses] = useState<string[]>(['all']);
+
+  /* Per-class filtering and assignments */
+  const [unitClassFilter, setUnitClassFilter] = useState<string>('all');
+  const [editingUnitForClasses, setEditingUnitForClasses] = useState<Subject | null>(null);
+  const [unitClassesSelection, setUnitClassesSelection] = useState<string[]>([]);
+
+  /* Live Exam Card Preview Modal */
+  const [previewExamCardModal, setPreviewExamCardModal] = useState<string | null>(null);
 
   /* Filter & search state for curriculum units */
   const [unitSearch, setUnitSearch] = useState('');
@@ -574,6 +793,38 @@ export const Settings: React.FC = () => {
     }
   };
 
+  const handleSaveUnitClassAssignments = async () => {
+    if (!organization || !currentSchool || !editingUnitForClasses || !editingUnitForClasses.id) return;
+    const toastId = toast.loading(`Updating designated classes for ${editingUnitForClasses.name}...`);
+    try {
+      await updateDoc(doc(db, 'organizations', organization.id, 'schools', currentSchool.id, 'subjects', editingUnitForClasses.id), {
+        applicableClasses: unitClassesSelection.length === 0 ? ['all'] : unitClassesSelection,
+        updatedAt: serverTimestamp(),
+      });
+      toast.success(`Updated class curriculum assignments for ${editingUnitForClasses.name}`, { id: toastId });
+      setEditingUnitForClasses(null);
+    } catch (err) {
+      console.error('Error saving unit classes:', err);
+      toast.error('Failed to update class assignments', { id: toastId });
+    }
+  };
+
+  const handleApplyExamCardTemplate = async (tmplId: string, tmplTitle: string) => {
+    setExamCardTemplate(tmplId);
+    if (!organization || !currentSchool) return;
+
+    const toastId = toast.loading(`Applying ${tmplTitle} for student exam passes...`);
+    try {
+      await updateDoc(doc(db, 'organizations', organization.id, 'schools', currentSchool.id), {
+        'branding.examCardTemplate': tmplId,
+      });
+      toast.success(`Active Exam Admit Card template set to "${tmplTitle}". Now active across all school exams!`, { id: toastId });
+    } catch (err) {
+      console.error('Error applying exam card template:', err);
+      toast.error('Failed to update exam template in database', { id: toastId });
+    }
+  };
+
   const handleCreateUnitInSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!organization || !currentSchool) return;
@@ -593,6 +844,7 @@ export const Settings: React.FC = () => {
         type: newUnitIsMandatory ? 'core' : 'elective',
         department: newUnitDept,
         weeklyPeriods: Number(newUnitPeriods) || 4,
+        applicableClasses: newUnitClasses.length === 0 ? ['all'] : newUnitClasses,
         teacherName: 'Assigned Instructor',
         createdAt: serverTimestamp(),
       });
@@ -600,6 +852,7 @@ export const Settings: React.FC = () => {
       setIsAddUnitModalOpen(false);
       setNewUnitName('');
       setNewUnitCode('');
+      setNewUnitClasses(['all']);
     } catch (err) {
       console.error('Error creating unit:', err);
       toast.error('Failed to create unit', { id: toastId });
@@ -609,23 +862,25 @@ export const Settings: React.FC = () => {
   const handleBulkSeedUnits = async () => {
     if (!organization || !currentSchool) return;
     const standardCurriculumUnits = [
-      { id: 'math-101', code: 'MATH-101', name: 'Mathematics', isMandatory: true, department: 'Sciences & Tech', weeklyPeriods: 5 },
-      { id: 'eng-102', code: 'ENG-102', name: 'English Language & Literacy', isMandatory: true, department: 'Languages', weeklyPeriods: 5 },
-      { id: 'kisw-103', code: 'KISW-103', name: 'Kiswahili & Fasihi', isMandatory: true, department: 'Languages', weeklyPeriods: 4 },
-      { id: 'sci-201', code: 'SCI-201', name: 'Integrated Science', isMandatory: true, department: 'Sciences & Tech', weeklyPeriods: 4 },
-      { id: 'sst-202', code: 'SST-202', name: 'Social Studies & Citizenship', isMandatory: true, department: 'Humanities', weeklyPeriods: 3 },
-      { id: 'agri-301', code: 'AGRI-301', name: 'Agriculture & Nutrition', isMandatory: true, department: 'Applied Sciences', weeklyPeriods: 3 },
-      { id: 'arts-302', code: 'ARTS-302', name: 'Creative Arts & Sports', isMandatory: true, department: 'Creative Arts', weeklyPeriods: 3 },
-      { id: 'ptech-303', code: 'PTECH-303', name: 'Pre-Technical & Digital Studies', isMandatory: true, department: 'Sciences & Tech', weeklyPeriods: 4 },
-      { id: 'cre-104', code: 'CRE-104', name: 'Christian Religious Education', isMandatory: false, department: 'Religious Studies', weeklyPeriods: 2 },
-      { id: 'ire-105', code: 'IRE-105', name: 'Islamic Religious Education', isMandatory: false, department: 'Religious Studies', weeklyPeriods: 2 },
-      { id: 'frn-203', code: 'FRN-203', name: 'French & Foreign Languages', isMandatory: false, department: 'Languages', weeklyPeriods: 3 },
-      { id: 'comp-204', code: 'COMP-204', name: 'Computer Science & ICT', isMandatory: false, department: 'Sciences & Tech', weeklyPeriods: 3 },
-      { id: 'bst-208', code: 'BST-208', name: 'Business Studies & Financial Literacy', isMandatory: false, department: 'Humanities', weeklyPeriods: 3 },
-      { id: 'mus-207', code: 'MUS-207', name: 'Music & Performing Arts', isMandatory: false, department: 'Creative Arts', weeklyPeriods: 2 },
+      { id: 'math-101', code: 'MATH-101', name: 'Mathematics', isMandatory: true, department: 'Sciences & Tech', weeklyPeriods: 5, applicableClasses: ['all'] },
+      { id: 'eng-102', code: 'ENG-102', name: 'English Language & Literacy', isMandatory: true, department: 'Languages', weeklyPeriods: 5, applicableClasses: ['all'] },
+      { id: 'kisw-103', code: 'KISW-103', name: 'Kiswahili & Fasihi', isMandatory: true, department: 'Languages', weeklyPeriods: 4, applicableClasses: ['all'] },
+      { id: 'env-101', code: 'ENV-101', name: 'Environmental & Foundational Activities', isMandatory: true, department: 'Sciences & Tech', weeklyPeriods: 4, applicableClasses: ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3'] },
+      { id: 'hyg-102', code: 'HYG-102', name: 'Hygiene, Movement & Nutrition Activities', isMandatory: true, department: 'Applied Sciences', weeklyPeriods: 3, applicableClasses: ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3'] },
+      { id: 'sci-201', code: 'SCI-201', name: 'Integrated Science & Technology', isMandatory: true, department: 'Sciences & Tech', weeklyPeriods: 4, applicableClasses: ['Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'] },
+      { id: 'sst-202', code: 'SST-202', name: 'Social Studies & Citizenship', isMandatory: true, department: 'Humanities', weeklyPeriods: 3, applicableClasses: ['Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'] },
+      { id: 'agri-301', code: 'AGRI-301', name: 'Agriculture & Nutrition', isMandatory: true, department: 'Applied Sciences', weeklyPeriods: 3, applicableClasses: ['Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'] },
+      { id: 'arts-302', code: 'ARTS-302', name: 'Creative Arts & Sports', isMandatory: true, department: 'Creative Arts', weeklyPeriods: 3, applicableClasses: ['Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'] },
+      { id: 'ptech-303', code: 'PTECH-303', name: 'Pre-Technical & Digital Studies', isMandatory: true, department: 'Sciences & Tech', weeklyPeriods: 4, applicableClasses: ['Grade 7', 'Grade 8', 'Grade 9'] },
+      { id: 'cre-104', code: 'CRE-104', name: 'Christian Religious Education', isMandatory: false, department: 'Religious Studies', weeklyPeriods: 2, applicableClasses: ['all'] },
+      { id: 'ire-105', code: 'IRE-105', name: 'Islamic Religious Education', isMandatory: false, department: 'Religious Studies', weeklyPeriods: 2, applicableClasses: ['all'] },
+      { id: 'frn-203', code: 'FRN-203', name: 'French & Foreign Languages', isMandatory: false, department: 'Languages', weeklyPeriods: 3, applicableClasses: ['Grade 7', 'Grade 8', 'Grade 9', 'Form 1', 'Form 2', 'Form 3', 'Form 4'] },
+      { id: 'comp-204', code: 'COMP-204', name: 'Computer Science & ICT', isMandatory: false, department: 'Sciences & Tech', weeklyPeriods: 3, applicableClasses: ['Grade 7', 'Grade 8', 'Grade 9', 'Form 1', 'Form 2', 'Form 3', 'Form 4'] },
+      { id: 'bst-208', code: 'BST-208', name: 'Business Studies & Financial Literacy', isMandatory: false, department: 'Humanities', weeklyPeriods: 3, applicableClasses: ['Grade 7', 'Grade 8', 'Grade 9', 'Form 1', 'Form 2', 'Form 3', 'Form 4'] },
+      { id: 'mus-207', code: 'MUS-207', name: 'Music & Performing Arts', isMandatory: false, department: 'Creative Arts', weeklyPeriods: 2, applicableClasses: ['Grade 7', 'Grade 8', 'Grade 9', 'Form 1', 'Form 2', 'Form 3', 'Form 4'] },
     ];
 
-    const toastId = toast.loading('Seeding standard curriculum units...');
+    const toastId = toast.loading('Seeding grade-appropriate curriculum units...');
     try {
       const batch = writeBatch(db);
       for (const unit of standardCurriculumUnits) {
@@ -639,7 +894,7 @@ export const Settings: React.FC = () => {
         }, { merge: true });
       }
       await batch.commit();
-      toast.success('Successfully seeded 14 standard curriculum units for this campus!', { id: toastId });
+      toast.success('Successfully seeded 16 curriculum units tailored by grade levels!', { id: toastId });
     } catch (err) {
       console.error('Error seeding units:', err);
       toast.error('Failed to seed curriculum units', { id: toastId });
@@ -880,36 +1135,56 @@ export const Settings: React.FC = () => {
   ];
 
   /* ================================================================ */
-  /*  Exam Card Templates Config                                      */
+  /*  Exam Card Templates Config (6 Real-World School Paradigms)      */
   /* ================================================================ */
   const examCardTemplates = [
     {
       id: 'classic_crest',
-      title: 'Classic Crest (Formal Academic)',
-      description: 'Traditional East African bordered certificate frame with passport photo box, subjects timetable verification grid, and official headteacher stamp box.',
+      title: 'Classic National Board Pass',
+      category: 'KNEC / UNEB / NECTA Standard',
+      description: 'Formal double-ruled certificate frame, passport photo box, candidate index/adm number, 6-subject timetable verification schedule, candidate integrity pledge, and official headteacher stamp box.',
       icon: Award,
-      badge: 'Most Popular',
+      badge: 'National Standard',
     },
     {
       id: 'modern_qr',
-      title: 'Modern QR Biometric Pass',
-      description: 'Tech-forward digital admit card with scannable candidate QR code, room/desk allocation, biometric verification badge, and security watermark.',
+      title: 'Modern Biometric & Secure QR Pass',
+      category: 'Tech-Enabled Academy',
+      description: 'Digital verification pass with large cryptographic QR code, student photo identification, desk & examination hall assignment, barcode candidate tracker, and anti-forgery watermark pattern.',
       icon: QrCode,
-      badge: 'Digital First',
-    },
-    {
-      id: 'compact_slip',
-      title: 'Compact Dual-Slip (Eco-Print)',
-      description: 'Paper-saving 2-per-page admit slip layout with candidate solemn pledge, parent emergency contact, and invigilator signature initial lines.',
-      icon: Printer,
-      badge: 'Eco Print',
+      badge: 'Biometric QR',
     },
     {
       id: 'executive_distinction',
-      title: 'Executive Distinction Certificate',
-      description: 'Premium high-security format with decorative guilloche border, embossed crest effect, security candidate code, and authorized validation grid.',
+      title: 'Executive Distinction Certificate Card',
+      category: 'Cambridge & International',
+      description: 'Elite international school format with intricate guilloche security border, gold foil styling, dual crest headers, invigilator verification initial columns, and authorized registrar seal.',
+      icon: ShieldCheck,
+      badge: 'International IB/IGCSE',
+    },
+    {
+      id: 'compact_slip',
+      title: 'Compact Eco Dual-Slip (A4 Split)',
+      category: 'High-Volume & Low-Ink',
+      description: 'Paper-conserving 2-cards-per-page A4 landscape split layout. Features candidate photo, timetable summary, invigilator sign-off boxes, and parent emergency tear-off slip.',
+      icon: Printer,
+      badge: '2-Per-Page Eco',
+    },
+    {
+      id: 'cbc_competency',
+      title: 'CBC Assessment Center Card',
+      category: 'KICD Competency Pathway',
+      description: 'Official Kenya CBC Junior/Senior School format with Learner Assessment UPI, CBA Assessment Center Code, pathways tracking, and Ministry examination room conduct rules.',
+      icon: Sparkles,
+      badge: 'CBC CBA Certified',
+    },
+    {
+      id: 'integrated_values',
+      title: 'Faith & Values Integrated Academy Card',
+      category: 'Faith-Based & Character Academy',
+      description: 'Integrated dual-language academic header, ethical student honor code affirmation, designated moral verse/guidance quotation, and physical examination supervisor endorsement block.',
       icon: FileText,
-      badge: 'Premium Security',
+      badge: 'Values & Character',
     },
   ];
 
@@ -1834,6 +2109,42 @@ export const Settings: React.FC = () => {
                     />
                   </div>
 
+                  <div className="flex items-center gap-1.5">
+                    <Filter className="w-3.5 h-3.5 text-slate-400" />
+                    <select
+                      value={unitClassFilter}
+                      onChange={(e) => setUnitClassFilter(e.target.value)}
+                      className="text-xs rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 font-bold text-slate-700"
+                    >
+                      <option value="all">All School Classes</option>
+                      <optgroup label="Pre-Primary">
+                        <option value="PP1">PP1</option>
+                        <option value="PP2">PP2</option>
+                      </optgroup>
+                      <optgroup label="Lower Primary">
+                        <option value="Grade 1">Grade 1</option>
+                        <option value="Grade 2">Grade 2</option>
+                        <option value="Grade 3">Grade 3</option>
+                      </optgroup>
+                      <optgroup label="Upper Primary">
+                        <option value="Grade 4">Grade 4</option>
+                        <option value="Grade 5">Grade 5</option>
+                        <option value="Grade 6">Grade 6</option>
+                      </optgroup>
+                      <optgroup label="Junior Secondary (JSS)">
+                        <option value="Grade 7">Grade 7</option>
+                        <option value="Grade 8">Grade 8</option>
+                        <option value="Grade 9">Grade 9</option>
+                      </optgroup>
+                      <optgroup label="Senior Secondary">
+                        <option value="Form 1">Form 1</option>
+                        <option value="Form 2">Form 2</option>
+                        <option value="Form 3">Form 3</option>
+                        <option value="Form 4">Form 4</option>
+                      </optgroup>
+                    </select>
+                  </div>
+
                   <select
                     value={unitDeptFilter}
                     onChange={(e) => setUnitDeptFilter(e.target.value)}
@@ -1908,6 +2219,26 @@ export const Settings: React.FC = () => {
                 </div>
               </div>
 
+              {/* Class Specific Filter Status Banner */}
+              {unitClassFilter !== 'all' && (
+                <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-between text-xs text-blue-950">
+                  <div className="flex items-center gap-2">
+                    <GraduationCap className="w-4 h-4 text-blue-700 shrink-0" />
+                    <span>
+                      Viewing curriculum learning areas designated for <strong>{unitClassFilter}</strong>.
+                      Students enrolled in {unitClassFilter} are assessed exclusively on these assigned units.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setUnitClassFilter('all')}
+                    className="text-2xs font-bold text-blue-700 hover:text-blue-900 underline"
+                  >
+                    Clear Filter
+                  </button>
+                </div>
+              )}
+
               {/* Units Table */}
               {loadingSchoolUnits ? (
                 <div className="p-8 text-center text-xs text-slate-500">Loading curriculum units...</div>
@@ -1921,7 +2252,7 @@ export const Settings: React.FC = () => {
                   </p>
                   <div className="mt-4 flex justify-center gap-2">
                     <Button size="sm" variant="primary" onClick={handleBulkSeedUnits} leftIcon={<Layers className="w-3.5 h-3.5" />}>
-                      Seed 14 Standard Units
+                      Seed Standard Units
                     </Button>
                   </div>
                 </div>
@@ -1933,6 +2264,7 @@ export const Settings: React.FC = () => {
                         <th className="py-2.5 px-3">Unit Code</th>
                         <th className="py-2.5 px-3">Subject / Unit Name</th>
                         <th className="py-2.5 px-3">Department</th>
+                        <th className="py-2.5 px-3">Target Classes &amp; Levels</th>
                         <th className="py-2.5 px-3">Weekly Periods</th>
                         <th className="py-2.5 px-3">Requirement Status (Click to Toggle)</th>
                         <th className="py-2.5 px-3 text-right">Actions</th>
@@ -1950,7 +2282,12 @@ export const Settings: React.FC = () => {
                             unitTypeFilter === 'all' ||
                             (unitTypeFilter === 'mandatory' && u.isMandatory) ||
                             (unitTypeFilter === 'optional' && !u.isMandatory);
-                          return matchesSearch && matchesDept && matchesType;
+                          const unitClasses = u.applicableClasses || ['all'];
+                          const matchesClass =
+                            unitClassFilter === 'all' ||
+                            unitClasses.includes('all') ||
+                            unitClasses.includes(unitClassFilter);
+                          return matchesSearch && matchesDept && matchesType && matchesClass;
                         })
                         .map((unit) => (
                           <tr key={unit.id} className="hover:bg-slate-50/70 transition">
@@ -1966,6 +2303,31 @@ export const Settings: React.FC = () => {
                               <span className="text-2xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-medium">
                                 {unit.department || 'General'}
                               </span>
+                            </td>
+                            <td className="py-2.5 px-3">
+                              <div className="flex flex-wrap items-center gap-1 max-w-[220px]">
+                                {(!unit.applicableClasses || unit.applicableClasses.length === 0 || unit.applicableClasses.includes('all')) ? (
+                                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                                    All School Classes
+                                  </span>
+                                ) : (
+                                  unit.applicableClasses.map((cls) => (
+                                    <span key={cls} className="text-[9.5px] font-bold px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-800 border border-indigo-200">
+                                      {cls}
+                                    </span>
+                                  ))
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingUnitForClasses(unit);
+                                    setUnitClassesSelection(unit.applicableClasses || ['all']);
+                                  }}
+                                  className="text-[10px] font-semibold text-brand-700 hover:text-brand-900 underline ml-1"
+                                >
+                                  Edit
+                                </button>
+                              </div>
                             </td>
                             <td className="py-2.5 px-3 font-mono text-slate-700">
                               {unit.weeklyPeriods || 4} pds/wk
@@ -2033,55 +2395,92 @@ export const Settings: React.FC = () => {
                 or administrators generate exam passes, this template will be used.
               </p>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {examCardTemplates.map((tmpl) => {
                   const isSelected = examCardTemplate === tmpl.id;
                   const Icon = tmpl.icon;
                   return (
                     <div
                       key={tmpl.id}
-                      onClick={() => {
-                        setExamCardTemplate(tmpl.id);
-                        setBrandingSaved(false);
-                      }}
-                      className={`rounded-2xl border p-4 cursor-pointer transition-all ${
+                      className={`rounded-2xl border p-4 flex flex-col justify-between transition-all bg-white ${
                         isSelected
-                          ? 'border-brand-500 ring-2 ring-brand-500/20 bg-blue-50/20 shadow-md'
-                          : 'border-gray-200 bg-white hover:border-gray-300'
+                          ? 'border-brand-500 ring-2 ring-brand-500/20 shadow-md bg-blue-50/15'
+                          : 'border-slate-200 hover:border-slate-300 hover:shadow-xs'
                       }`}
                     >
-                      <div className="flex items-start justify-between gap-3 mb-2">
-                        <div className="flex items-center gap-2.5">
-                          <div
-                            className={`p-2 rounded-xl text-white ${
-                              isSelected ? 'bg-brand-700' : 'bg-gray-700'
-                            }`}
-                          >
-                            <Icon className="w-4 h-4" />
+                      <div>
+                        {/* Header */}
+                        <div className="flex items-start justify-between gap-2 mb-2.5">
+                          <div className="flex items-center gap-2">
+                            <div
+                              className={`p-2 rounded-xl text-white ${
+                                isSelected ? 'bg-brand-700' : 'bg-slate-700'
+                              }`}
+                            >
+                              <Icon className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <h4 className="text-xs font-bold text-slate-900 leading-tight">{tmpl.title}</h4>
+                              <span className="text-[9.5px] font-bold uppercase tracking-wider text-brand-700 block mt-0.5">
+                                {tmpl.badge}
+                              </span>
+                            </div>
                           </div>
-                          <div>
-                            <h4 className="text-sm font-bold text-gray-900">{tmpl.title}</h4>
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-brand-700">
-                              {tmpl.badge}
+
+                          {isSelected && (
+                            <span className="rounded-full bg-emerald-100 text-emerald-800 px-2.5 py-0.5 text-[10px] font-extrabold uppercase shrink-0">
+                              Active
                             </span>
-                          </div>
+                          )}
                         </div>
 
-                        {isSelected ? (
-                          <span className="rounded-full bg-emerald-100 text-emerald-800 px-2.5 py-0.5 text-xs font-bold">
-                            Selected
-                          </span>
-                        ) : (
-                          <button
-                            type="button"
-                            className="text-xs font-semibold text-gray-400 hover:text-gray-700"
-                          >
-                            Choose
-                          </button>
-                        )}
+                        {/* Live Miniature Visual Canvas */}
+                        <div className="my-2.5">
+                          <MiniatureExamCardPreview
+                            templateId={tmpl.id}
+                            primaryColor={primaryColor}
+                            secondaryColor={secondaryColor}
+                            schoolName={currentSchool?.name || 'Edumo Demonstration Academy'}
+                          />
+                        </div>
+
+                        {/* Description */}
+                        <p className="text-2xs text-slate-600 leading-relaxed mb-3">
+                          {tmpl.description}
+                        </p>
                       </div>
 
-                      <p className="text-xs text-gray-600 leading-relaxed mt-2">{tmpl.description}</p>
+                      {/* Action Buttons */}
+                      <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2 mt-auto">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPreviewExamCardModal(tmpl.id);
+                          }}
+                          className="text-2xs py-1 px-2.5 h-7 flex-1"
+                          leftIcon={<Eye className="w-3 h-3 text-slate-600" />}
+                        >
+                          Preview Live Pass
+                        </Button>
+
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={isSelected ? 'ghost' : 'primary'}
+                          disabled={isSelected}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleApplyExamCardTemplate(tmpl.id, tmpl.title);
+                          }}
+                          className={`text-2xs py-1 px-2.5 h-7 flex-1 ${isSelected ? '!text-emerald-700 !font-bold cursor-default' : ''}`}
+                          leftIcon={isSelected ? <Check className="w-3 h-3 text-emerald-600" /> : undefined}
+                        >
+                          {isSelected ? 'Current Format' : 'Apply to Campus'}
+                        </Button>
+                      </div>
                     </div>
                   );
                 })}
@@ -2983,6 +3382,103 @@ export const Settings: React.FC = () => {
             </div>
           </div>
 
+          {/* Target Classes Selection */}
+          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-gray-800 block">
+                Designated Target Classes / Grade Levels
+              </label>
+              <span className="text-[10px] text-slate-500 font-semibold">
+                {newUnitClasses.includes('all') ? 'Assigned to All School Classes' : `${newUnitClasses.length} class(es) selected`}
+              </span>
+            </div>
+
+            {/* Quick Preset Buttons */}
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              <button
+                type="button"
+                onClick={() => setNewUnitClasses(['all'])}
+                className={`text-[10.5px] px-2 py-0.5 rounded-md font-bold transition border ${
+                  newUnitClasses.includes('all')
+                    ? 'bg-brand-700 text-white border-brand-800'
+                    : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                }`}
+              >
+                All Classes
+              </button>
+              <button
+                type="button"
+                onClick={() => setNewUnitClasses(['PP1', 'PP2'])}
+                className="text-[10.5px] px-2 py-0.5 rounded-md font-bold bg-white text-slate-700 border border-slate-300 hover:bg-slate-100"
+              >
+                Pre-Primary (PP1 - PP2)
+              </button>
+              <button
+                type="button"
+                onClick={() => setNewUnitClasses(['Grade 1', 'Grade 2', 'Grade 3'])}
+                className="text-[10.5px] px-2 py-0.5 rounded-md font-bold bg-white text-slate-700 border border-slate-300 hover:bg-slate-100"
+              >
+                Lower Primary (Grades 1 - 3)
+              </button>
+              <button
+                type="button"
+                onClick={() => setNewUnitClasses(['Grade 4', 'Grade 5', 'Grade 6'])}
+                className="text-[10.5px] px-2 py-0.5 rounded-md font-bold bg-white text-slate-700 border border-slate-300 hover:bg-slate-100"
+              >
+                Upper Primary (Grades 4 - 6)
+              </button>
+              <button
+                type="button"
+                onClick={() => setNewUnitClasses(['Grade 7', 'Grade 8', 'Grade 9'])}
+                className="text-[10.5px] px-2 py-0.5 rounded-md font-bold bg-white text-slate-700 border border-slate-300 hover:bg-slate-100"
+              >
+                Junior Secondary (Grades 7 - 9)
+              </button>
+              <button
+                type="button"
+                onClick={() => setNewUnitClasses(['Form 1', 'Form 2', 'Form 3', 'Form 4'])}
+                className="text-[10.5px] px-2 py-0.5 rounded-md font-bold bg-white text-slate-700 border border-slate-300 hover:bg-slate-100"
+              >
+                Senior Secondary (Forms 1 - 4)
+              </button>
+            </div>
+
+            {/* Checkbox grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-2 border-t border-slate-200">
+              {ALL_SCHOOL_CLASSES.map((cls) => {
+                const isChecked = newUnitClasses.includes('all') || newUnitClasses.includes(cls);
+                return (
+                  <label key={cls} className="flex items-center gap-1.5 text-xs text-slate-700 cursor-pointer p-1 rounded hover:bg-slate-100">
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={(e) => {
+                        if (newUnitClasses.includes('all')) {
+                          if (!e.target.checked) {
+                            setNewUnitClasses(ALL_SCHOOL_CLASSES.filter((c) => c !== cls));
+                          }
+                        } else {
+                          if (e.target.checked) {
+                            const next = [...newUnitClasses, cls];
+                            if (next.length === ALL_SCHOOL_CLASSES.length) {
+                              setNewUnitClasses(['all']);
+                            } else {
+                              setNewUnitClasses(next);
+                            }
+                          } else {
+                            setNewUnitClasses(newUnitClasses.filter((c) => c !== cls));
+                          }
+                        }
+                      }}
+                      className="rounded text-brand-600 focus:ring-brand-500"
+                    />
+                    <span className="font-medium text-2xs">{cls}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+
           <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
             <Button
               type="button"
@@ -3001,6 +3497,384 @@ export const Settings: React.FC = () => {
           </div>
         </form>
       </Modal>
+
+      {/* ============================================================ */}
+      {/*  DESIGNATE CLASSES FOR EXISTING UNIT MODAL                   */}
+      {/* ============================================================ */}
+      {editingUnitForClasses && (
+        <Modal
+          isOpen={editingUnitForClasses !== null}
+          onClose={() => setEditingUnitForClasses(null)}
+          title={`Designate Target Classes — ${editingUnitForClasses.name} (${editingUnitForClasses.code})`}
+          description="Select which classes take this learning area. Only students enrolled in designated classes will be assessed on this unit in marksheets and report cards."
+        >
+          <div className="space-y-4 text-left">
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-800">Quick Level Selection Presets:</span>
+                <span className="text-[10px] text-slate-500 font-semibold">
+                  {unitClassesSelection.includes('all') ? 'All School Classes Active' : `${unitClassesSelection.length} classes active`}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setUnitClassesSelection(['all'])}
+                  className={`text-[10.5px] px-2 py-0.5 rounded font-bold transition border ${
+                    unitClassesSelection.includes('all')
+                      ? 'bg-brand-700 text-white border-brand-800'
+                      : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                  }`}
+                >
+                  All School Classes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUnitClassesSelection(['PP1', 'PP2'])}
+                  className="text-[10.5px] px-2 py-0.5 rounded font-bold bg-white text-slate-700 border border-slate-300 hover:bg-slate-100"
+                >
+                  Pre-Primary (PP1 - PP2)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUnitClassesSelection(['Grade 1', 'Grade 2', 'Grade 3'])}
+                  className="text-[10.5px] px-2 py-0.5 rounded font-bold bg-white text-slate-700 border border-slate-300 hover:bg-slate-100"
+                >
+                  Lower Primary (Grades 1 - 3)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUnitClassesSelection(['Grade 4', 'Grade 5', 'Grade 6'])}
+                  className="text-[10.5px] px-2 py-0.5 rounded font-bold bg-white text-slate-700 border border-slate-300 hover:bg-slate-100"
+                >
+                  Upper Primary (Grades 4 - 6)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUnitClassesSelection(['Grade 7', 'Grade 8', 'Grade 9'])}
+                  className="text-[10.5px] px-2 py-0.5 rounded font-bold bg-white text-slate-700 border border-slate-300 hover:bg-slate-100"
+                >
+                  Junior Secondary (Grades 7 - 9)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUnitClassesSelection(['Form 1', 'Form 2', 'Form 3', 'Form 4'])}
+                  className="text-[10.5px] px-2 py-0.5 rounded font-bold bg-white text-slate-700 border border-slate-300 hover:bg-slate-100"
+                >
+                  Senior Secondary (Forms 1 - 4)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUnitClassesSelection([])}
+                  className="text-[10.5px] px-2 py-0.5 rounded font-bold bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 ml-auto"
+                >
+                  Clear All
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-3 rounded-xl border border-slate-200 max-h-56 overflow-y-auto">
+              {ALL_SCHOOL_CLASSES.map((cls) => {
+                const isChecked = unitClassesSelection.includes('all') || unitClassesSelection.includes(cls);
+                return (
+                  <label key={cls} className="flex items-center gap-2 text-xs text-slate-800 cursor-pointer p-1.5 rounded hover:bg-slate-50 transition border border-transparent hover:border-slate-200">
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={(e) => {
+                        if (unitClassesSelection.includes('all')) {
+                          if (!e.target.checked) {
+                            setUnitClassesSelection(ALL_SCHOOL_CLASSES.filter((c) => c !== cls));
+                          }
+                        } else {
+                          if (e.target.checked) {
+                            const next = [...unitClassesSelection, cls];
+                            if (next.length === ALL_SCHOOL_CLASSES.length) {
+                              setUnitClassesSelection(['all']);
+                            } else {
+                              setUnitClassesSelection(next);
+                            }
+                          } else {
+                            setUnitClassesSelection(unitClassesSelection.filter((c) => c !== cls));
+                          }
+                        }
+                      }}
+                      className="rounded text-brand-600 focus:ring-brand-500"
+                    />
+                    <span className="font-semibold text-2xs">{cls}</span>
+                  </label>
+                );
+              })}
+            </div>
+
+            <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+              <Button type="button" variant="ghost" onClick={() => setEditingUnitForClasses(null)}>
+                Cancel
+              </Button>
+              <Button type="button" variant="primary" onClick={handleSaveUnitClassAssignments} leftIcon={<Check className="w-4 h-4" />}>
+                Save Class Assignments
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* ============================================================ */}
+      {/*  LIVE EXAMINATION ADMIT CARD PREVIEW MODAL                   */}
+      {/* ============================================================ */}
+      {previewExamCardModal && (
+        <Modal
+          isOpen={previewExamCardModal !== null}
+          onClose={() => setPreviewExamCardModal(null)}
+          title={`Official Examination Admit Card — ${examCardTemplates.find((t) => t.id === previewExamCardModal)?.title || 'Template'}`}
+          description={`Live printable candidate admit pass layout configured for ${currentSchool?.name || 'this campus'}. You can inspect every field without changing your current template.`}
+          maxWidth="2xl"
+        >
+          <div className="space-y-4 text-left">
+            {/* Top Toolbar */}
+            <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-100 border border-slate-200 text-xs">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-slate-700">Format:</span>
+                <span className="px-2 py-0.5 rounded-md bg-white border border-slate-300 font-mono text-2xs font-extrabold text-brand-700">
+                  {examCardTemplates.find((t) => t.id === previewExamCardModal)?.title}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => window.print()}
+                  leftIcon={<Printer className="w-3.5 h-3.5" />}
+                  className="text-2xs py-1 h-7"
+                >
+                  Print Sample Pass
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="primary"
+                  onClick={() => {
+                    const tmpl = examCardTemplates.find((t) => t.id === previewExamCardModal);
+                    if (tmpl) handleApplyExamCardTemplate(tmpl.id, tmpl.title);
+                    setPreviewExamCardModal(null);
+                  }}
+                  leftIcon={<Check className="w-3.5 h-3.5" />}
+                  className="text-2xs py-1 h-7"
+                >
+                  Apply &amp; Set as Active Format
+                </Button>
+              </div>
+            </div>
+
+            {/* High-Resolution Printable Admit Card Sheet */}
+            <div
+              className={`rounded-xl p-5 border-2 bg-white text-slate-900 shadow-sm print:shadow-none print:border-black ${
+                previewExamCardModal === 'executive_distinction'
+                  ? 'border-amber-400 bg-linear-to-b from-amber-50/20 via-white to-amber-50/10'
+                  : previewExamCardModal === 'modern_qr'
+                  ? 'border-blue-300 bg-slate-50/40'
+                  : previewExamCardModal === 'cbc_competency'
+                  ? 'border-emerald-400 bg-emerald-50/20'
+                  : previewExamCardModal === 'integrated_values'
+                  ? 'border-purple-300 bg-linear-to-b from-purple-50/30 to-white'
+                  : previewExamCardModal === 'compact_slip'
+                  ? 'border-dashed border-slate-400 font-mono'
+                  : 'border-double border-4'
+              }`}
+              style={{
+                borderColor: previewExamCardModal === 'classic_crest' ? primaryColor : undefined,
+                fontFamily: previewExamCardModal === 'compact_slip' ? 'monospace' : 'var(--font-main, sans-serif)',
+              }}
+            >
+              {/* Card Header */}
+              <div className="flex items-start justify-between border-b-2 border-slate-900 pb-3 gap-3">
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-white text-lg shrink-0 shadow-xs"
+                    style={{ backgroundColor: primaryColor }}
+                  >
+                    {currentSchool?.branding?.logo ? (
+                      <img src={currentSchool.branding.logo} alt="Logo" className="w-10 h-10 object-contain" />
+                    ) : (
+                      <Award className="w-7 h-7 text-white" />
+                    )}
+                  </div>
+                  <div>
+                    <h2 className="text-base font-black uppercase tracking-tight text-slate-900">
+                      {currentSchool?.name || 'Edumo Demonstration Academy'}
+                    </h2>
+                    <p className="text-2xs font-semibold text-slate-500 italic">
+                      "{schoolMotto || currentSchool?.branding?.motto || 'Knowledge, Character and Excellence'}"
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2 text-[10px] text-slate-600 mt-0.5">
+                      <span>Center Code: <strong>{currentSchool?.code || 'MAIN'}-2026</strong></span>
+                      <span>•</span>
+                      <span>{city || 'Nairobi'}, {county || 'Kenya'}</span>
+                      <span>•</span>
+                      <span>Academic Year: <strong>2026</strong></span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Candidate Photo Frame */}
+                <div className="flex flex-col items-center">
+                  <div className="w-20 h-24 border-2 border-slate-400 rounded-md bg-slate-100 flex flex-col items-center justify-center text-center p-1 text-slate-400">
+                    <Users className="w-8 h-8 text-slate-300 mb-0.5" />
+                    <span className="text-[8px] font-bold uppercase tracking-wider">PASSPORT PHOTO</span>
+                  </div>
+                  <span className="text-[9px] font-mono font-bold text-slate-700 mt-0.5">#0042</span>
+                </div>
+              </div>
+
+              {/* Title Banner */}
+              <div
+                className="my-3 py-1.5 px-3 rounded-md text-center font-black uppercase tracking-widest text-xs text-white flex items-center justify-between"
+                style={{ backgroundColor: primaryColor }}
+              >
+                <span>OFFICIAL CANDIDATE EXAMINATION ADMIT PASS</span>
+                <span className="text-[10px] font-mono font-normal opacity-90">SERIES: 2026 TERM 3 SUMMATIVE</span>
+              </div>
+
+              {/* Candidate Details Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs mb-3">
+                <div>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase block">Candidate Name</span>
+                  <span className="font-extrabold text-slate-900">Emmanuel Kiprono Kosgei</span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase block">Admission / UPI Index</span>
+                  <span className="font-mono font-black text-slate-900">2026/0042 • UPI-701042-26</span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase block">Class &amp; Stream</span>
+                  <span className="font-bold text-slate-900">Grade 7 West (Junior School)</span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase block">Hall &amp; Desk Allocation</span>
+                  <span className="font-black text-brand-700 font-mono">HALL A • DESK #14</span>
+                </div>
+              </div>
+
+              {/* Timetable Verification Grid */}
+              <div className="mb-3">
+                <span className="text-2xs font-bold uppercase tracking-wider text-slate-600 block mb-1">
+                  Verified Timetable &amp; Invigilator Endorsement Schedule
+                </span>
+                <div className="overflow-x-auto rounded-lg border border-slate-300">
+                  <table className="w-full text-left text-2xs">
+                    <thead className="bg-slate-100 text-slate-700 font-bold uppercase text-[9.5px] border-b border-slate-300">
+                      <tr>
+                        <th className="py-1.5 px-2.5">Date &amp; Time</th>
+                        <th className="py-1.5 px-2.5">Paper / Learning Area</th>
+                        <th className="py-1.5 px-2.5">Type</th>
+                        <th className="py-1.5 px-2.5">Room</th>
+                        <th className="py-1.5 px-2.5 text-center">Invigilator Initial</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 font-medium">
+                      <tr>
+                        <td className="py-1.5 px-2.5 font-mono">Mon 10 Nov • 08:30 - 10:30</td>
+                        <td className="py-1.5 px-2.5 font-bold">101 Mathematics Paper 1</td>
+                        <td className="py-1.5 px-2.5"><span className="px-1.5 py-0.2 rounded text-[9px] bg-blue-100 text-blue-800 font-bold">Core</span></td>
+                        <td className="py-1.5 px-2.5">Hall A</td>
+                        <td className="py-1.5 px-2.5 text-center font-serif text-slate-400">___________</td>
+                      </tr>
+                      <tr>
+                        <td className="py-1.5 px-2.5 font-mono">Mon 10 Nov • 11:30 - 13:00</td>
+                        <td className="py-1.5 px-2.5 font-bold">102 English Language &amp; Composition</td>
+                        <td className="py-1.5 px-2.5"><span className="px-1.5 py-0.2 rounded text-[9px] bg-blue-100 text-blue-800 font-bold">Core</span></td>
+                        <td className="py-1.5 px-2.5">Hall A</td>
+                        <td className="py-1.5 px-2.5 text-center font-serif text-slate-400">___________</td>
+                      </tr>
+                      <tr>
+                        <td className="py-1.5 px-2.5 font-mono">Tue 11 Nov • 08:30 - 10:00</td>
+                        <td className="py-1.5 px-2.5 font-bold">201 Integrated Science</td>
+                        <td className="py-1.5 px-2.5"><span className="px-1.5 py-0.2 rounded text-[9px] bg-blue-100 text-blue-800 font-bold">Core</span></td>
+                        <td className="py-1.5 px-2.5">Lab 2</td>
+                        <td className="py-1.5 px-2.5 text-center font-serif text-slate-400">___________</td>
+                      </tr>
+                      <tr>
+                        <td className="py-1.5 px-2.5 font-mono">Tue 11 Nov • 11:00 - 12:30</td>
+                        <td className="py-1.5 px-2.5 font-bold">103 Kiswahili Lugha na Insha</td>
+                        <td className="py-1.5 px-2.5"><span className="px-1.5 py-0.2 rounded text-[9px] bg-blue-100 text-blue-800 font-bold">Core</span></td>
+                        <td className="py-1.5 px-2.5">Hall A</td>
+                        <td className="py-1.5 px-2.5 text-center font-serif text-slate-400">___________</td>
+                      </tr>
+                      <tr>
+                        <td className="py-1.5 px-2.5 font-mono">Wed 12 Nov • 08:30 - 10:00</td>
+                        <td className="py-1.5 px-2.5 font-bold">303 Pre-Technical &amp; Digital Studies</td>
+                        <td className="py-1.5 px-2.5"><span className="px-1.5 py-0.2 rounded text-[9px] bg-blue-100 text-blue-800 font-bold">Core</span></td>
+                        <td className="py-1.5 px-2.5">Comp Lab</td>
+                        <td className="py-1.5 px-2.5 text-center font-serif text-slate-400">___________</td>
+                      </tr>
+                      <tr>
+                        <td className="py-1.5 px-2.5 font-mono">Wed 12 Nov • 11:00 - 12:30</td>
+                        <td className="py-1.5 px-2.5 font-bold">202 Social Studies &amp; Citizenship</td>
+                        <td className="py-1.5 px-2.5"><span className="px-1.5 py-0.2 rounded text-[9px] bg-blue-100 text-blue-800 font-bold">Core</span></td>
+                        <td className="py-1.5 px-2.5">Hall A</td>
+                        <td className="py-1.5 px-2.5 text-center font-serif text-slate-400">___________</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Integrity Code & Signatures */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-2xs mb-2">
+                <div className="sm:col-span-2">
+                  <span className="font-bold text-slate-900 block mb-0.5">Candidate Integrity Affirmation:</span>
+                  <p className="text-slate-600 italic leading-relaxed text-[10px]">
+                    "I affirm that I will uphold absolute integrity, arrive at the examination room 15 minutes prior, and abide by all institutional rules. Unauthorized materials will result in immediate disqualification."
+                  </p>
+                  <div className="mt-2 pt-1 border-t border-slate-200 flex justify-between text-[10px]">
+                    <span>Candidate Signature: <strong>E. Kiprono</strong></span>
+                    <span>Date: <strong>10/11/2026</strong></span>
+                  </div>
+                </div>
+
+                <div className="border-l border-slate-200 pl-3 flex flex-col justify-between text-[10px]">
+                  <div>
+                    <span className="font-bold text-slate-800 block">Chief Invigilator:</span>
+                    <span className="font-serif italic text-slate-600 block">J. K. Cheruiyot</span>
+                  </div>
+                  <div className="pt-1 border-t border-slate-200 flex items-center justify-between">
+                    <div>
+                      <span className="font-bold text-slate-800 block">Principal / Head:</span>
+                      <span className="font-serif italic text-slate-600">Dr. L. Bosire</span>
+                    </div>
+                    <div className="w-8 h-8 rounded-full border-2 border-dashed border-red-400 text-red-600 text-[8px] font-black flex items-center justify-center text-center">
+                      SEAL
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Security Footer & QR Code */}
+              <div className="flex items-center justify-between pt-2 border-t border-slate-200 text-[10px] text-slate-500">
+                <div className="flex items-center gap-2">
+                  <QrCode className="w-6 h-6 text-slate-800 shrink-0" />
+                  <div>
+                    <span className="font-mono font-bold text-slate-800 block">VERIFICATION ID: #EDM-EX-2026-04289</span>
+                    <span>Digital institutional checksum authenticated</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="font-bold text-slate-700 block">EDUMO SECURE EXAM PASS</span>
+                  <span className="text-[9px]">Valid for 2026 Academic Session</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Buttons */}
+            <div className="flex justify-end gap-3 pt-2">
+              <Button type="button" variant="ghost" onClick={() => setPreviewExamCardModal(null)}>
+                Close Preview
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };
