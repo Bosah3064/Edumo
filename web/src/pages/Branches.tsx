@@ -13,7 +13,29 @@ import { Building2, Plus, Phone, MapPin, CheckCircle2, BarChart3, Users, Trendin
 import toast from 'react-hot-toast';
 
 export const Branches: React.FC = () => {
-  const { organization, schools, currentSchool, switchSchool, hasPermission } = useTenant();
+  const { organization, schools, currentSchool, switchSchool, hasPermission, currentRole } = useTenant();
+
+  if (currentRole === 'teacher') {
+    return (
+      <div className="max-w-3xl mx-auto py-16 px-4 text-center animate-fade-in">
+        <div className="bg-white rounded-3xl p-8 sm:p-10 border border-slate-200/80 shadow-sm max-w-lg mx-auto">
+          <div className="w-16 h-16 bg-blue-50 text-[#1d5f99] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-2xs">
+            <Building2 className="w-8 h-8" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-900 mb-2">Campus Branches Restricted</h2>
+          <p className="text-sm text-slate-600 mb-6 leading-relaxed">
+            Multi-branch management and campus replication are reserved for institution owners and school administrators.
+          </p>
+          <a
+            href="/dashboard"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-slate-900 text-white font-semibold text-sm hover:bg-slate-800 shadow-sm transition-all"
+          >
+            Return to Dashboard
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   const [viewMode, setViewMode] = useState<'cards' | 'comparison'>('cards');
   const [isModalOpen, setIsModalOpen] = useState(false);

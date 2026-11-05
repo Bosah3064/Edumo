@@ -38,7 +38,7 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   const { signOut, currentUser, isPlatformAdmin } = useAuth();
-  const { currentRole, currentSchool, organization } = useTenant();
+  const { currentRole, currentSchool, organization, hasPermission } = useTenant();
   const navigate = useNavigate();
   const [sidebarLanguage, setSidebarLanguage] = useState<'en' | 'sw'>(() =>
     localStorage.getItem('edumo_sidebar_language') === 'sw' ? 'sw' : 'en'
@@ -60,34 +60,57 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
     (currentUser as any)?.role === 'superAdmin' ||
     (currentUser as any)?.role === 'platformAdmin';
 
+  const isSchoolAdminOrOwner =
+    currentRole === 'orgOwner' ||
+    currentRole === 'platformAdmin' ||
+    (currentRole as string) === 'schoolAdmin' ||
+    (currentRole as string) === 'admin' ||
+    (currentRole as string) === 'principal';
+
   const activeLogo = currentSchool?.branding?.logo || organization?.branding?.logo;
 
   const navTranslations = sidebarLanguage === 'sw' ? swTranslations.nav : enTranslations.nav;
   const navItems = [
     { to: '/dashboard', label: navTranslations.dashboard, icon: LayoutDashboard },
-    { to: '/branches', label: navTranslations.branches, icon: Building2 },
+    ...(isSchoolAdminOrOwner
+      ? [{ to: '/branches', label: navTranslations.branches, icon: Building2 }]
+      : []),
     { to: '/students', label: navTranslations.students, icon: Users },
     { to: '/attendance', label: navTranslations.attendance, icon: CalendarCheck2 },
     { to: '/classes', label: navTranslations.classes, icon: BookOpen },
     { to: '/timetable', label: sidebarLanguage === 'sw' ? 'Ratiba ya Masomo' : 'Class Timetable', icon: Calendar },
     { to: '/academics', label: sidebarLanguage === 'sw' ? 'Matokeo na Alama' : 'Academics & Marks', icon: Award },
     { to: '/assignments', label: sidebarLanguage === 'sw' ? 'Kazi za Darasa' : 'Assignments', icon: ClipboardCheck },
-    { to: '/staff', label: navTranslations.staff, icon: GraduationCap },
+    ...(hasPermission('staff.read') || isSchoolAdminOrOwner
+      ? [{ to: '/staff', label: navTranslations.staff, icon: GraduationCap }]
+      : []),
     { to: '/educator-portal', label: sidebarLanguage === 'sw' ? 'Tovuti ya Walimu' : 'Educator Portal', icon: Sparkles },
     { to: '/announcements', label: navTranslations.announcements, icon: Megaphone },
-    { to: '/excel-import', label: navTranslations.excelImport, icon: FileSpreadsheet },
+    ...(hasPermission('students.import') || isSchoolAdminOrOwner
+      ? [{ to: '/excel-import', label: navTranslations.excelImport, icon: FileSpreadsheet }]
+      : []),
     { to: '/reports', label: sidebarLanguage === 'sw' ? 'Ripoti za Excel' : 'Report Builder', icon: FileText },
-    { to: '/finance', label: sidebarLanguage === 'sw' ? 'Ada na Fedha' : 'Fees & Finance', icon: CreditCard },
-    { to: '/admissions', label: sidebarLanguage === 'sw' ? 'Udahili na Usajili' : 'Admissions', icon: UserPlus },
-    { to: '/operations', label: sidebarLanguage === 'sw' ? 'Uendeshaji wa Shule' : 'Operations & Fleet', icon: Bus },
+    ...(hasPermission('fees.read') || isSchoolAdminOrOwner
+      ? [{ to: '/finance', label: sidebarLanguage === 'sw' ? 'Ada na Fedha' : 'Fees & Finance', icon: CreditCard }]
+      : []),
+    ...(hasPermission('admissions.read') || isSchoolAdminOrOwner
+      ? [{ to: '/admissions', label: sidebarLanguage === 'sw' ? 'Udahili na Usajili' : 'Admissions', icon: UserPlus }]
+      : []),
+    ...(hasPermission('transport.manage') || isSchoolAdminOrOwner
+      ? [{ to: '/operations', label: sidebarLanguage === 'sw' ? 'Uendeshaji wa Shule' : 'Operations & Fleet', icon: Bus }]
+      : []),
     { to: '/messaging', label: sidebarLanguage === 'sw' ? 'Ujumbe na Wazazi' : 'Messages & Alerts', icon: MessageSquare },
-    { to: '/extended', label: sidebarLanguage === 'sw' ? 'Maktaba na Hosteli' : 'Extended Modules', icon: Layers },
+    ...(hasPermission('library.manage') || isSchoolAdminOrOwner
+      ? [{ to: '/extended', label: sidebarLanguage === 'sw' ? 'Maktaba na Hosteli' : 'Extended Modules', icon: Layers }]
+      : []),
     ...(isSuperOrPlatformAdmin
       ? [{ to: '/platform-console', label: sidebarLanguage === 'sw' ? 'Jopo la Usimamizi' : 'Platform Console', icon: ShieldCheck }]
       : []),
     { to: '/parent-portal', label: navTranslations.parentPortal, icon: HeartHandshake },
     { to: '/profile', label: sidebarLanguage === 'sw' ? 'Wasifu Wangu' : 'My Profile', icon: User },
-    { to: '/settings', label: navTranslations.settings, icon: Settings },
+    ...(hasPermission('settings.read') || isSchoolAdminOrOwner
+      ? [{ to: '/settings', label: navTranslations.settings, icon: Settings }]
+      : []),
   ];
 
   return (
@@ -159,26 +182,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
           </div>
         )}
 
-        {/* ALWAYS VISIBLE HIGH-CONTRAST INSTALL APP BUTTON */}
-        <div className="px-3 pt-2.5 pb-1 shrink-0">
-          <button
-            type="button"
-            onClick={() => {
-              window.dispatchEvent(new CustomEvent('edumo-trigger-pwa-install'));
-              if (onClose) onClose();
-            }}
-            className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-extrabold transition-all bg-gradient-to-r from-[#1d5f99] to-[#683669] text-white shadow-sm hover:opacity-95 active:scale-98"
-          >
-            <div className="flex items-center gap-2">
-              <Smartphone className="w-4 h-4 text-white shrink-0" />
-              <span className="text-white font-bold tracking-tight">Install Phone App</span>
-            </div>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-white text-[#1d5f99] font-black uppercase tracking-wider shadow-2xs">
-              PWA
-            </span>
-          </button>
-        </div>
-
         {/* Navigation List — Comfortable text-sm font size */}
         <nav className="p-3 space-y-1 flex-1 min-h-0 overflow-y-auto">
           {navItems.map((item) => {
@@ -213,14 +216,32 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
         </nav>
       </div>
 
-      {/* Footer / User Profile & Logout */}
+      {/* Footer / Install App + User Profile & Logout */}
       <div
-        className="p-3 shrink-0"
+        className="p-3 shrink-0 space-y-2.5"
         style={{
           borderTop: '1px solid var(--sidebar-border, #e2e8f0)',
           backgroundColor: 'rgba(0, 0, 0, 0.04)',
         }}
       >
+        {/* INSTALL PHONE APP BUTTON AT THE BOTTOM */}
+        <button
+          type="button"
+          onClick={() => {
+            window.dispatchEvent(new CustomEvent('edumo-trigger-pwa-install'));
+            if (onClose) onClose();
+          }}
+          className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-extrabold transition-all bg-gradient-to-r from-[#1d5f99] to-[#683669] text-white shadow-sm hover:opacity-95 active:scale-98"
+        >
+          <div className="flex items-center gap-2">
+            <Smartphone className="w-4 h-4 text-white shrink-0" />
+            <span className="text-white font-bold tracking-tight">Install Phone App</span>
+          </div>
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-white text-[#1d5f99] font-black uppercase tracking-wider shadow-2xs">
+            PWA
+          </span>
+        </button>
+
         <div
           className="flex items-center justify-between p-2.5 rounded-xl shadow-2xs"
           style={{
@@ -246,7 +267,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                 className="text-xs font-medium capitalize truncate"
                 style={{ color: 'var(--sidebar-text-muted, #64748b)' }}
               >
-                {currentRole || 'Staff Member'}
+                {currentRole === 'orgOwner'
+                  ? 'School Administrator'
+                  : currentRole === 'teacher'
+                  ? 'Educator / Teacher'
+                  : currentRole
+                  ? currentRole.charAt(0).toUpperCase() + currentRole.slice(1)
+                  : 'Faculty Member'}
               </p>
             </div>
           </div>

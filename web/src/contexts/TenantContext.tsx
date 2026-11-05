@@ -252,7 +252,7 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Compute permissions for current role
   const userPermissions = useMemo<Permission[]>(() => {
-    if (!currentRole) return Object.values(DEFAULT_ROLE_PERMISSIONS).flat();
+    if (!currentRole) return [];
     if (
       currentRole === 'orgOwner' ||
       currentRole === 'platformAdmin' ||
@@ -265,9 +265,10 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [currentRole]);
 
   const hasPermission = (permission: Permission): boolean => {
+    if (!currentRole) return false;
     if (
-      !currentRole ||
       currentRole === 'orgOwner' ||
+      currentRole === 'platformAdmin' ||
       (currentRole as string) === 'schoolAdmin' ||
       (currentRole as string) === 'admin' ||
       claims?.platformAdmin
