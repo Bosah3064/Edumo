@@ -8,6 +8,7 @@ import {
   query,
   where,
   getDocs,
+  getDoc,
   doc,
   setDoc,
   updateDoc,
@@ -76,15 +77,16 @@ export const EducatorPortal: React.FC = () => {
     const fetchPendingInvites = async () => {
       try {
         const emailLower = currentUser.email?.toLowerCase().trim();
-        // Query invitations collection group for matching email
-        const invitesQuery = query(
-          collectionGroup(db, 'invitations'),
+        if (!emailLower) return;
+
+        // Query root invitations first (direct collection, fast & index-free)
+        const rootInvitesQuery = query(
+          collection(db, 'invitations'),
           where('email', '==', emailLower),
           where('status', '==', 'pending')
         );
-
-        const snap = await getDocs(invitesQuery);
-        const list: PendingInvite[] = snap.docs.map((d) => ({
+        const snap = await getDocs(rootInvitesQuery);
+        let list: PendingInvite[] = snap.docs.map((d) => ({
           id: d.id,
           code: d.data().code || d.id,
           orgId: d.data().orgId,
@@ -96,6 +98,33 @@ export const EducatorPortal: React.FC = () => {
           assignedClass: d.data().assignedClass || '',
           createdAt: d.data().createdAt,
         }));
+
+        // Fallback to collectionGroup if root yielded no records
+        if (list.length === 0) {
+          try {
+            const cgQuery = query(
+              collectionGroup(db, 'invitations'),
+              where('email', '==', emailLower),
+              where('status', '==', 'pending')
+            );
+            const cgSnap = await getDocs(cgQuery);
+            list = cgSnap.docs.map((d) => ({
+              id: d.id,
+              code: d.data().code || d.id,
+              orgId: d.data().orgId,
+              schoolId: d.data().schoolId,
+              schoolName: d.data().schoolName || 'Institution Campus',
+              staffName: d.data().staffName,
+              role: d.data().role || 'teacher',
+              assignedSubjects: d.data().assignedSubjects || [],
+              assignedClass: d.data().assignedClass || '',
+              createdAt: d.data().createdAt,
+            }));
+          } catch (cgErr) {
+            console.warn('CollectionGroup fallback skipped:', cgErr);
+          }
+        }
+
         setPendingInvites(list);
       } catch (err) {
         console.warn('Could not query pending invites:', err);
@@ -120,101 +149,135 @@ export const EducatorPortal: React.FC = () => {
     const toastId = toast.loading('Verifying school code with institutional directory...');
 
     try {
-      // 1. Check invitations collectionGroup first
-      const inviteQ = query(
-        collectionGroup(db, 'invitations'),
-        where('code', '==', cleanCode)
-      );
-      const inviteSnap = await getDocs(inviteQ);
+      let inviteData: any = null;
+      let matchedRef: any = null;
 
-      if (!inviteSnap.empty) {
-        const inviteData = inviteSnap.docs[0].data();
+      // 1. Direct doc lookup at root /invitations/{cleanCode} (Instant & index-free)
+      try {
+        const rootSnap = await getDoc(doc(db, 'invitations', cleanCode));
+        if (rootSnap.exists()) {
+          inviteData = rootSnap.data();
+          matchedRef = rootSnap.ref;
+        }
+      } catch (e) {
+        console.warn('Root invitation direct lookup fallback:', e);
+      }
+
+      // 2. CollectionGroup fallback if root was not populated
+      if (!inviteData) {
+        try {
+          const inviteQ = query(
+            collectionGroup(db, 'invitations'),
+            where('code', '==', cleanCode)
+          );
+          const inviteSnap = await getDocs(inviteQ);
+          if (!inviteSnap.empty) {
+            inviteData = inviteSnap.docs[0].data();
+            matchedRef = inviteSnap.docs[0].ref;
+          }
+        } catch (cgErr) {
+          console.warn('CollectionGroup invitation lookup deferred:', cgErr);
+        }
+      }
+
+      if (inviteData && currentUser) {
         const orgId = inviteData.orgId;
         const schoolId = inviteData.schoolId;
 
         // Bind user to this school
-        if (currentUser) {
-          await setDoc(
-            doc(db, 'users', currentUser.uid),
-            {
-              displayName: currentUser.displayName || inviteData.staffName || 'Faculty Educator',
-              email: currentUser.email || '',
-              role: 'teacher',
-              educatorId,
-              memberships: [
-                {
-                  orgId,
-                  schoolIds: [schoolId],
-                  role: inviteData.role || 'teacher',
-                  joinedAt: new Date().toISOString(),
-                },
-              ],
-              updatedAt: serverTimestamp(),
-            },
-            { merge: true }
-          );
+        await setDoc(
+          doc(db, 'users', currentUser.uid),
+          {
+            displayName: currentUser.displayName || inviteData.staffName || 'Faculty Educator',
+            email: currentUser.email || '',
+            role: 'teacher',
+            educatorId,
+            memberships: [
+              {
+                orgId,
+                schoolIds: [schoolId],
+                role: inviteData.role || 'teacher',
+                joinedAt: new Date().toISOString(),
+              },
+            ],
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
 
-          // Mark invitation accepted
-          try {
-            await updateDoc(inviteSnap.docs[0].ref, {
+        // Mark invitation accepted in root doc and subcollection
+        try {
+          if (matchedRef) {
+            await updateDoc(matchedRef, {
               status: 'accepted',
               acceptedBy: currentUser.uid,
               acceptedAt: serverTimestamp(),
             });
-          } catch {
-            // Non-fatal
           }
-
-          localStorage.setItem('edumo_active_org_id', orgId);
-          localStorage.setItem('edumo_active_school_id', schoolId);
-          await refreshClaims();
-
-          toast.success(`Connected successfully to ${inviteData.schoolName || 'your school'}!`, { id: toastId });
-          window.location.reload();
-          return;
+          if (orgId && schoolId) {
+            await updateDoc(doc(db, 'organizations', orgId, 'schools', schoolId, 'invitations', cleanCode), {
+              status: 'accepted',
+              acceptedBy: currentUser.uid,
+              acceptedAt: serverTimestamp(),
+            }).catch(() => {});
+          }
+        } catch {
+          // Non-fatal
         }
+
+        localStorage.setItem('edumo_active_org_id', orgId);
+        localStorage.setItem('edumo_active_school_id', schoolId);
+        await refreshClaims();
+
+        toast.success(`Connected successfully to ${inviteData.schoolName || 'your school'}!`, { id: toastId });
+        window.location.reload();
+        return;
       }
 
-      // 2. Direct school search fallback
-      const schoolsQ = query(collectionGroup(db, 'schools'), where('code', '==', cleanCode));
-      const schoolSnap = await getDocs(schoolsQ);
+      // 3. Direct school search fallback
+      try {
+        const schoolsQ = query(collectionGroup(db, 'schools'), where('code', '==', cleanCode));
+        const schoolSnap = await getDocs(schoolsQ);
 
-      if (!schoolSnap.empty) {
-        const schoolDoc = schoolSnap.docs[0];
-        const schoolData = schoolDoc.data();
-        const pathSegments = schoolDoc.ref.path.split('/');
-        const orgId = pathSegments[1];
-        const schoolId = schoolDoc.id;
+        if (!schoolSnap.empty) {
+          const schoolDoc = schoolSnap.docs[0];
+          const schoolData = schoolDoc.data();
+          const pathSegments = schoolDoc.ref.path.split('/');
+          const orgId = pathSegments[1];
+          const schoolId = schoolDoc.id;
 
-        if (currentUser) {
-          await setDoc(
-            doc(db, 'users', currentUser.uid),
-            {
-              displayName: currentUser.displayName || 'Faculty Educator',
-              email: currentUser.email || '',
-              role: 'teacher',
-              educatorId,
-              memberships: [
-                {
-                  orgId,
-                  schoolIds: [schoolId],
-                  role: 'teacher',
-                  joinedAt: new Date().toISOString(),
-                },
-              ],
-              updatedAt: serverTimestamp(),
-            },
-            { merge: true }
-          );
+          if (currentUser) {
+            await setDoc(
+              doc(db, 'users', currentUser.uid),
+              {
+                displayName: currentUser.displayName || 'Faculty Educator',
+                email: currentUser.email || '',
+                role: 'teacher',
+                educatorId,
+                memberships: [
+                  {
+                    orgId,
+                    schoolIds: [schoolId],
+                    role: 'teacher',
+                    joinedAt: new Date().toISOString(),
+                  },
+                ],
+                updatedAt: serverTimestamp(),
+              },
+              { merge: true }
+            );
 
-          localStorage.setItem('edumo_active_org_id', orgId);
-          localStorage.setItem('edumo_active_school_id', schoolId);
-          await refreshClaims();
+            localStorage.setItem('edumo_active_org_id', orgId);
+            localStorage.setItem('edumo_active_school_id', schoolId);
+            await refreshClaims();
 
-          toast.success(`Connected successfully to ${schoolData.name}!`, { id: toastId });
-          window.location.reload();
-          return;
+            toast.success(`Connected successfully to ${schoolData.name}!`, { id: toastId });
+            window.location.reload();
+            return;
+          }
         }
+      } catch (schoolErr) {
+        console.warn('School lookup deferred:', schoolErr);
       }
 
       toast.error('Invalid school join code. Please verify the code with your school principal.', { id: toastId });
@@ -251,14 +314,20 @@ export const EducatorPortal: React.FC = () => {
         { merge: true }
       );
 
-      // Update invitation doc status
+      // Update invitation doc status in root and subcollection
       try {
+        await updateDoc(doc(db, 'invitations', invite.code), {
+          status: 'accepted',
+          acceptedBy: currentUser.uid,
+          acceptedAt: serverTimestamp(),
+        }).catch(() => {});
+
         const invRef = doc(db, 'organizations', invite.orgId, 'schools', invite.schoolId, 'invitations', invite.code);
         await updateDoc(invRef, {
           status: 'accepted',
           acceptedBy: currentUser.uid,
           acceptedAt: serverTimestamp(),
-        });
+        }).catch(() => {});
       } catch {
         // Non-fatal
       }

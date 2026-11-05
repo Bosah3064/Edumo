@@ -32,7 +32,7 @@ interface TenantContextType {
 const TenantContext = createContext<TenantContextType | undefined>(undefined);
 
 export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { currentUser, claims, activeOrgId } = useAuth();
+  const { currentUser, claims, activeOrgId, userProfileRole } = useAuth();
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [schools, setSchools] = useState<School[]>([]);
   const [currentSchoolId, setCurrentSchoolId] = useState<string | null>(null);
@@ -228,14 +228,27 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, [currentSchool]);
 
-  // Determine current user's role in this school
+  // Determine current user's role in this school accurately
   const currentRole = useMemo<UserRole | null>(() => {
-    if (!claims) return 'orgOwner';
-    if (claims.orgRole === 'orgOwner') return 'orgOwner';
-    if (!currentSchoolId || !claims.schoolRoles) return claims.orgRole || 'orgOwner';
-    const role = claims.schoolRoles[currentSchoolId];
-    return (role as UserRole) || claims.orgRole || 'orgOwner';
-  }, [claims, currentSchoolId]);
+    // 1. Explicit per-school role from token claims
+    if (currentSchoolId && claims?.schoolRoles?.[currentSchoolId]) {
+      return claims.schoolRoles[currentSchoolId] as UserRole;
+    }
+    // 2. Organization role from token claims
+    if (claims?.orgRole) {
+      return claims.orgRole as UserRole;
+    }
+    // 3. User profile role from Firestore (users/{uid}.role or memberships)
+    if (userProfileRole) {
+      return userProfileRole as UserRole;
+    }
+    // 4. If current user is the actual creator/owner of this organization
+    if (organization?.ownerId && currentUser?.uid && organization.ownerId === currentUser.uid) {
+      return 'orgOwner';
+    }
+    // 5. Default for educators/members: 'teacher' (Never default unprivileged users to orgOwner!)
+    return 'teacher';
+  }, [claims, currentSchoolId, userProfileRole, organization?.ownerId, currentUser?.uid]);
 
   // Compute permissions for current role
   const userPermissions = useMemo<Permission[]>(() => {

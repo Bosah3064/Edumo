@@ -21,6 +21,7 @@ interface AuthContextType {
   refreshClaims: () => Promise<UserClaims | null>;
   isPlatformAdmin: boolean;
   activeOrgId: string | null;
+  userProfileRole: UserRole | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,6 +29,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [claims, setClaims] = useState<UserClaims | null>(null);
+  const [userProfileRole, setUserProfileRole] = useState<UserRole | null>(null);
   const [userProfileOrgId, setUserProfileOrgId] = useState<string | null>(() => {
     return localStorage.getItem('edumo_active_org_id');
   });
@@ -45,13 +47,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setUserProfileOrgId(customClaims.orgId);
             localStorage.setItem('edumo_active_org_id', customClaims.orgId);
           } else {
-            // Check Firestore for user profile membership or owned organization
+            // Check Firestore for user profile role, membership or owned organization
             try {
               const userDoc = await getDoc(doc(db, 'users', user.uid));
-              if (userDoc.exists() && userDoc.data()?.memberships?.[0]?.orgId) {
-                const fetchedOrgId = userDoc.data().memberships[0].orgId;
-                setUserProfileOrgId(fetchedOrgId);
-                localStorage.setItem('edumo_active_org_id', fetchedOrgId);
+              if (userDoc.exists()) {
+                const uData = userDoc.data();
+                const resolvedRole = (uData?.role || uData?.memberships?.[0]?.role || null) as UserRole | null;
+                if (resolvedRole) setUserProfileRole(resolvedRole);
+                if (uData?.memberships?.[0]?.orgId) {
+                  const fetchedOrgId = uData.memberships[0].orgId;
+                  setUserProfileOrgId(fetchedOrgId);
+                  localStorage.setItem('edumo_active_org_id', fetchedOrgId);
+                }
               } else {
                 // Check if user is the direct creator/owner of any organization
                 const orgsQuery = query(collection(db, 'organizations'), where('ownerId', '==', user.uid), limit(1));
@@ -59,11 +66,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 if (!orgsSnap.empty) {
                   const fetchedOrgId = orgsSnap.docs[0].id;
                   setUserProfileOrgId(fetchedOrgId);
+                  setUserProfileRole('orgOwner');
                   localStorage.setItem('edumo_active_org_id', fetchedOrgId);
                 }
               }
             } catch (fsErr) {
-              console.warn('Could not resolve user organization from Firestore:', fsErr);
+              console.warn('Could not resolve user profile from Firestore:', fsErr);
             }
           }
         } catch (error) {
@@ -106,6 +114,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setClaims(null);
     setCurrentUser(null);
     setUserProfileOrgId(null);
+    setUserProfileRole(null);
     localStorage.removeItem('edumo_active_org_id');
     localStorage.removeItem('edumo_active_school_id');
   };
@@ -131,6 +140,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         refreshClaims,
         isPlatformAdmin,
         activeOrgId,
+        userProfileRole,
       }}
     >
       {children}

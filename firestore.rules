@@ -203,6 +203,11 @@ service cloud.firestore {
           allow read, write: if isAuthenticated();
         }
 
+        // ===== INVITATIONS SUBCOLLECTION =====
+        match /invitations/{inviteId} {
+          allow read, write: if isAuthenticated();
+        }
+
         // ===== EXAM SERIES (Edumo Academic Analytics) =====
         match /examSeries/{seriesId} {
           allow read, write: if isAuthenticated();
@@ -432,9 +437,21 @@ service cloud.firestore {
       allow read, write: if isAuthenticated();
     }
 
-    // ===== INVITES =====
+    // ===== INVITES & INVITATIONS =====
     match /invites/{inviteId} {
       allow read, write: if isAuthenticated();
+    }
+
+    match /invitations/{inviteId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /{path=**}/invitations/{inviteId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /{path=**}/schools/{schoolId} {
+      allow read: if isAuthenticated();
     }
 
     // ===== COUNTRY PACKS =====

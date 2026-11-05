@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTenant } from '../contexts/TenantContext';
 import { httpsCallable } from 'firebase/functions';
 import { functions, db } from '../firebase';
-import { collection, onSnapshot, doc, runTransaction, serverTimestamp, setDoc, updateDoc, DocumentData } from 'firebase/firestore';
+import { collection, onSnapshot, doc, runTransaction, serverTimestamp, setDoc, updateDoc, deleteDoc, DocumentData } from 'firebase/firestore';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
@@ -28,6 +28,12 @@ import {
   X,
   Lock,
   MessageSquare,
+  Trash2,
+  Edit3,
+  AlertTriangle,
+  UserX,
+  UserCheck,
+  Power,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatSchoolId, getNextSchoolId, getSchoolEmail } from '../utils/schoolId';
@@ -71,6 +77,7 @@ interface StaffMember {
   status: string;
   schoolId?: string;
   schoolEmail?: string;
+  inviteCode?: string;
 }
 
 export const Staff: React.FC = () => {
@@ -82,6 +89,18 @@ export const Staff: React.FC = () => {
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [inviting, setInviting] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);
+
+  // Administrator Actions States: Delete & Edit
+  const [staffToDelete, setStaffToDelete] = useState<StaffMember | null>(null);
+  const [isDeletingStaff, setIsDeletingStaff] = useState(false);
+  const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
+  const [editStaffName, setEditStaffName] = useState('');
+  const [editStaffEmail, setEditStaffEmail] = useState('');
+  const [editStaffPhone, setEditStaffPhone] = useState('');
+  const [editStaffTsc, setEditStaffTsc] = useState('');
+  const [editStaffClass, setEditStaffClass] = useState('');
+  const [editStaffSubjects, setEditStaffSubjects] = useState<string[]>([]);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   // Invite Form
   const [staffName, setStaffName] = useState('');
@@ -140,6 +159,7 @@ export const Staff: React.FC = () => {
             status: data.status || 'active',
             schoolId: data.schoolId,
             schoolEmail: data.schoolEmail,
+            inviteCode: data.inviteCode,
           };
         });
         setStaffList(list);
@@ -247,10 +267,9 @@ export const Staff: React.FC = () => {
         createdAt: serverTimestamp(),
       });
 
-      // Store invitation record in school's invitations collection for educator portal code verification
+      // Store invitation record in root and school invitations collection for instant code verification
       try {
-        const inviteDocRef = doc(db, 'organizations', organization.id, 'schools', currentSchool.id, 'invitations', code);
-        await setDoc(inviteDocRef, {
+        const invitePayload = {
           code,
           schoolId: currentSchool.id,
           schoolName: currentSchool.name,
@@ -267,7 +286,12 @@ export const Staff: React.FC = () => {
           tempPassword: createLoginAccount ? tempPassword : '',
           status: 'pending',
           createdAt: serverTimestamp(),
-        });
+        };
+
+        // 1. Root collection for direct lookup by code without index requirements
+        await setDoc(doc(db, 'invitations', code), invitePayload);
+        // 2. School-scoped subcollection
+        await setDoc(doc(db, 'organizations', organization.id, 'schools', currentSchool.id, 'invitations', code), invitePayload);
       } catch (invErr) {
         console.warn('Invitation doc write deferred:', invErr);
       }
@@ -367,6 +391,86 @@ export const Staff: React.FC = () => {
     } catch (err) {
       console.error('Error toggling role:', err);
       toast.error('Failed to update roles', { id: toastId });
+    }
+  };
+
+  // Administrator Actions
+  const handleDeleteStaff = async () => {
+    if (!staffToDelete || !organization || !currentSchool) return;
+    setIsDeletingStaff(true);
+    const toastId = toast.loading(`Deleting ${staffToDelete.name} from school records...`);
+    try {
+      await deleteDoc(doc(db, 'organizations', organization.id, 'schools', currentSchool.id, 'staff', staffToDelete.id));
+      if (staffToDelete.inviteCode) {
+        try {
+          await deleteDoc(doc(db, 'organizations', organization.id, 'schools', currentSchool.id, 'invitations', staffToDelete.inviteCode));
+        } catch {
+          // Non-fatal
+        }
+      }
+      toast.success(`${staffToDelete.name} deleted successfully!`, { id: toastId });
+      setStaffToDelete(null);
+    } catch (err) {
+      console.error('Delete staff error:', err);
+      toast.error('Failed to delete staff member', { id: toastId });
+    } finally {
+      setIsDeletingStaff(false);
+    }
+  };
+
+  const handleToggleStaffStatus = async (member: StaffMember) => {
+    if (!organization || !currentSchool) return;
+    const newStatus = member.status === 'suspended' ? 'active' : 'suspended';
+    const actionText = newStatus === 'suspended' ? 'Suspended access for' : 'Reactivated access for';
+    const toastId = toast.loading(`${newStatus === 'suspended' ? 'Suspending' : 'Reactivating'} ${member.name}...`);
+    try {
+      const staffRef = doc(db, 'organizations', organization.id, 'schools', currentSchool.id, 'staff', member.id);
+      await updateDoc(staffRef, {
+        status: newStatus,
+        updatedAt: serverTimestamp(),
+      });
+      toast.success(`${actionText} ${member.name}!`, { id: toastId });
+    } catch (err) {
+      console.error('Status toggle error:', err);
+      toast.error('Failed to update status', { id: toastId });
+    }
+  };
+
+  const handleOpenEditStaff = (member: StaffMember) => {
+    setEditingStaff(member);
+    setEditStaffName(member.name);
+    setEditStaffEmail(member.email);
+    setEditStaffPhone(member.phone);
+    setEditStaffTsc(member.tscNumber || '');
+    setEditStaffClass(member.assignedClass || member.assignedClasses[0] || '');
+    setEditStaffSubjects(member.assignedSubjects || []);
+  };
+
+  const handleSaveEditStaff = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingStaff || !organization || !currentSchool) return;
+    setIsSavingEdit(true);
+    const toastId = toast.loading(`Updating ${editStaffName}...`);
+    try {
+      const staffRef = doc(db, 'organizations', organization.id, 'schools', currentSchool.id, 'staff', editingStaff.id);
+      await updateDoc(staffRef, {
+        name: editStaffName.trim(),
+        email: editStaffEmail.trim(),
+        phone: editStaffPhone.trim(),
+        tscNumber: editStaffTsc.trim(),
+        assignedClass: editStaffClass,
+        assignedClasses: editStaffClass ? [editStaffClass] : [],
+        assignedSubjects: editStaffSubjects,
+        assignedSubject: editStaffSubjects.join(', '),
+        updatedAt: serverTimestamp(),
+      });
+      toast.success(`Updated ${editStaffName} successfully!`, { id: toastId });
+      setEditingStaff(null);
+    } catch (err) {
+      console.error('Update staff error:', err);
+      toast.error('Failed to update staff member', { id: toastId });
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -611,9 +715,52 @@ export const Staff: React.FC = () => {
                   )}
                 </div>
 
-                <div className="mt-5 pt-3 border-t border-gray-200 flex justify-between items-center text-2xs text-gray-500">
-                  <span>Status: Active</span>
-                  <span className="text-accent-600 font-medium">Verified Credentials</span>
+                <div className="mt-4 pt-3 border-t border-gray-200 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className={`text-2xs font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                        member.status === 'suspended'
+                          ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                          : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                      }`}
+                    >
+                      {member.status === 'suspended' ? 'Suspended' : 'Active'}
+                    </span>
+                  </div>
+
+                  {/* Administrator Action Icons */}
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditStaff(member)}
+                      title="Edit Staff Member"
+                      className="p-1.5 rounded-lg bg-gray-100 hover:bg-blue-50 text-gray-600 hover:text-blue-700 transition-colors"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleToggleStaffStatus(member)}
+                      title={member.status === 'suspended' ? 'Reactivate Staff Access' : 'Suspend Staff Access'}
+                      className={`p-1.5 rounded-lg transition-colors ${
+                        member.status === 'suspended'
+                          ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700'
+                          : 'bg-amber-50 hover:bg-amber-100 text-amber-700'
+                      }`}
+                    >
+                      <Power className="w-3.5 h-3.5" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setStaffToDelete(member)}
+                      title="Delete Faculty Member"
+                      className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               </Card>
             ))}
@@ -1118,6 +1265,161 @@ export const Staff: React.FC = () => {
               </Button>
             </div>
           </div>
+        </Modal>
+      )}
+
+      {/* Delete Staff Confirmation Modal */}
+      {staffToDelete && (
+        <Modal
+          isOpen={Boolean(staffToDelete)}
+          onClose={() => setStaffToDelete(null)}
+          title="Delete Staff Member"
+          description="Permanently remove this educator from the school staff directory"
+          maxWidth="md"
+        >
+          <div className="space-y-4 mt-2">
+            <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+              <div className="text-xs text-rose-900 space-y-1">
+                <p className="font-bold">
+                  Are you sure you want to delete {staffToDelete.name}?
+                </p>
+                <p className="text-[11px] text-rose-800 leading-relaxed">
+                  This action permanently revokes their portal login access and unbinds all assigned classes and teaching subjects. This cannot be undone.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1 text-slate-700">
+              <p><strong>Educator Name:</strong> {staffToDelete.name}</p>
+              <p><strong>School ID:</strong> {staffToDelete.schoolId || 'N/A'}</p>
+              <p><strong>Email:</strong> {staffToDelete.email || 'N/A'}</p>
+              <p><strong>Primary Role:</strong> {staffToDelete.role}</p>
+            </div>
+
+            <div className="pt-3 border-t border-slate-200 flex justify-end gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setStaffToDelete(null)}
+                disabled={isDeletingStaff}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={handleDeleteStaff}
+                isLoading={isDeletingStaff}
+                className="bg-rose-600 hover:bg-rose-700 text-white"
+              >
+                Yes, Delete Staff Member
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Edit Staff Details Modal */}
+      {editingStaff && (
+        <Modal
+          isOpen={Boolean(editingStaff)}
+          onClose={() => setEditingStaff(null)}
+          title={`Edit Profile — ${editingStaff.name}`}
+          description="Update contact information, assigned stream, and teaching units"
+          maxWidth="lg"
+        >
+          <form onSubmit={handleSaveEditStaff} className="space-y-4 mt-2">
+            <Input
+              label="Staff Full Name"
+              value={editStaffName}
+              onChange={(e) => setEditStaffName(e.target.value)}
+              required
+            />
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
+                label="Login Email"
+                type="email"
+                value={editStaffEmail}
+                onChange={(e) => setEditStaffEmail(e.target.value)}
+                required
+              />
+              <Input
+                label="Mobile Phone"
+                value={editStaffPhone}
+                onChange={(e) => setEditStaffPhone(e.target.value)}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
+                label="TSC / Registration Number"
+                value={editStaffTsc}
+                onChange={(e) => setEditStaffTsc(e.target.value)}
+                placeholder="e.g. TSC-48921"
+              />
+              <Select
+                label="Assigned Class / Stream"
+                value={editStaffClass}
+                onChange={(e) => setEditStaffClass(e.target.value)}
+                options={[
+                  { label: 'None / Subject Specialist', value: '' },
+                  ...classesList.map((c) => ({ label: c.name, value: c.name })),
+                ]}
+              />
+            </div>
+
+            {/* Assigned Units Multi-Select */}
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+              <span className="text-xs font-bold text-slate-800 block">
+                Assigned Teaching Units / Learning Areas ({editStaffSubjects.length})
+              </span>
+              <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto p-1">
+                {Array.from(new Set([...schoolUnits.map((u) => u.name), ...DEFAULT_COMMON_UNITS])).map((uName) => {
+                  const isSel = editStaffSubjects.includes(uName);
+                  return (
+                    <button
+                      type="button"
+                      key={uName}
+                      onClick={() => {
+                        if (isSel) {
+                          setEditStaffSubjects(editStaffSubjects.filter((s) => s !== uName));
+                        } else {
+                          setEditStaffSubjects([...editStaffSubjects, uName]);
+                        }
+                      }}
+                      className={`text-2xs px-2 py-1 rounded-md border font-medium transition-all ${
+                        isSel
+                          ? 'bg-purple-600 text-white border-purple-700'
+                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      {isSel ? '✓ ' : '+ '}{uName}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-slate-200 flex justify-end gap-2">
+              <Button
+                variant="ghost"
+                type="button"
+                onClick={() => setEditingStaff(null)}
+                disabled={isSavingEdit}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                type="submit"
+                isLoading={isSavingEdit}
+              >
+                Save Changes
+              </Button>
+            </div>
+          </form>
         </Modal>
       )}
     </div>

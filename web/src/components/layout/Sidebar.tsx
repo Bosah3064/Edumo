@@ -38,7 +38,7 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   const { signOut, currentUser, isPlatformAdmin } = useAuth();
-  const { currentRole, currentSchool } = useTenant();
+  const { currentRole, currentSchool, organization } = useTenant();
   const navigate = useNavigate();
   const [sidebarLanguage, setSidebarLanguage] = useState<'en' | 'sw'>(() =>
     localStorage.getItem('edumo_sidebar_language') === 'sw' ? 'sw' : 'en'
@@ -59,6 +59,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
     currentRole === 'platformAdmin' ||
     (currentUser as any)?.role === 'superAdmin' ||
     (currentUser as any)?.role === 'platformAdmin';
+
+  const activeLogo = currentSchool?.branding?.logo || organization?.branding?.logo;
 
   const navTranslations = sidebarLanguage === 'sw' ? swTranslations.nav : enTranslations.nav;
   const navItems = [
@@ -90,7 +92,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
 
   return (
     <aside
-      className="w-64 h-full flex flex-col justify-between shrink-0 select-none shadow-sm transition-colors duration-200"
+      className="w-64 h-screen flex flex-col min-h-0 shrink-0 select-none shadow-sm transition-colors duration-200"
       style={{
         backgroundColor: 'var(--sidebar-bg, #ffffff)',
         color: 'var(--sidebar-text, #334155)',
@@ -98,30 +100,30 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
       }}
     >
       {/* Brand Header — Crisp White Container for Maximum Logo Visibility */}
-      <div>
+      <div className="flex flex-col min-h-0 flex-1">
         <div
-          className="h-18 px-4 flex items-center justify-between border-b border-slate-200 shadow-2xs"
+          className="h-18 px-4 flex items-center justify-between border-b border-slate-200 shadow-2xs shrink-0"
           style={{ backgroundColor: '#ffffff', color: '#0f172a' }}
         >
-          {currentSchool?.branding?.logo ? (
+          {activeLogo ? (
             <NavLink to="/dashboard" className="flex items-center gap-3 min-w-0 w-full hover:opacity-90 transition-opacity">
               <div className="w-10 h-10 rounded-xl bg-white p-0.5 border border-slate-200 shadow-2xs flex items-center justify-center shrink-0">
                 <img
-                  src={currentSchool.branding.logo}
-                  alt={currentSchool.name}
+                  src={activeLogo}
+                  alt={currentSchool?.name || organization?.name || 'School Logo'}
                   className="w-full h-full object-contain rounded-lg"
                 />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-black truncate text-slate-900 tracking-tight">
-                  {currentSchool.name}
+                <p className="text-sm font-black truncate text-slate-900 tracking-tight">
+                  {currentSchool?.name || organization?.name}
                 </p>
-                {currentSchool.branding.motto ? (
-                  <p className="text-[10px] text-slate-500 italic truncate font-medium">
-                    {currentSchool.branding.motto}
+                {currentSchool?.branding?.motto || organization?.branding?.motto ? (
+                  <p className="text-xs text-slate-500 italic truncate font-medium">
+                    {currentSchool?.branding?.motto || organization?.branding?.motto}
                   </p>
                 ) : (
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-[#1d5f99] block font-mono">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#1d5f99] block font-mono">
                     Institutional Portal
                   </span>
                 )}
@@ -133,19 +135,20 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
             </div>
           )}
         </div>
+
         {currentSchool && (
           <div
-            className="px-5 py-2.5 flex items-center justify-between"
+            className="px-4 py-2 flex items-center justify-between shrink-0"
             style={{
               backgroundColor: 'rgba(0, 0, 0, 0.05)',
               borderBottom: '1px solid var(--sidebar-border, #e2e8f0)',
             }}
           >
-            <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--sidebar-text-muted, #64748b)' }}>
-              Active School
+            <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--sidebar-text-muted, #64748b)' }}>
+              Campus
             </span>
             <span
-              className="text-xs font-bold truncate max-w-[130px] px-2 py-0.5 rounded-md"
+              className="text-xs font-bold truncate max-w-[140px] px-2 py-0.5 rounded-md"
               style={{
                 backgroundColor: 'rgba(255, 255, 255, 0.2)',
                 color: 'var(--sidebar-text, #0f172a)',
@@ -156,8 +159,28 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
           </div>
         )}
 
-        {/* Navigation List */}
-        <nav className="p-3 space-y-1 overflow-y-auto max-h-[calc(100vh-13rem)]">
+        {/* ALWAYS VISIBLE HIGH-CONTRAST INSTALL APP BUTTON */}
+        <div className="px-3 pt-2.5 pb-1 shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('edumo-trigger-pwa-install'));
+              if (onClose) onClose();
+            }}
+            className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-extrabold transition-all bg-gradient-to-r from-[#1d5f99] to-[#683669] text-white shadow-sm hover:opacity-95 active:scale-98"
+          >
+            <div className="flex items-center gap-2">
+              <Smartphone className="w-4 h-4 text-white shrink-0" />
+              <span className="text-white font-bold tracking-tight">Install Phone App</span>
+            </div>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-white text-[#1d5f99] font-black uppercase tracking-wider shadow-2xs">
+              PWA
+            </span>
+          </button>
+        </div>
+
+        {/* Navigation List — Comfortable text-sm font size */}
+        <nav className="p-3 space-y-1 flex-1 min-h-0 overflow-y-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
             return (
@@ -166,8 +189,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                 to={item.to}
                 onClick={onClose}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-medium transition-all duration-150 ${
-                    isActive ? 'shadow-xs font-semibold' : 'hover:bg-white/10'
+                  `flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-150 ${
+                    isActive ? 'shadow-xs font-bold' : 'hover:bg-white/10'
                   }`
                 }
                 style={({ isActive }) =>
@@ -175,14 +198,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                     ? {
                         backgroundColor: 'var(--sidebar-active-bg, #1d5f99)',
                         color: 'var(--sidebar-active-text, #ffffff)',
-                        borderLeft: '3px solid var(--school-secondary, #683669)',
+                        borderLeft: '4px solid var(--school-secondary, #683669)',
                       }
                     : {
                         color: 'var(--sidebar-text-muted, #64748b)',
                       }
                 }
               >
-                <Icon className="w-4 h-4 shrink-0" />
+                <Icon className="w-4.5 h-4.5 shrink-0" />
                 <span className="truncate">{item.label}</span>
               </NavLink>
             );
@@ -192,37 +215,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
 
       {/* Footer / User Profile & Logout */}
       <div
-        className="p-3"
+        className="p-3 shrink-0"
         style={{
           borderTop: '1px solid var(--sidebar-border, #e2e8f0)',
           backgroundColor: 'rgba(0, 0, 0, 0.04)',
         }}
       >
-        {/* Install Mobile PWA App Button */}
-        <button
-          type="button"
-          onClick={() => {
-            window.dispatchEvent(new CustomEvent('edumo-trigger-pwa-install'));
-            if (onClose) onClose();
-          }}
-          className="w-full mb-2 flex items-center justify-between p-2 rounded-xl text-xs font-bold transition-all hover:opacity-90 active:scale-98"
-          style={{
-            backgroundColor: 'rgba(29, 95, 153, 0.1)',
-            color: 'var(--school-primary, #1d5f99)',
-            border: '1px solid rgba(29, 95, 153, 0.2)',
-          }}
-        >
-          <div className="flex items-center gap-2">
-            <Smartphone className="w-3.5 h-3.5" />
-            <span>Install Phone App</span>
-          </div>
-          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[#1d5f99] text-white font-extrabold uppercase">
-            PWA
-          </span>
-        </button>
-
         <div
-          className="flex items-center justify-between p-2 rounded-xl shadow-2xs"
+          className="flex items-center justify-between p-2.5 rounded-xl shadow-2xs"
           style={{
             backgroundColor: 'rgba(255, 255, 255, 0.15)',
             border: '1px solid var(--sidebar-border, #e2e8f0)',
@@ -230,20 +230,20 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
         >
           <div className="flex items-center gap-2.5 truncate">
             <div
-              className="w-8 h-8 rounded-full text-white flex items-center justify-center text-xs font-bold uppercase shrink-0 shadow-xs"
+              className="w-9 h-9 rounded-full text-white flex items-center justify-center text-sm font-bold uppercase shrink-0 shadow-xs"
               style={{ backgroundColor: 'var(--school-primary, #1d5f99)' }}
             >
               {currentUser?.displayName ? currentUser.displayName.charAt(0) : 'U'}
             </div>
             <div className="truncate text-left">
               <p
-                className="text-xs font-bold truncate"
+                className="text-sm font-bold truncate"
                 style={{ color: 'var(--sidebar-text, #0f172a)' }}
               >
                 {currentUser?.displayName || currentUser?.email || 'User'}
               </p>
               <p
-                className="text-[10px] font-semibold capitalize truncate"
+                className="text-xs font-medium capitalize truncate"
                 style={{ color: 'var(--sidebar-text-muted, #64748b)' }}
               >
                 {currentRole || 'Staff Member'}
@@ -260,10 +260,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
               }
             }}
             title={navTranslations.signOut}
-            className="p-1.5 rounded-lg transition-colors hover:bg-white/20"
+            className="p-2 rounded-lg transition-colors hover:bg-white/20"
             style={{ color: 'var(--sidebar-text-muted, #64748b)' }}
           >
-            <LogOut className="w-4 h-4" />
+            <LogOut className="w-4.5 h-4.5" />
           </button>
         </div>
       </div>

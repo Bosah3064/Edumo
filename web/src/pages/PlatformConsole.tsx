@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTenant } from '../contexts/TenantContext';
 import { useAuth } from '../contexts/AuthContext';
 import { collection, onSnapshot, getDocs } from 'firebase/firestore';
@@ -10,6 +11,8 @@ import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import {
   ShieldCheck,
+  ShieldAlert,
+  ArrowLeft,
   Building2,
   Users,
   Download,
@@ -43,8 +46,56 @@ interface TenantSummary {
 }
 
 export const PlatformConsole: React.FC = () => {
-  const { organization, currentSchool } = useTenant();
-  const { currentUser } = useAuth();
+  const { organization, currentSchool, currentRole } = useTenant();
+  const { currentUser, isPlatformAdmin } = useAuth();
+  const navigate = useNavigate();
+
+  // STRICT SECURITY GUARD: Block any non-platform-engineer from accessing this page.
+  if (!isPlatformAdmin) {
+    return (
+      <div className="min-h-[70vh] flex items-center justify-center p-4 animate-fade-in">
+        <Card className="max-w-md w-full p-6 text-center space-y-4 border-red-200 bg-red-50/40 shadow-xl">
+          <div className="w-14 h-14 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center mx-auto shadow-sm">
+            <ShieldAlert className="w-8 h-8" />
+          </div>
+          <div>
+            <span className="text-[10px] uppercase font-bold text-red-700 tracking-wider bg-red-100 px-2.5 py-0.5 rounded-full">
+              Platform Core Protected
+            </span>
+            <h2 className="text-lg font-black text-slate-900 mt-2">
+              Access Restricted: Platform Engineers Only
+            </h2>
+            <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+              The Platform Console manages multi-tenant database partitions, cross-institution billing, and platform feature flags.
+              School Administrators are restricted to their own institution's workspace.
+            </p>
+          </div>
+          <div className="p-3 bg-white rounded-xl border border-red-200 text-left text-xs space-y-1.5 shadow-xs">
+            <div className="flex justify-between">
+              <span className="text-slate-500">Account:</span>
+              <strong className="text-slate-800">{currentUser?.email}</strong>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500">Your Role:</span>
+              <strong className="text-slate-800 capitalize">{currentRole || 'School Administrator'}</strong>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500">Security Clearance:</span>
+              <span className="text-red-600 font-bold">Unauthorized for Platform Ops</span>
+            </div>
+          </div>
+          <Button
+            variant="primary"
+            onClick={() => navigate('/dashboard')}
+            className="w-full flex items-center justify-center gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Return to School Dashboard
+          </Button>
+        </Card>
+      </div>
+    );
+  }
 
   const [tenants, setTenants] = useState<TenantSummary[]>([
     { id: 'org-demo', name: 'Edumo Demonstration Academy Group', country: 'KE', plan: 'growth', studentCount: 420, branchCount: 2, status: 'active', mrr: 35000 },

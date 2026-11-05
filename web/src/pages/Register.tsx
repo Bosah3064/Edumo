@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { httpsCallable } from 'firebase/functions';
-import { collection, doc, setDoc, updateDoc, collectionGroup, getDocs, where, query } from 'firebase/firestore';
+import { collection, doc, setDoc, updateDoc, collectionGroup, getDocs, getDoc, where, query } from 'firebase/firestore';
 import { db, functions, auth } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/Button';
@@ -30,7 +30,7 @@ import toast from 'react-hot-toast';
 
 export const Register: React.FC = () => {
   const { t } = useTranslation();
-  const { signUp, signOut, refreshClaims, currentUser } = useAuth();
+  const { signIn, signUp, signOut, refreshClaims, currentUser } = useAuth();
   const navigate = useNavigate();
 
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
@@ -143,10 +143,26 @@ export const Register: React.FC = () => {
     try {
       let user = currentUser;
       if (!user) {
-        user = await signUp(teacherEmail, teacherPassword, teacherName);
+        try {
+          user = await signUp(teacherEmail, teacherPassword, teacherName);
+        } catch (signUpErr: any) {
+          if (signUpErr?.code === 'auth/email-already-in-use' || signUpErr?.message?.includes('email-already-in-use')) {
+            try {
+              await signIn(teacherEmail, teacherPassword);
+              user = auth.currentUser;
+            } catch {
+              throw new Error('This email is already registered. If this is your account, please enter your existing password to log in, or sign in from the Login page.');
+            }
+          } else {
+            throw signUpErr;
+          }
+        }
       }
 
       const activeUser = auth.currentUser || user;
+      if (!activeUser) {
+        throw new Error('Could not establish educator session. Please try logging in.');
+      }
       const educatorId = `EDU-TCH-${(activeUser.uid || '8921').substring(0, 5).toUpperCase()}`;
       const now = new Date().toISOString();
 
@@ -158,10 +174,10 @@ export const Register: React.FC = () => {
       if (teacherJoinCode.trim()) {
         const cleanCode = teacherJoinCode.trim().toUpperCase();
         try {
-          const invQuery = query(collectionGroup(db, 'invitations'), where('code', '==', cleanCode));
-          const invSnap = await getDocs(invQuery);
-          if (!invSnap.empty) {
-            const invData = invSnap.docs[0].data();
+          // 1. Direct document check at root (index-free, instant)
+          const rootSnap = await getDoc(doc(db, 'invitations', cleanCode));
+          if (rootSnap.exists()) {
+            const invData = rootSnap.data();
             attachedOrgId = invData.orgId;
             attachedSchoolId = invData.schoolId;
             attachedMemberships = [
@@ -172,11 +188,33 @@ export const Register: React.FC = () => {
                 joinedAt: now,
               },
             ];
-            await updateDoc(invSnap.docs[0].ref, {
+            await updateDoc(rootSnap.ref, {
               status: 'accepted',
               acceptedBy: activeUser.uid,
               acceptedAt: now,
-            });
+            }).catch(() => {});
+          } else {
+            // 2. CollectionGroup fallback
+            const invQuery = query(collectionGroup(db, 'invitations'), where('code', '==', cleanCode));
+            const invSnap = await getDocs(invQuery);
+            if (!invSnap.empty) {
+              const invData = invSnap.docs[0].data();
+              attachedOrgId = invData.orgId;
+              attachedSchoolId = invData.schoolId;
+              attachedMemberships = [
+                {
+                  orgId: invData.orgId,
+                  schoolIds: [invData.schoolId],
+                  role: invData.role || 'teacher',
+                  joinedAt: now,
+                },
+              ];
+              await updateDoc(invSnap.docs[0].ref, {
+                status: 'accepted',
+                acceptedBy: activeUser.uid,
+                acceptedAt: now,
+              }).catch(() => {});
+            }
           }
         } catch (invErr) {
           console.warn('Teacher join code upfront lookup deferred:', invErr);
@@ -236,7 +274,19 @@ export const Register: React.FC = () => {
     try {
       // 1. If not authenticated, create Firebase user
       if (!currentUser) {
-        await signUp(adminEmail, adminPassword, adminName);
+        try {
+          await signUp(adminEmail, adminPassword, adminName);
+        } catch (signUpErr: any) {
+          if (signUpErr?.code === 'auth/email-already-in-use' || signUpErr?.message?.includes('email-already-in-use')) {
+            try {
+              await signIn(adminEmail, adminPassword);
+            } catch {
+              throw new Error('This email is already registered. Please enter your existing password to log in and set up your institution, or use the Login page.');
+            }
+          } else {
+            throw signUpErr;
+          }
+        }
       }
 
       const activeUser = auth.currentUser;
@@ -420,9 +470,16 @@ export const Register: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f3f4f6] text-[#1f2937] flex flex-col justify-center items-center p-4 relative overflow-hidden">
-      {/* Subtle Glows */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-[#1d5f99]/10 rounded-full blur-[120px] pointer-events-none" />
+    <div className="min-h-screen bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] text-[#1f2937] flex flex-col justify-center items-center p-4 sm:p-6 relative overflow-hidden font-sans">
+      {/* Custom AI Generated Campus Backdrop with Smart Ambient Blur */}
+      <div
+        className="absolute inset-0 opacity-25 bg-cover bg-center pointer-events-none mix-blend-overlay"
+        style={{
+          backgroundImage: `url('./edumo-campus-bg.jpg')`,
+        }}
+      />
+      <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-[#1d5f99]/20 rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[300px] bg-[#683669]/20 rounded-full blur-[140px] pointer-events-none" />
 
       <div className="w-full max-w-2xl relative z-10 animate-fade-in my-8">
         {/* Header */}
@@ -430,11 +487,13 @@ export const Register: React.FC = () => {
           <div className="mb-3">
             <EdumoLogo size="xl" showText={true} showSubtitle={true} showBadge={true} to="/" />
           </div>
-          <h2 className="text-2xl font-display font-bold text-[#1f2937]">
-            {t('register.title', 'Register Your School')}
+          <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+            {accountType === 'teacher' ? 'Educator Registration' : t('register.title', 'Register Your School')}
           </h2>
-          <p className="text-xs text-[#4b5563] mt-1 font-medium">
-            {t('register.subtitle', 'Set up your multi-tenant workspace with country-specific curriculum and branding')}
+          <p className="text-sm text-slate-300 mt-1 font-medium max-w-lg">
+            {accountType === 'teacher'
+              ? 'Join the verified educator network — no ghost schools created, single-campus binding'
+              : t('register.subtitle', 'Set up your multi-tenant workspace with country-specific curriculum and branding')}
           </p>
         </div>
 
@@ -1046,13 +1105,13 @@ export const Register: React.FC = () => {
       </>
     )}
 
-        <div className="text-center mt-6 text-xs text-gray-500">
+        <div className="text-center mt-6 text-sm text-slate-300">
           <span>Already have an account? </span>
           <Link
             to="/login"
-            className="text-brand-700 hover:text-brand-800 font-semibold underline underline-offset-4"
+            className="text-blue-300 hover:text-white font-bold underline underline-offset-4"
           >
-            Sign In
+            Sign In &rarr;
           </Link>
         </div>
       </div>

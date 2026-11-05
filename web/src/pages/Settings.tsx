@@ -628,6 +628,7 @@ export const Settings: React.FC = () => {
   const [logoUrl, setLogoUrl] = useState(currentSchool?.branding?.logo || '');
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState('');
+  const [applyLogoToAllBranches, setApplyLogoToAllBranches] = useState(true);
   const [brandingSaved, setBrandingSaved] = useState(false);
 
   /* ---- Portal Visual Theme & Fonts ---- */
@@ -1361,6 +1362,29 @@ export const Settings: React.FC = () => {
           );
         }
 
+        // 5. Apply logo to all branches if toggled
+        if (applyLogoToAllBranches && savedLogoUrl) {
+          try {
+            await updateDoc(doc(db, 'organizations', organization.id), {
+              'branding.logo': savedLogoUrl,
+              'branding.primaryColor': primaryColor,
+              'branding.secondaryColor': secondaryColor,
+            });
+            const schoolsSnapshot = await getDocs(
+              collection(db, 'organizations', organization.id, 'schools')
+            );
+            await Promise.all(
+              schoolsSnapshot.docs.map((sDoc) =>
+                updateDoc(sDoc.ref, {
+                  'branding.logo': savedLogoUrl,
+                })
+              )
+            );
+          } catch (bErr) {
+            console.warn('Cross-branch logo sync note:', bErr);
+          }
+        }
+
         setLogoUrl(savedLogoUrl);
         setLogoFile(null);
         setLogoPreviewUrl(savedLogoUrl);
@@ -1943,6 +1967,24 @@ export const Settings: React.FC = () => {
                     className="mt-1.5 w-full rounded-xl border border-gray-200 bg-white text-xs text-gray-600 file:mr-3 file:border-0 file:bg-gray-100 file:px-3 file:py-2.5 file:text-gray-700 cursor-pointer"
                   />
                 </label>
+
+                {/* Multi-Branch Logo Inheritance Checkbox */}
+                <div className="pt-1">
+                  <label className="flex items-start gap-2.5 cursor-pointer text-xs font-semibold text-slate-800 bg-slate-50 p-3 rounded-xl border border-slate-200 hover:bg-slate-100 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={applyLogoToAllBranches}
+                      onChange={(e) => setApplyLogoToAllBranches(e.target.checked)}
+                      className="rounded text-brand-600 focus:ring-brand-500 mt-0.5"
+                    />
+                    <div>
+                      <span>Apply this logo across all campus branches in this institution</span>
+                      <p className="text-[11px] text-slate-500 font-normal mt-0.5">
+                        Recommended: Guarantees unified branding across all campuses without needing to upload separately. Uncheck if this branch uses a distinct crest.
+                      </p>
+                    </div>
+                  </label>
+                </div>
               </div>
             </div>
           )}

@@ -86,7 +86,8 @@ export default {
         display: ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'],
       },
       fontSize: {
-        '2xs': ['0.625rem', { lineHeight: '0.875rem' }],
+        '2xs': ['0.75rem', { lineHeight: '1rem' }],
+        'xs': ['0.8125rem', { lineHeight: '1.2rem' }],
       },
       borderRadius: {
         '4xl': '2rem',
