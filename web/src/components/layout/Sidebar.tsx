@@ -29,6 +29,7 @@ import {
   ShieldCheck,
   User,
   Smartphone,
+  Sparkles,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -36,7 +37,7 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
-  const { signOut, currentUser } = useAuth();
+  const { signOut, currentUser, isPlatformAdmin } = useAuth();
   const { currentRole, currentSchool } = useTenant();
   const navigate = useNavigate();
   const [sidebarLanguage, setSidebarLanguage] = useState<'en' | 'sw'>(() =>
@@ -52,6 +53,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
     return () => window.removeEventListener('edumo-sidebar-language-change', handleLanguageChange);
   }, []);
 
+  const isSuperOrPlatformAdmin =
+    Boolean(isPlatformAdmin) ||
+    (currentRole as string) === 'superAdmin' ||
+    currentRole === 'platformAdmin' ||
+    (currentUser as any)?.role === 'superAdmin' ||
+    (currentUser as any)?.role === 'platformAdmin';
+
   const navTranslations = sidebarLanguage === 'sw' ? swTranslations.nav : enTranslations.nav;
   const navItems = [
     { to: '/dashboard', label: navTranslations.dashboard, icon: LayoutDashboard },
@@ -63,6 +71,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
     { to: '/academics', label: sidebarLanguage === 'sw' ? 'Matokeo na Alama' : 'Academics & Marks', icon: Award },
     { to: '/assignments', label: sidebarLanguage === 'sw' ? 'Kazi za Darasa' : 'Assignments', icon: ClipboardCheck },
     { to: '/staff', label: navTranslations.staff, icon: GraduationCap },
+    { to: '/educator-portal', label: sidebarLanguage === 'sw' ? 'Tovuti ya Walimu' : 'Educator Portal', icon: Sparkles },
     { to: '/announcements', label: navTranslations.announcements, icon: Megaphone },
     { to: '/excel-import', label: navTranslations.excelImport, icon: FileSpreadsheet },
     { to: '/reports', label: sidebarLanguage === 'sw' ? 'Ripoti za Excel' : 'Report Builder', icon: FileText },
@@ -71,7 +80,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
     { to: '/operations', label: sidebarLanguage === 'sw' ? 'Uendeshaji wa Shule' : 'Operations & Fleet', icon: Bus },
     { to: '/messaging', label: sidebarLanguage === 'sw' ? 'Ujumbe na Wazazi' : 'Messages & Alerts', icon: MessageSquare },
     { to: '/extended', label: sidebarLanguage === 'sw' ? 'Maktaba na Hosteli' : 'Extended Modules', icon: Layers },
-    { to: '/platform-console', label: sidebarLanguage === 'sw' ? 'Jopo la Usimamizi' : 'Platform Console', icon: ShieldCheck },
+    ...(isSuperOrPlatformAdmin
+      ? [{ to: '/platform-console', label: sidebarLanguage === 'sw' ? 'Jopo la Usimamizi' : 'Platform Console', icon: ShieldCheck }]
+      : []),
     { to: '/parent-portal', label: navTranslations.parentPortal, icon: HeartHandshake },
     { to: '/profile', label: sidebarLanguage === 'sw' ? 'Wasifu Wangu' : 'My Profile', icon: User },
     { to: '/settings', label: navTranslations.settings, icon: Settings },

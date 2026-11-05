@@ -198,6 +198,11 @@ service cloud.firestore {
           }
         }
 
+        // ===== DIRECT MARKS SUBCOLLECTION =====
+        match /marks/{markId} {
+          allow read, write: if isAuthenticated();
+        }
+
         // ===== EXAM SERIES (Edumo Academic Analytics) =====
         match /examSeries/{seriesId} {
           allow read, write: if isAuthenticated();

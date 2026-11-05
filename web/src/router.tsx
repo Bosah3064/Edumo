@@ -25,6 +25,7 @@ import { Messaging } from './pages/Messaging';
 import { ExtendedModules } from './pages/ExtendedModules';
 import { PlatformConsole } from './pages/PlatformConsole';
 import { Profile } from './pages/Profile';
+import { EducatorPortal } from './pages/EducatorPortal';
 
 export const router = createBrowserRouter([
   // Public routes
@@ -112,6 +113,10 @@ export const router = createBrowserRouter([
       {
         path: '/extended',
         element: <ExtendedModules />,
+      },
+      {
+        path: '/educator-portal',
+        element: <EducatorPortal />,
       },
       {
         path: '/platform-console',

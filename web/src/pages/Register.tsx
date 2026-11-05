@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { httpsCallable } from 'firebase/functions';
-import { collection, doc, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, updateDoc, collectionGroup, getDocs, where, query } from 'firebase/firestore';
 import { db, functions, auth } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/Button';
@@ -22,6 +22,9 @@ import {
   CheckCircle2,
   Sparkles,
   ShieldCheck,
+  GraduationCap,
+  Lock,
+  BookOpen,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -54,6 +57,18 @@ export const Register: React.FC = () => {
   const [primaryColor, setPrimaryColor] = useState('#1d5f99');
   const [secondaryColor, setSecondaryColor] = useState('#683669');
   const [schoolMotto, setSchoolMotto] = useState('Excellence, Discipline and Service');
+
+  // Account Type Selection: Institution vs Verified Educator
+  const [accountType, setAccountType] = useState<'institution' | 'teacher'>('institution');
+
+  // Teacher Registration State
+  const [teacherName, setTeacherName] = useState(currentUser?.displayName || '');
+  const [teacherEmail, setTeacherEmail] = useState(currentUser?.email || '');
+  const [teacherPassword, setTeacherPassword] = useState('');
+  const [teacherPhone, setTeacherPhone] = useState('+254712345678');
+  const [teacherSubjects, setTeacherSubjects] = useState('Mathematics, Integrated Science');
+  const [teacherTsc, setTeacherTsc] = useState('');
+  const [teacherJoinCode, setTeacherJoinCode] = useState('');
 
   // Step 4: Administrator Account
   const [adminName, setAdminName] = useState(currentUser?.displayName || '');
@@ -108,6 +123,95 @@ export const Register: React.FC = () => {
       toast.success('Signed out. You can now register a fresh administrator account.');
     } catch {
       toast.error('Failed to sign out');
+    }
+  };
+
+  const handleTeacherSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser && (!teacherName || !teacherEmail || !teacherPassword)) {
+      toast.error('Please complete all educator credentials');
+      return;
+    }
+    if (!currentUser && teacherPassword.length < 8) {
+      toast.error('Password must be at least 8 characters');
+      return;
+    }
+
+    setLoading(true);
+    const toastId = toast.loading('Registering verified educator profile...');
+
+    try {
+      let user = currentUser;
+      if (!user) {
+        user = await signUp(teacherEmail, teacherPassword, teacherName);
+      }
+
+      const activeUser = auth.currentUser || user;
+      const educatorId = `EDU-TCH-${(activeUser.uid || '8921').substring(0, 5).toUpperCase()}`;
+      const now = new Date().toISOString();
+
+      let attachedMemberships: any[] = [];
+      let attachedOrgId = '';
+      let attachedSchoolId = '';
+
+      // If teacher supplied a join code, try to find and attach the school immediately!
+      if (teacherJoinCode.trim()) {
+        const cleanCode = teacherJoinCode.trim().toUpperCase();
+        try {
+          const invQuery = query(collectionGroup(db, 'invitations'), where('code', '==', cleanCode));
+          const invSnap = await getDocs(invQuery);
+          if (!invSnap.empty) {
+            const invData = invSnap.docs[0].data();
+            attachedOrgId = invData.orgId;
+            attachedSchoolId = invData.schoolId;
+            attachedMemberships = [
+              {
+                orgId: invData.orgId,
+                schoolIds: [invData.schoolId],
+                role: invData.role || 'teacher',
+                joinedAt: now,
+              },
+            ];
+            await updateDoc(invSnap.docs[0].ref, {
+              status: 'accepted',
+              acceptedBy: activeUser.uid,
+              acceptedAt: now,
+            });
+          }
+        } catch (invErr) {
+          console.warn('Teacher join code upfront lookup deferred:', invErr);
+        }
+      }
+
+      await setDoc(
+        doc(db, 'users', activeUser.uid),
+        {
+          displayName: teacherName.trim() || activeUser.displayName || 'Faculty Educator',
+          email: teacherEmail.trim().toLowerCase() || activeUser.email || '',
+          phone: teacherPhone.trim(),
+          role: 'teacher',
+          educatorId,
+          tscNumber: teacherTsc.trim(),
+          specializations: teacherSubjects ? teacherSubjects.split(',').map((s) => s.trim()).filter(Boolean) : [],
+          memberships: attachedMemberships,
+          createdAt: now,
+        },
+        { merge: true }
+      );
+
+      if (attachedOrgId && attachedSchoolId) {
+        localStorage.setItem('edumo_active_org_id', attachedOrgId);
+        localStorage.setItem('edumo_active_school_id', attachedSchoolId);
+      }
+
+      await refreshClaims();
+      toast.success('Educator profile created! Welcome to Edumo.', { id: toastId });
+      navigate('/educator-portal');
+    } catch (err: any) {
+      console.error('Teacher registration error:', err);
+      toast.error(err.message || 'Failed to register educator profile', { id: toastId });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -334,20 +438,32 @@ export const Register: React.FC = () => {
           </p>
         </div>
 
-        {/* Institutional Administrator Only Guidance Notice */}
-        <div className="mb-5 p-3.5 rounded-2xl bg-amber-50/90 border border-amber-200/90 flex items-start gap-3 text-xs text-amber-900 shadow-2xs">
-          <ShieldCheck className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
-          <div className="space-y-0.5">
-            <span className="font-bold block text-amber-950">
-              Institutional Registration Only (School Administrators &amp; Principals)
-            </span>
-            <p className="text-[11px] text-amber-800 leading-relaxed">
-              This onboarding workflow registers new educational institutions and campus branches. <strong>Teachers, staff members, students, and guardians</strong> do not register here — accounts are provisioned internally by school administration or class teachers.{' '}
-              <Link to="/login" className="text-[#1d5f99] font-bold underline hover:text-blue-800">
-                Sign in to your school account &rarr;
-              </Link>
-            </p>
-          </div>
+        {/* Account Type Selector: Institution vs Verified Educator */}
+        <div className="grid grid-cols-2 gap-2 mb-5 p-1 bg-slate-200/80 rounded-2xl">
+          <button
+            type="button"
+            onClick={() => setAccountType('institution')}
+            className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all ${
+              accountType === 'institution'
+                ? 'bg-white text-[#1d5f99] shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Building2 className="w-4 h-4" />
+            <span>School / Institution</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setAccountType('teacher')}
+            className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all ${
+              accountType === 'teacher'
+                ? 'bg-white text-[#1d5f99] shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <GraduationCap className="w-4 h-4" />
+            <span>Teacher / Educator</span>
+          </button>
         </div>
 
         {/* Signed-in user notice */}
@@ -370,31 +486,153 @@ export const Register: React.FC = () => {
           </div>
         )}
 
-        {/* Stepper Indicator */}
-        <div className="grid grid-cols-4 gap-2 mb-6">
-          {[
-            { num: 1, label: 'Institution', icon: Building2 },
-            { num: 2, label: 'Campus', icon: School },
-            { num: 3, label: 'Branding', icon: Palette },
-            { num: 4, label: 'Admin', icon: UserCheck },
-          ].map((s) => (
-            <div
-              key={s.num}
-              className={`p-2 rounded-2xl border text-center transition-all ${
-                step === s.num
-                  ? 'bg-white border-2 border-[#1d5f99] text-[#1d5f99] font-bold shadow-md'
-                  : step > s.num
-                  ? 'bg-white border border-emerald-500/40 text-emerald-600 font-semibold'
-                  : 'bg-white/60 border border-gray-200 text-gray-400'
-              }`}
-            >
-              <div className="text-[10px] uppercase tracking-wider font-bold">Step {s.num}</div>
-              <div className="text-xs font-semibold truncate">{s.label}</div>
-            </div>
-          ))}
-        </div>
+        {accountType === 'teacher' ? (
+          <Card className="bg-white border border-gray-200 shadow-xl rounded-2xl p-6 sm:p-8">
+            <div className="space-y-4">
+              <div>
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 text-[11px] font-bold uppercase tracking-wider mb-1">
+                  <GraduationCap className="w-3.5 h-3.5" />
+                  Educator Profile (Zero Ghost Schools)
+                </div>
+                <h3 className="text-base font-bold text-gray-900">
+                  Register as an Independent Verified Educator
+                </h3>
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  Join the Edumo educational network. You will receive a unique <strong>Educator ID</strong> and can connect directly to your school campus using an invitation code without spawning duplicate school databases.
+                </p>
+              </div>
 
-        <Card className="bg-white border border-gray-200 shadow-xl rounded-2xl p-6 sm:p-8">
+              <form onSubmit={handleTeacherSubmit} className="space-y-4 pt-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Input
+                    label="Full Educator Name"
+                    placeholder="e.g. Mwalimu Grace Wanjiku"
+                    value={teacherName}
+                    onChange={(e) => setTeacherName(e.target.value)}
+                    required
+                  />
+
+                  <Input
+                    label="Mobile Phone"
+                    placeholder="+254712345678"
+                    value={teacherPhone}
+                    onChange={(e) => setTeacherPhone(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Input
+                    label="Teaching Learning Areas / Units"
+                    placeholder="e.g. Mathematics, Integrated Science"
+                    value={teacherSubjects}
+                    onChange={(e) => setTeacherSubjects(e.target.value)}
+                    helperText="Subjects you specialize in teaching"
+                  />
+
+                  <Input
+                    label="TSC / Educator Registration No. (Optional)"
+                    placeholder="e.g. TSC-789421"
+                    value={teacherTsc}
+                    onChange={(e) => setTeacherTsc(e.target.value)}
+                  />
+                </div>
+
+                {/* Optional School Code */}
+                <div className="p-3 bg-blue-50/70 rounded-xl border border-blue-200/80">
+                  <label className="block text-xs font-bold text-blue-950 mb-1">
+                    School Invitation / Join Code (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. EDM-9821 or Campus Code (Leave empty if joining later)"
+                    value={teacherJoinCode}
+                    onChange={(e) => setTeacherJoinCode(e.target.value.toUpperCase())}
+                    className="w-full text-xs font-mono font-bold px-3 py-2 rounded-lg border border-blue-200 bg-white uppercase focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                  <p className="text-[10px] text-blue-800 mt-1">
+                    If your principal gave you a code, enter it now to attach to your school immediately. Otherwise, connect in the Educator Portal.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Input
+                    label="Email Address (Login Username)"
+                    type="email"
+                    placeholder="grace.wanjiku@gmail.com"
+                    value={teacherEmail}
+                    onChange={(e) => setTeacherEmail(e.target.value)}
+                    required
+                  />
+
+                  <Input
+                    label="Account Password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={teacherPassword}
+                    onChange={(e) => setTeacherPassword(e.target.value)}
+                    required
+                    helperText="Minimum 8 characters"
+                  />
+                </div>
+
+                <div className="pt-2">
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    className="w-full flex items-center justify-center gap-2"
+                    isLoading={loading}
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    Register Educator Profile &rarr;
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </Card>
+        ) : (
+          <>
+            {/* Institutional Administrator Only Guidance Notice */}
+            <div className="mb-5 p-3.5 rounded-2xl bg-amber-50/90 border border-amber-200/90 flex items-start gap-3 text-xs text-amber-900 shadow-2xs">
+              <ShieldCheck className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+              <div className="space-y-0.5">
+                <span className="font-bold block text-amber-950">
+                  Institutional Registration Only (School Administrators &amp; Principals)
+                </span>
+                <p className="text-[11px] text-amber-800 leading-relaxed">
+                  This onboarding workflow registers new educational institutions and campus branches. <strong>Teachers, staff members, students, and guardians</strong> do not register here — accounts are provisioned internally by school administration or class teachers.{' '}
+                  <Link to="/login" className="text-[#1d5f99] font-bold underline hover:text-blue-800">
+                    Sign in to your school account &rarr;
+                  </Link>
+                </p>
+              </div>
+            </div>
+
+            {/* Stepper Indicator */}
+            <div className="grid grid-cols-4 gap-2 mb-6">
+              {[
+                { num: 1, label: 'Institution', icon: Building2 },
+                { num: 2, label: 'Campus', icon: School },
+                { num: 3, label: 'Branding', icon: Palette },
+                { num: 4, label: 'Admin', icon: UserCheck },
+              ].map((s) => (
+                <div
+                  key={s.num}
+                  className={`p-2 rounded-2xl border text-center transition-all ${
+                    step === s.num
+                      ? 'bg-white border-2 border-[#1d5f99] text-[#1d5f99] font-bold shadow-md'
+                      : step > s.num
+                      ? 'bg-white border border-emerald-500/40 text-emerald-600 font-semibold'
+                      : 'bg-white/60 border border-gray-200 text-gray-400'
+                  }`}
+                >
+                  <div className="text-[10px] uppercase tracking-wider font-bold">Step {s.num}</div>
+                  <div className="text-xs font-semibold truncate">{s.label}</div>
+                </div>
+              ))}
+            </div>
+
+            <Card className="bg-white border border-gray-200 shadow-xl rounded-2xl p-6 sm:p-8">
           {/* STEP 1: Institution & Country Pack */}
           {step === 1 && (
             <div className="space-y-4">
@@ -805,6 +1043,8 @@ export const Register: React.FC = () => {
             </form>
           )}
         </Card>
+      </>
+    )}
 
         <div className="text-center mt-6 text-xs text-gray-500">
           <span>Already have an account? </span>

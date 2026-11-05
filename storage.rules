@@ -70,9 +70,8 @@ service firebase.storage {
 
     // ===== ORG-LEVEL BRANDING =====
     match /{orgId}/branding/{filename} {
-      allow read: if isOrgMember(orgId) || isPlatformAdmin();
-      allow write: if isOrgMember(orgId) &&
-        request.auth.token.orgRole == 'orgOwner' &&
+      allow read: if true;
+      allow write: if isAuthenticated() &&
         isImageType() &&
         isUnderPhotoLimit();
     }
@@ -81,24 +80,24 @@ service firebase.storage {
 
     // Student photos
     match /{orgId}/{schoolId}/students/{studentId}/photos/{filename} {
-      allow read: if hasSchoolAccess(orgId, schoolId);
-      allow write: if hasSchoolAccess(orgId, schoolId) &&
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() &&
         isImageType() &&
         isUnderPhotoLimit();
     }
 
     // Student documents
     match /{orgId}/{schoolId}/students/{studentId}/documents/{filename} {
-      allow read: if hasSchoolAccess(orgId, schoolId);
-      allow write: if hasSchoolAccess(orgId, schoolId) &&
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() &&
         isDocumentType() &&
         isUnderDocLimit();
     }
 
     // Staff photos
     match /{orgId}/{schoolId}/staff/{staffId}/photos/{filename} {
-      allow read: if hasSchoolAccess(orgId, schoolId);
-      allow write: if hasSchoolAccess(orgId, schoolId) &&
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() &&
         isImageType() &&
         isUnderPhotoLimit();
     }
@@ -165,8 +164,8 @@ service firebase.storage {
 
     // School branding
     match /{orgId}/{schoolId}/branding/{filename} {
-      allow read: if hasSchoolAccess(orgId, schoolId);
-      allow write: if hasSchoolAccess(orgId, schoolId) &&
+      allow read: if true;
+      allow write: if isAuthenticated() &&
         isImageType() &&
         isUnderPhotoLimit();
     }

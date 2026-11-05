@@ -244,10 +244,22 @@ export const Attendance: React.FC = () => {
     }
 
     try {
-      // Try callable first
+      // 1. Direct resilient Firestore setDoc write (zero CORS errors on GitHub Pages/custom domains, instant local offline cache)
+      const docRef = doc(
+        db,
+        'organizations',
+        organization.id,
+        'schools',
+        currentSchool.id,
+        'attendance',
+        recordId
+      );
+      await setDoc(docRef, payload, { merge: true });
+
+      // 2. Non-blocking background sync notification if online (swallows CORS/network errors gracefully)
       try {
         const markAttendanceFn = httpsCallable(functions, 'markAttendance');
-        await markAttendanceFn({
+        markAttendanceFn({
           orgId: organization.id,
           schoolId: currentSchool.id,
           classId: selectedClass,
@@ -258,19 +270,11 @@ export const Attendance: React.FC = () => {
           entries: Object.fromEntries(
             Object.entries(entriesMap).map(([id, val]) => [id, { status: val.status }])
           ),
+        }).catch((fnErr) => {
+          console.debug('Background attendance callable notification skipped:', fnErr);
         });
-      } catch (callErr) {
-        // Fallback to direct doc write if callable needs token refresh
-        const docRef = doc(
-          db,
-          'organizations',
-          organization.id,
-          'schools',
-          currentSchool.id,
-          'attendance',
-          recordId
-        );
-        await setDoc(docRef, payload, { merge: true });
+      } catch {
+        // Non-blocking
       }
 
       toast.success('Attendance register submitted successfully!');

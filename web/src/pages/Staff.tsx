@@ -22,12 +22,37 @@ import {
   ShieldCheck,
   CheckCircle,
   BookOpen,
+  Share2,
+  Key,
+  Plus,
+  X,
+  Lock,
+  MessageSquare,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatSchoolId, getNextSchoolId, getSchoolEmail } from '../utils/schoolId';
 import { getSchoolEmailDomain } from '../utils/admission';
 import { exportStaffDirectory } from '../utils/excelExport';
 import { READY_ROLES, computeCombinedCapabilities } from '../utils/roles';
+
+const DEFAULT_COMMON_UNITS = [
+  'Mathematics',
+  'English Language',
+  'Kiswahili',
+  'Integrated Science',
+  'Social Studies',
+  'CRE / Religious Studies',
+  'Agriculture & Nutrition',
+  'Pre-Technical Studies',
+  'Creative Arts & Sports',
+  'Computer Science',
+  'Physics',
+  'Chemistry',
+  'Biology',
+  'History & Government',
+  'Geography',
+  'Business Studies',
+];
 
 interface StaffMember {
   id: string;
@@ -66,6 +91,11 @@ export const Staff: React.FC = () => {
   const [additionalRoles, setAdditionalRoles] = useState<string[]>([]);
   const [assignedClass, setAssignedClass] = useState('');
   const [assignedSubject, setAssignedSubject] = useState('');
+  const [assignedSubjects, setAssignedSubjects] = useState<string[]>([]);
+  const [customSubjectInput, setCustomSubjectInput] = useState('');
+  const [schoolUnits, setSchoolUnits] = useState<Array<{ id: string; name: string; code?: string }>>([]);
+  const [createLoginAccount, setCreateLoginAccount] = useState(true);
+  const [tempPassword, setTempPassword] = useState('Edumo@2026');
   const [classesList, setClassesList] = useState<Array<{ id: string; name: string }>>([]);
   const [generatedInviteCode, setGeneratedInviteCode] = useState<string | null>(null);
   const [generatedSchoolId, setGeneratedSchoolId] = useState<string>('');
@@ -130,9 +160,20 @@ export const Staff: React.FC = () => {
       }
     });
 
+    const subjectsRef = collection(db, 'organizations', organization.id, 'schools', currentSchool.id, 'subjects');
+    const unsubSubjects = onSnapshot(subjectsRef, (snap) => {
+      const units = snap.docs.map((d) => ({
+        id: d.id,
+        name: (d.data().name || d.id).trim(),
+        code: d.data().code,
+      }));
+      setSchoolUnits(units);
+    });
+
     return () => {
       unsub();
       unsubClasses();
+      unsubSubjects();
     };
   }, [organization, currentSchool]);
 
@@ -176,6 +217,12 @@ export const Staff: React.FC = () => {
 
       let code = `EDM-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
 
+      const finalSubjects = assignedSubjects.length > 0
+        ? assignedSubjects
+        : assignedSubject
+        ? assignedSubject.split(',').map((s) => s.trim()).filter(Boolean)
+        : [];
+
       // Create staff record directly with role capabilities and permissions
       const newStaffRef = doc(collection(db, 'organizations', organization.id, 'schools', currentSchool.id, 'staff'));
       await setDoc(newStaffRef, {
@@ -191,11 +238,39 @@ export const Staff: React.FC = () => {
         inviteCode: code,
         assignedClasses: assignedClass ? [assignedClass] : [],
         assignedClass: assignedClass || '',
-        assignedSubjects: assignedSubject ? [assignedSubject] : [],
+        assignedSubjects: finalSubjects,
+        assignedSubject: finalSubjects.join(', '),
         capabilities,
         permissions,
+        hasLoginAccount: createLoginAccount,
+        tempPassword: createLoginAccount ? tempPassword : '',
         createdAt: serverTimestamp(),
       });
+
+      // Store invitation record in school's invitations collection for educator portal code verification
+      try {
+        const inviteDocRef = doc(db, 'organizations', organization.id, 'schools', currentSchool.id, 'invitations', code);
+        await setDoc(inviteDocRef, {
+          code,
+          schoolId: currentSchool.id,
+          schoolName: currentSchool.name,
+          orgId: organization.id,
+          staffId: newStaffRef.id,
+          schoolStaffId: schoolId,
+          staffName: staffName.trim() || 'Faculty Educator',
+          email: (inviteEmail || '').trim().toLowerCase(),
+          phone: (invitePhone || '').trim(),
+          role: inviteRole,
+          roles: allAssignedRoles,
+          assignedSubjects: finalSubjects,
+          assignedClass: assignedClass || '',
+          tempPassword: createLoginAccount ? tempPassword : '',
+          status: 'pending',
+          createdAt: serverTimestamp(),
+        });
+      } catch (invErr) {
+        console.warn('Invitation doc write deferred:', invErr);
+      }
 
       // If this is a class teacher, update the class record so the class reflects its assigned teacher!
       if (allAssignedRoles.includes('class_teacher') && assignedClass) {
@@ -514,12 +589,26 @@ export const Staff: React.FC = () => {
                     {member.assignedClasses.map((cls) => (
                       <span
                         key={cls}
-                        className="text-2xs px-2 py-0.5 rounded-md bg-gray-100 text-gray-600 border border-gray-200 font-semibold"
+                        className="text-2xs px-2 py-0.5 rounded-md bg-gray-100 text-gray-700 border border-gray-200 font-semibold"
                       >
                         Class: {cls}
                       </span>
                     ))}
                   </div>
+
+                  {member.assignedSubjects && member.assignedSubjects.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {member.assignedSubjects.map((subj) => (
+                        <span
+                          key={subj}
+                          className="text-2xs px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200 font-semibold flex items-center gap-1"
+                        >
+                          <BookOpen className="w-2.5 h-2.5 text-purple-600 shrink-0" />
+                          Unit: {subj}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="mt-5 pt-3 border-t border-gray-200 flex justify-between items-center text-2xs text-gray-500">
@@ -625,15 +714,110 @@ export const Staff: React.FC = () => {
               />
             )}
 
-            {/* If Subject Teacher is selected, prompt for Subject */}
-            {(inviteRole === 'teacher' || additionalRoles.includes('teacher')) && (
-              <Input
-                label="Assigned Learning Area(s) / Subjects"
-                placeholder="e.g. Mathematics, Integrated Science"
-                value={assignedSubject}
-                onChange={(e) => setAssignedSubject(e.target.value)}
-                helperText="Subjects this educator is authorized to grade"
-              />
+            {/* Multi-Unit Teaching Assignment */}
+            {(inviteRole === 'teacher' || additionalRoles.includes('teacher') || true) && (
+              <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      <BookOpen className="w-3.5 h-3.5 text-brand-600" />
+                      Assigned Learning Areas / Units (Multi-Unit Teaching)
+                    </span>
+                    <p className="text-[11px] text-slate-500">
+                      Select all subjects this educator teaches. A teacher can be assigned multiple units across classes.
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-100 text-brand-700">
+                    {assignedSubjects.length} Selected
+                  </span>
+                </div>
+
+                {/* Selected Unit Badges */}
+                {assignedSubjects.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 p-2 bg-white rounded-lg border border-slate-200 max-h-24 overflow-y-auto">
+                    {assignedSubjects.map((subj) => (
+                      <span
+                        key={subj}
+                        className="inline-flex items-center gap-1 text-2xs font-semibold px-2 py-0.5 rounded-md bg-brand-50 text-brand-700 border border-brand-200"
+                      >
+                        {subj}
+                        <button
+                          type="button"
+                          onClick={() => setAssignedSubjects(assignedSubjects.filter((s) => s !== subj))}
+                          className="hover:text-red-600 transition-colors"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Quick Unit Suggestion Pills */}
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
+                    Available School Units (Click to toggle):
+                  </span>
+                  <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto p-1">
+                    {Array.from(new Set([...schoolUnits.map((u) => u.name), ...DEFAULT_COMMON_UNITS])).map((unitName) => {
+                      const isSelected = assignedSubjects.includes(unitName);
+                      return (
+                        <button
+                          type="button"
+                          key={unitName}
+                          onClick={() => {
+                            if (isSelected) {
+                              setAssignedSubjects(assignedSubjects.filter((s) => s !== unitName));
+                            } else {
+                              setAssignedSubjects([...assignedSubjects, unitName]);
+                            }
+                          }}
+                          className={`text-2xs px-2 py-1 rounded-md border font-medium transition-all ${
+                            isSelected
+                              ? 'bg-brand-600 text-white border-brand-700 shadow-xs'
+                              : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                          }`}
+                        >
+                          {isSelected ? '✓ ' : '+ '}{unitName}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Custom Unit Input */}
+                <div className="flex gap-2 pt-1">
+                  <input
+                    type="text"
+                    placeholder="Type custom unit (e.g. Robotics, French, Aviation)..."
+                    value={customSubjectInput}
+                    onChange={(e) => setCustomSubjectInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (customSubjectInput.trim() && !assignedSubjects.includes(customSubjectInput.trim())) {
+                          setAssignedSubjects([...assignedSubjects, customSubjectInput.trim()]);
+                          setCustomSubjectInput('');
+                        }
+                      }
+                    }}
+                    className="flex-1 text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-500 bg-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (customSubjectInput.trim() && !assignedSubjects.includes(customSubjectInput.trim())) {
+                        setAssignedSubjects([...assignedSubjects, customSubjectInput.trim()]);
+                        setCustomSubjectInput('');
+                      }
+                    }}
+                    className="px-2.5 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold flex items-center gap-1"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Add
+                  </button>
+                </div>
+              </div>
             )}
 
             {/* Capabilities Checklist Preview Box */}
@@ -657,13 +841,50 @@ export const Staff: React.FC = () => {
               );
             })()}
 
+            {/* Login Account Setup */}
+            <div className="p-3.5 bg-amber-50/60 rounded-xl border border-amber-200/80 space-y-2">
+              <label className="flex items-center gap-2 cursor-pointer font-bold text-xs text-amber-950">
+                <input
+                  type="checkbox"
+                  checked={createLoginAccount}
+                  onChange={(e) => setCreateLoginAccount(e.target.checked)}
+                  className="rounded text-amber-600 focus:ring-amber-500"
+                />
+                <Key className="w-3.5 h-3.5 text-amber-600" />
+                Enable System Login &amp; Issue Temporary Password
+              </label>
+              {createLoginAccount && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-amber-900 mb-1">
+                      Initial Temporary Password
+                    </label>
+                    <div className="relative">
+                      <Lock className="w-3.5 h-3.5 text-amber-600 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        value={tempPassword}
+                        onChange={(e) => setTempPassword(e.target.value)}
+                        className="w-full text-xs font-mono pl-8 pr-2.5 py-1.5 rounded-lg border border-amber-200 bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
+                        placeholder="e.g. Edumo@2026"
+                      />
+                    </div>
+                  </div>
+                  <div className="text-[11px] text-amber-800 flex items-center">
+                    The teacher will receive this password and can update it immediately upon login.
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input
-                label="Staff Email (Optional)"
+                label="Staff Email (Login Username)"
                 type="email"
                 placeholder="teacher@academy.ac.ke"
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
+                helperText="Primary email used to sign in to Edumo"
               />
 
               <Input
@@ -689,52 +910,153 @@ export const Staff: React.FC = () => {
             </div>
           </form>
         ) : (
-          <div className="text-center py-4 space-y-4">
-            <div className="w-12 h-12 rounded-full bg-accent-500/10 text-accent-600 flex items-center justify-center mx-auto">
-              <Check className="w-6 h-6" />
+          <div className="text-left py-2 space-y-4">
+            <div className="text-center">
+              <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-2">
+                <Check className="w-6 h-6" />
+              </div>
+              <h4 className="text-base font-bold text-gray-900">
+                Educator Provisioned Successfully!
+              </h4>
+              <p className="text-xs text-gray-500 max-w-sm mx-auto">
+                Account active in <strong>{currentSchool?.name}</strong>. Share credentials with the educator below.
+              </p>
             </div>
 
-            <h4 className="text-base font-semibold text-gray-900">
-              Single-Use Invite Code Ready
-            </h4>
-            <p className="text-xs text-gray-500 max-w-xs mx-auto">
-              Share this code with the staff member to activate their account in {currentSchool?.name}.
-            </p>
-
-            {generatedSchoolId && (
-              <div className="p-3 bg-brand-50 rounded-2xl border border-brand-200 text-center">
-                <p className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">School ID</p>
-                <p className="font-mono text-base font-bold text-brand-700">{generatedSchoolId}</p>
-                {getSchoolEmail(generatedSchoolId, getSchoolEmailDomain(currentSchool)) && (
-                  <p className="text-xs text-gray-600 mt-1">
-                    {getSchoolEmail(generatedSchoolId, getSchoolEmailDomain(currentSchool))}
-                  </p>
+            {/* Summary Credentials Card */}
+            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+                <div>
+                  <p className="text-xs font-bold text-slate-900">{staffName || 'Faculty Educator'}</p>
+                  <p className="text-[11px] text-slate-500 capitalize">{inviteRole.replace(/_/g, ' ')}</p>
+                </div>
+                {generatedSchoolId && (
+                  <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-brand-100 text-brand-700">
+                    ID: {generatedSchoolId}
+                  </span>
                 )}
               </div>
-            )}
 
-            <div className="p-3 bg-gray-50 rounded-2xl border border-brand-500/30 flex items-center justify-between font-mono text-base font-bold text-brand-600">
-              <span>{generatedInviteCode}</span>
-              <button
-                type="button"
-                onClick={() => {
-                  navigator.clipboard.writeText(generatedInviteCode);
-                  toast.success('Invite code copied to clipboard!');
-                }}
-                className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"
-              >
-                <Copy className="w-4 h-4" />
-              </button>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="p-2 bg-white rounded-lg border border-slate-200">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Login Email</span>
+                  <p className="font-mono text-xs font-semibold text-slate-800 truncate">
+                    {inviteEmail || getSchoolEmail(generatedSchoolId, getSchoolEmailDomain(currentSchool))}
+                  </p>
+                </div>
+                <div className="p-2 bg-white rounded-lg border border-slate-200">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Initial Password</span>
+                  <p className="font-mono text-xs font-bold text-amber-700">
+                    {tempPassword}
+                  </p>
+                </div>
+              </div>
+
+              {/* Campus Join Code */}
+              <div className="p-2.5 bg-brand-50/70 rounded-xl border border-brand-200/80 flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-brand-800 block">Campus Join Code</span>
+                  <span className="font-mono text-sm font-black text-brand-900">{generatedInviteCode}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (generatedInviteCode) {
+                      navigator.clipboard.writeText(generatedInviteCode);
+                      toast.success('Join code copied!');
+                    }
+                  }}
+                  className="p-1.5 rounded-lg bg-white border border-brand-200 text-brand-700 hover:bg-brand-50 transition-colors"
+                  title="Copy Join Code"
+                >
+                  <Copy className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Units & Class summary */}
+              <div className="text-xs space-y-1">
+                {assignedClass && (
+                  <p className="text-[11px] text-slate-600">
+                    <strong className="text-slate-800">Assigned Class:</strong> {assignedClass}
+                  </p>
+                )}
+                {assignedSubjects.length > 0 && (
+                  <div>
+                    <span className="text-[11px] font-bold text-slate-800 block mb-1">
+                      Assigned Teaching Units ({assignedSubjects.length}):
+                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      {assignedSubjects.map((s) => (
+                        <span key={s} className="text-[10px] px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200 font-semibold">
+                          {s}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setIsInviteModalOpen(false)}
-              className="mt-4"
-            >
-              Done
-            </Button>
+            {/* Quick Share Buttons */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <Button
+                variant="primary"
+                onClick={() => {
+                  const portalUrl = 'https://edumo-3dfc9.web.app/login';
+                  const email = inviteEmail || getSchoolEmail(generatedSchoolId, getSchoolEmailDomain(currentSchool));
+                  const units = assignedSubjects.length > 0 ? assignedSubjects.join(', ') : 'Assigned Subjects';
+                  const message = `*Welcome to ${currentSchool?.name} on Edumo!*\n\nHello Mwalimu ${staffName},\nYour official faculty account has been created.\n\n*Login Details:*\n- Portal: ${portalUrl}\n- Email: ${email}\n- Temporary Password: ${tempPassword}\n- School ID: ${generatedSchoolId}\n- Join Code: ${generatedInviteCode}\n\n*Assigned Units:* ${units}\n*Assigned Class:* ${assignedClass || 'General'}\n\nPlease sign in and update your password upon first entry.`;
+                  
+                  navigator.clipboard.writeText(message);
+                  toast.success('WhatsApp / SMS invitation copied to clipboard!');
+                }}
+                className="w-full flex items-center justify-center gap-1.5"
+              >
+                <MessageSquare className="w-4 h-4" />
+                Copy WhatsApp Message
+              </Button>
+
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  const email = inviteEmail || getSchoolEmail(generatedSchoolId, getSchoolEmailDomain(currentSchool));
+                  const text = `Email: ${email}\nPassword: ${tempPassword}\nSchool ID: ${generatedSchoolId}\nJoin Code: ${generatedInviteCode}`;
+                  navigator.clipboard.writeText(text);
+                  toast.success('Login credentials copied!');
+                }}
+                className="w-full flex items-center justify-center gap-1.5"
+              >
+                <Copy className="w-4 h-4" />
+                Copy Credentials Only
+              </Button>
+            </div>
+
+            <div className="pt-2 flex justify-end gap-2 border-t border-slate-200">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setStaffName('');
+                  setInviteEmail('');
+                  setInvitePhone('+254700000000');
+                  setAssignedSubjects([]);
+                  setGeneratedInviteCode(null);
+                  setGeneratedSchoolId('');
+                }}
+              >
+                + Add Another Teacher
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  setIsInviteModalOpen(false);
+                  setGeneratedInviteCode(null);
+                }}
+              >
+                Close &amp; Finish
+              </Button>
+            </div>
           </div>
         )}
       </Modal>
