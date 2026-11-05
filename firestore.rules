@@ -124,14 +124,14 @@ service cloud.firestore {
         match /students/{studentId} {
           allow read: if hasSchoolAccess(orgId, schoolId) ||
             isVerifiedGuardianOf(orgId, schoolId, studentId);
-          allow create: if hasSchoolRole(orgId, schoolId,
-            ['principal', 'deputy', 'admin']) &&
+          allow create: if (hasSchoolRole(orgId, schoolId,
+            ['principal', 'deputy', 'admin', 'teacher']) || hasPermission('students.enroll')) &&
             withinSizeLimit();
-          allow update: if hasSchoolRole(orgId, schoolId,
-            ['principal', 'deputy', 'admin']) &&
+          allow update: if (hasSchoolRole(orgId, schoolId,
+            ['principal', 'deputy', 'admin', 'teacher']) || hasPermission('students.write')) &&
             immutableFields(['createdAt', 'createdBy', 'admissionNumber']) &&
             withinSizeLimit();
-          allow delete: if false;
+          allow delete: if hasSchoolRole(orgId, schoolId, ['principal', 'admin']);
 
           // Medical records — strictly restricted
           match /medical/{docId} {
@@ -217,6 +217,14 @@ service cloud.firestore {
               ['principal', 'deputy', 'admin']);
             allow delete: if false;
           }
+        }
+
+        // ===== CURRICULUM UNITS & SUBJECTS (School-wide catalog) =====
+        match /subjects/{subjectId} {
+          allow read: if hasSchoolAccess(orgId, schoolId);
+          allow create, update: if hasSchoolRole(orgId, schoolId,
+            ['principal', 'deputy', 'admin', 'teacher']) || hasPermission('academics.write');
+          allow delete: if hasSchoolRole(orgId, schoolId, ['principal', 'admin']);
         }
 
         // ===== ATTENDANCE =====

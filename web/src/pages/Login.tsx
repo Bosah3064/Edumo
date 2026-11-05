@@ -217,14 +217,19 @@ export const Login: React.FC = () => {
         </Card>
 
         {/* Footer links */}
-        <div className="text-center mt-6 text-xs text-[#4b5563] font-medium">
-          <span>{t('auth.dontHaveAccount')} </span>
-          <Link
-            to="/register"
-            className="text-[#1d5f99] hover:text-[#a5243d] font-bold underline underline-offset-4"
-          >
-            {t('auth.registerSchool')}
-          </Link>
+        <div className="text-center mt-6 text-xs text-[#4b5563] font-medium space-y-2">
+          <div>
+            <span>{t('auth.dontHaveAccount')} </span>
+            <Link
+              to="/register"
+              className="text-[#1d5f99] hover:text-[#a5243d] font-bold underline underline-offset-4"
+            >
+              {t('auth.registerSchool')}
+            </Link>
+          </div>
+          <p className="text-[11px] text-gray-500 max-w-sm mx-auto">
+            Staff, Teachers &amp; Students: Your accounts are provisioned directly inside your school portal by the School Administrator or Class Teacher.
+          </p>
         </div>
       </div>
     </div>

@@ -72,3 +72,4 @@ type FeeInvoice @table {
   dueDate: Date!
   createdAt: Timestamp! @default(expr: "request.time")
 }
+

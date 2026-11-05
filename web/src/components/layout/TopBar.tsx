@@ -14,6 +14,7 @@ import {
   ChevronDown,
   LogOut,
   User,
+  Settings,
 } from 'lucide-react';
 
 interface TopBarProps {
@@ -122,12 +123,22 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar }) => {
               <button
                 onClick={() => {
                   setProfileOpen(false);
-                  navigate('/settings');
+                  navigate('/profile');
                 }}
                 className="w-full flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
               >
                 <User className="w-4 h-4 text-[#1d5f99]" />
-                Profile & School Settings
+                My Profile &amp; Credentials
+              </button>
+              <button
+                onClick={() => {
+                  setProfileOpen(false);
+                  navigate('/settings');
+                }}
+                className="w-full flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+              >
+                <Settings className="w-4 h-4 text-[#683669]" />
+                Institution Settings &amp; Theming
               </button>
               <button
                 onClick={async () => {

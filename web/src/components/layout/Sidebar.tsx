@@ -27,6 +27,7 @@ import {
   MessageSquare,
   Layers,
   ShieldCheck,
+  User,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -71,6 +72,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
     { to: '/extended', label: sidebarLanguage === 'sw' ? 'Maktaba na Hosteli' : 'Extended Modules', icon: Layers },
     { to: '/platform-console', label: sidebarLanguage === 'sw' ? 'Jopo la Usimamizi' : 'Platform Console', icon: ShieldCheck },
     { to: '/parent-portal', label: navTranslations.parentPortal, icon: HeartHandshake },
+    { to: '/profile', label: sidebarLanguage === 'sw' ? 'Wasifu Wangu' : 'My Profile', icon: User },
     { to: '/settings', label: navTranslations.settings, icon: Settings },
   ];
 
@@ -83,32 +85,40 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
         borderRight: '1px solid var(--sidebar-border, #e2e8f0)',
       }}
     >
-      {/* Brand Header */}
+      {/* Brand Header — Crisp White Container for Maximum Logo Visibility */}
       <div>
         <div
-          className="h-16 px-5 flex items-center justify-between"
-          style={{ borderBottom: '1px solid var(--sidebar-border, #e2e8f0)' }}
+          className="h-18 px-4 flex items-center justify-between border-b border-slate-200 shadow-2xs"
+          style={{ backgroundColor: '#ffffff', color: '#0f172a' }}
         >
           {currentSchool?.branding?.logo ? (
-            <NavLink to="/dashboard" className="flex items-center gap-3 min-w-0">
-              <img
-                src={currentSchool.branding.logo}
-                alt={currentSchool.name}
-                className="w-10 h-10 rounded-xl object-cover border border-white/20 shadow-xs"
-              />
-              <div className="min-w-0">
-                <p className="text-sm font-bold truncate" style={{ color: 'var(--sidebar-text, #0f172a)' }}>
+            <NavLink to="/dashboard" className="flex items-center gap-3 min-w-0 w-full hover:opacity-90 transition-opacity">
+              <div className="w-10 h-10 rounded-xl bg-white p-0.5 border border-slate-200 shadow-2xs flex items-center justify-center shrink-0">
+                <img
+                  src={currentSchool.branding.logo}
+                  alt={currentSchool.name}
+                  className="w-full h-full object-contain rounded-lg"
+                />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-black truncate text-slate-900 tracking-tight">
                   {currentSchool.name}
                 </p>
-                {currentSchool.branding.motto && (
-                  <p className="text-[9px] truncate max-w-[150px]" style={{ color: 'var(--sidebar-text-muted, #64748b)' }}>
+                {currentSchool.branding.motto ? (
+                  <p className="text-[10px] text-slate-500 italic truncate font-medium">
                     {currentSchool.branding.motto}
                   </p>
+                ) : (
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-[#1d5f99] block font-mono">
+                    Institutional Portal
+                  </span>
                 )}
               </div>
             </NavLink>
           ) : (
-            <EdumoLogo size="md" showText={true} showBadge={true} to="/dashboard" />
+            <div className="w-full flex items-center justify-center py-1">
+              <EdumoLogo size="md" showText={true} showBadge={true} to="/dashboard" />
+            </div>
           )}
         </div>
         {currentSchool && (

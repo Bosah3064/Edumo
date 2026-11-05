@@ -158,17 +158,24 @@ export interface Stream {
   studentCount: number;
 }
 
-/** Subject within a class */
+/** Subject / Curriculum Unit within a school */
 export interface Subject {
   id?: string;
   name: string;
   code: string;
   type: 'core' | 'elective' | 'optional';
-  category?: string; // CBC learning area
+  isMandatory?: boolean; // True for mandatory/core units, false for optional/elective
+  category?: string; // e.g. Sciences, Humanities, Languages, Technical, Religious
+  department?: string;
+  weeklyPeriods?: number;
+  applicableClasses?: string[];
   maxMarks?: number;
   teacherId?: string;
+  teacherName?: string;
+  description?: string;
   strands?: Strand[];
   gradingScaleOverride?: Record<string, unknown>;
+  createdAt?: ISOTimestamp;
 }
 
 export interface Strand {

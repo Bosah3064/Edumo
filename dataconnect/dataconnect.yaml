@@ -9,3 +9,4 @@ schema:
       cloudSql:
         instanceId: "edumo-sql-instance"
 connectorDirs: ["./connector"]
+

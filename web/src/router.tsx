@@ -24,6 +24,7 @@ import { Operations } from './pages/Operations';
 import { Messaging } from './pages/Messaging';
 import { ExtendedModules } from './pages/ExtendedModules';
 import { PlatformConsole } from './pages/PlatformConsole';
+import { Profile } from './pages/Profile';
 
 export const router = createBrowserRouter([
   // Public routes
@@ -123,6 +124,10 @@ export const router = createBrowserRouter([
       {
         path: '/settings',
         element: <Settings />,
+      },
+      {
+        path: '/profile',
+        element: <Profile />,
       },
     ],
   },

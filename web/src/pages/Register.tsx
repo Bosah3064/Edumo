@@ -21,6 +21,7 @@ import {
   AlertCircle,
   CheckCircle2,
   Sparkles,
+  ShieldCheck,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -331,6 +332,22 @@ export const Register: React.FC = () => {
           <p className="text-xs text-[#4b5563] mt-1 font-medium">
             {t('register.subtitle', 'Set up your multi-tenant workspace with country-specific curriculum and branding')}
           </p>
+        </div>
+
+        {/* Institutional Administrator Only Guidance Notice */}
+        <div className="mb-5 p-3.5 rounded-2xl bg-amber-50/90 border border-amber-200/90 flex items-start gap-3 text-xs text-amber-900 shadow-2xs">
+          <ShieldCheck className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+          <div className="space-y-0.5">
+            <span className="font-bold block text-amber-950">
+              Institutional Registration Only (School Administrators &amp; Principals)
+            </span>
+            <p className="text-[11px] text-amber-800 leading-relaxed">
+              This onboarding workflow registers new educational institutions and campus branches. <strong>Teachers, staff members, students, and guardians</strong> do not register here — accounts are provisioned internally by school administration or class teachers.{' '}
+              <Link to="/login" className="text-[#1d5f99] font-bold underline hover:text-blue-800">
+                Sign in to your school account &rarr;
+              </Link>
+            </p>
+          </div>
         </div>
 
         {/* Signed-in user notice */}
