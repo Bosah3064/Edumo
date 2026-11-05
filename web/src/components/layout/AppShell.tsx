@@ -4,6 +4,7 @@ import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import { MobileNav } from './MobileNav';
 import { OfflineBanner } from '../ui/OfflineBanner';
+import { PWAInstallBanner } from '../pwa/PWAInstallBanner';
 import { useTenant } from '../../contexts/TenantContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { Spinner } from '../ui/Spinner';
@@ -73,9 +74,12 @@ export const AppShell: React.FC = () => {
         <OfflineBanner />
         <TopBar onToggleSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)} />
 
-        <main className="flex-1 overflow-y-auto pb-20 lg:pb-8 p-4 sm:p-6 lg:p-8">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-6 lg:p-8 pb-24 lg:pb-8">
           <Outlet />
         </main>
+
+        {/* PWA Phone Install Prompt Banner */}
+        <PWAInstallBanner />
 
         {/* Mobile bottom nav */}
         <MobileNav onOpenMore={() => setIsMobileSidebarOpen(true)} />

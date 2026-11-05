@@ -30,11 +30,11 @@ export const BranchSwitcher: React.FC = () => {
         <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-[#1d5f99] shrink-0 font-bold">
           <SchoolIcon className="w-4 h-4" />
         </div>
-        <div className="hidden sm:block text-left">
-          <p className="text-[10px] uppercase tracking-wider text-[#4b5563] font-bold truncate max-w-[130px]">
+        <div className="text-left">
+          <p className="hidden sm:block text-[10px] uppercase tracking-wider text-[#4b5563] font-bold truncate max-w-[130px]">
             {organization?.name || 'Edumo Academy'}
           </p>
-          <p className="text-xs font-bold text-[#1f2937] truncate max-w-[130px]">
+          <p className="text-xs font-bold text-[#1f2937] truncate max-w-[90px] sm:max-w-[140px]">
             {currentSchool.name}
           </p>
         </div>

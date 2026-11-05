@@ -272,75 +272,75 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* KPI Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        <Card className="flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-              Enrolled Learners
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-6">
+        <Card className="flex items-center justify-between !p-3.5 sm:!p-5">
+          <div className="truncate">
+            <p className="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider truncate">
+              Learners
             </p>
-            <h3 className="text-2xl font-display font-bold text-gray-900 mt-1">
+            <h3 className="text-xl sm:text-2xl font-display font-bold text-gray-900 mt-0.5">
               {loadingStats ? '...' : studentCount}
             </h3>
-            <p className="text-2xs text-accent-600 mt-1 flex items-center gap-1 font-medium">
-              <TrendingUp className="w-3 h-3" />
-              <span>Real-time enrollment</span>
+            <p className="text-[10px] text-accent-600 mt-0.5 flex items-center gap-1 font-medium truncate">
+              <TrendingUp className="w-3 h-3 shrink-0" />
+              <span>Real-time</span>
             </p>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-brand-500">
-            <Users className="w-6 h-6" />
+          <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-brand-500 shrink-0">
+            <Users className="w-4 h-4 sm:w-6 sm:h-6" />
           </div>
         </Card>
 
-        <Card className="flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-              Today's Attendance
+        <Card className="flex items-center justify-between !p-3.5 sm:!p-5">
+          <div className="truncate">
+            <p className="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider truncate">
+              Attendance
             </p>
-            <h3 className="text-2xl font-display font-bold text-accent-600 mt-1">
+            <h3 className="text-xl sm:text-2xl font-display font-bold text-accent-600 mt-0.5">
               {todayAttendance.rate}
             </h3>
-            <p className="text-2xs text-gray-500 mt-1 font-medium">
+            <p className="text-[10px] text-gray-500 mt-0.5 font-medium truncate">
               {todayAttendance.hasData
-                ? `${todayAttendance.present} Present • ${todayAttendance.absent} Absent`
-                : 'Not marked yet today'}
+                ? `${todayAttendance.present} In • ${todayAttendance.absent} Out`
+                : 'Not marked yet'}
             </p>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-accent-500/10 border border-accent-500/20 flex items-center justify-center text-accent-600">
-            <CalendarCheck2 className="w-6 h-6" />
+          <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-accent-500/10 border border-accent-500/20 flex items-center justify-center text-accent-600 shrink-0">
+            <CalendarCheck2 className="w-4 h-4 sm:w-6 sm:h-6" />
           </div>
         </Card>
 
-        <Card className="flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-              Teaching & Staff
+        <Card className="flex items-center justify-between !p-3.5 sm:!p-5">
+          <div className="truncate">
+            <p className="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider truncate">
+              Faculty / Staff
             </p>
-            <h3 className="text-2xl font-display font-bold text-gray-900 mt-1">
+            <h3 className="text-xl sm:text-2xl font-display font-bold text-gray-900 mt-0.5">
               {loadingStats ? '...' : staffCount}
             </h3>
-            <p className="text-2xs text-gray-500 mt-1 font-medium">
-              Active registered staff
+            <p className="text-[10px] text-gray-500 mt-0.5 font-medium truncate">
+              Active staff
             </p>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-edumoPurple-500/10 border border-edumoPurple-500/20 flex items-center justify-center text-edumoPurple-500">
-            <GraduationCap className="w-6 h-6" />
+          <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-edumoPurple-500/10 border border-edumoPurple-500/20 flex items-center justify-center text-edumoPurple-500 shrink-0">
+            <GraduationCap className="w-4 h-4 sm:w-6 sm:h-6" />
           </div>
         </Card>
 
-        <Card className="flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-              Active Classes
+        <Card className="flex items-center justify-between !p-3.5 sm:!p-5">
+          <div className="truncate">
+            <p className="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider truncate">
+              Classes
             </p>
-            <h3 className="text-2xl font-display font-bold text-gray-900 mt-1">
+            <h3 className="text-xl sm:text-2xl font-display font-bold text-gray-900 mt-0.5">
               {loadingStats ? '...' : classCount}
             </h3>
-            <p className="text-2xs text-brand-600 mt-1 font-medium">
-              Configured class streams
+            <p className="text-[10px] text-brand-600 mt-0.5 font-medium truncate">
+              Active streams
             </p>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-warning-500/10 border border-warning-500/20 flex items-center justify-center text-warning-600">
-            <Building2 className="w-6 h-6" />
+          <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-warning-500/10 border border-warning-500/20 flex items-center justify-center text-warning-600 shrink-0">
+            <Building2 className="w-4 h-4 sm:w-6 sm:h-6" />
           </div>
         </Card>
       </div>

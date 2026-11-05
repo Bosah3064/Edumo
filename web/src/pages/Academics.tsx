@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useTenant } from '../contexts/TenantContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useOffline } from '../contexts/OfflineContext';
@@ -57,6 +57,7 @@ import {
   type GradingScale,
   type StudentAssessmentAggregate,
   type ExamSeries,
+  type Subject,
 } from '@edumo/shared';
 import {
   exportMarksEntryTemplate,
@@ -102,6 +103,55 @@ export const Academics: React.FC = () => {
   const [assessmentTitle, setAssessmentTitle] = useState('Term 1 Mid-Term Assessment');
   const [maxScore, setMaxScore] = useState(50);
   const [selectedLearnerId, setSelectedLearnerId] = useState<string>('');
+
+  // Dynamic Real-time School Subjects from Firestore (no hardcoding)
+  const [schoolSubjects, setSchoolSubjects] = useState<Subject[]>([]);
+
+  useEffect(() => {
+    if (!organization || !currentSchool) return;
+    const subjectsRef = collection(db, 'organizations', organization.id, 'schools', currentSchool.id, 'subjects');
+    const unsub = onSnapshot(subjectsRef, (snap) => {
+      const list: Subject[] = snap.docs.map((d) => ({
+        id: d.id,
+        ...(d.data() as any),
+      }));
+      setSchoolSubjects(list);
+    });
+    return () => unsub();
+  }, [organization?.id, currentSchool?.id]);
+
+  // Filter available subjects based on selected class
+  const availableSubjectOptions = useMemo(() => {
+    if (schoolSubjects.length === 0) {
+      return [
+        'Mathematics',
+        'English Language',
+        'Kiswahili',
+        'Integrated Science',
+        'Social Studies',
+        'Christian Religious Education (CRE)',
+        'Agriculture & Nutrition',
+        'Creative Arts & Sports',
+        'Pre-Technical Studies',
+      ];
+    }
+    const filtered = schoolSubjects.filter((s) => {
+      if (!s.applicableClasses || s.applicableClasses.length === 0 || s.applicableClasses.includes('all')) {
+        return true;
+      }
+      return s.applicableClasses.includes(selectedClass);
+    });
+
+    const options = filtered.length > 0 ? filtered.map((s) => s.name) : schoolSubjects.map((s) => s.name);
+    return Array.from(new Set(options));
+  }, [schoolSubjects, selectedClass]);
+
+  // Keep selectedSubject aligned with availableSubjectOptions for this class
+  useEffect(() => {
+    if (availableSubjectOptions.length > 0 && !availableSubjectOptions.includes(selectedSubject)) {
+      setSelectedSubject(availableSubjectOptions[0]);
+    }
+  }, [availableSubjectOptions, selectedSubject]);
 
   // Roster & Marks
   const [roster, setRoster] = useState<LearnerMarkRow[]>([]);
@@ -832,17 +882,7 @@ export const Academics: React.FC = () => {
           label="Learning Area / Subject"
           value={selectedSubject}
           onChange={(e) => setSelectedSubject(e.target.value)}
-          options={[
-            'Mathematics',
-            'English Language',
-            'Kiswahili',
-            'Integrated Science',
-            'Social Studies',
-            'Christian Religious Education (CRE)',
-            'Agriculture & Nutrition',
-            'Creative Arts & Sports',
-            'Pre-Technical Studies',
-          ].map((s) => ({ value: s, label: s }))}
+          options={availableSubjectOptions.map((s) => ({ value: s, label: s }))}
         />
 
         <Select
@@ -891,8 +931,89 @@ export const Academics: React.FC = () => {
               <p className="text-xs text-gray-500 mt-1">Enroll students or assign them to this class.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
+            <>
+              {/* Mobile Card View (sm:hidden) */}
+              <div className="sm:hidden divide-y divide-gray-100">
+                {roster.map((row, idx) => {
+                  const numScore = row.score === '' ? null : Number(row.score);
+                  const percentage = numScore !== null ? (numScore / maxScore) * 100 : 0;
+                  const band = numScore !== null ? calculateGradeBand(percentage, activeScale) : null;
+
+                  return (
+                    <div key={row.studentId} className="p-3.5 bg-white space-y-2.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="w-5 h-5 rounded-full bg-slate-100 text-slate-500 font-mono text-[10px] font-bold flex items-center justify-center">
+                              {idx + 1}
+                            </span>
+                            <span className="font-bold text-gray-900 text-xs">{row.name}</span>
+                          </div>
+                          <div className="flex items-center gap-2 mt-0.5 ml-7 text-2xs text-gray-500">
+                            <span className="font-mono">{row.admissionNumber}</span>
+                            <span>•</span>
+                            <span className="font-bold text-gray-600 bg-gray-100 px-1.5 py-0.2 rounded">
+                              {row.stream || 'East'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {band ? (
+                          <span
+                            className="px-2 py-0.5 rounded-full text-2xs font-extrabold shrink-0"
+                            style={{
+                              backgroundColor: `${band.colorHex || '#1d5f99'}20`,
+                              color: band.colorHex || '#1d5f99',
+                            }}
+                          >
+                            {band.code} ({Math.round(percentage)}%)
+                          </span>
+                        ) : (
+                          <span className="text-gray-400 text-2xs italic shrink-0">Unmarked</span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 flex-1">
+                          <label className="text-2xs font-bold text-gray-500 shrink-0">Score:</label>
+                          <input
+                            type="number"
+                            min="0"
+                            max={maxScore}
+                            value={row.score}
+                            onChange={(e) => handleScoreChange(row.studentId, e.target.value)}
+                            placeholder="—"
+                            className="w-20 text-center font-bold text-sm rounded-lg border border-gray-300 py-1 px-1.5 focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                          />
+                          <span className="text-2xs text-gray-400 font-semibold">/ {maxScore}</span>
+                        </div>
+
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => openStudentReportCard(row)}
+                          className="text-2xs h-8 px-2"
+                          leftIcon={<Eye className="w-3.5 h-3.5" />}
+                        >
+                          Report
+                        </Button>
+                      </div>
+
+                      <input
+                        type="text"
+                        value={row.comments}
+                        onChange={(e) => handleCommentChange(row.studentId, e.target.value)}
+                        placeholder="Learner assessment remarks..."
+                        className="w-full text-xs rounded-lg border border-gray-200 py-1.5 px-2.5 text-gray-700 focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Desktop Table View (hidden on sm) */}
+              <div className="hidden sm:block overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="border-b border-gray-200 bg-gray-100 text-gray-600 uppercase text-2xs font-semibold">
                     <th className="py-3 px-4 w-12 text-center">No.</th>
@@ -973,7 +1094,8 @@ export const Academics: React.FC = () => {
                 </tbody>
               </table>
             </div>
-          )}
+          </>
+        )}
         </Card>
       )}
 

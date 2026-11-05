@@ -21,6 +21,7 @@ import {
   Check,
   Tag,
   FolderTree,
+  Pencil,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
@@ -81,6 +82,25 @@ export const Classes: React.FC = () => {
   const [unitTeacher, setUnitTeacher] = useState('');
   const [savingUnit, setSavingUnit] = useState(false);
   const [seedingCurriculum, setSeedingCurriculum] = useState(false);
+  const [newUnitClasses, setNewUnitClasses] = useState<string[]>(['all']);
+
+  // Manage Class Units Modal State
+  const [managingUnitsForClass, setManagingUnitsForClass] = useState<ClassItem | null>(null);
+  const [classUnitsSelection, setClassUnitsSelection] = useState<string[]>([]);
+  const [savingClassUnits, setSavingClassUnits] = useState(false);
+  const [classUnitSearch, setClassUnitSearch] = useState('');
+  const [isAddUnitForClassOpen, setIsAddUnitForClassOpen] = useState(false);
+
+  // Edit Unit Modal State
+  const [editingUnit, setEditingUnit] = useState<Subject | null>(null);
+  const [editUnitName, setEditUnitName] = useState('');
+  const [editUnitCode, setEditUnitCode] = useState('');
+  const [editUnitDepartment, setEditUnitDepartment] = useState('Sciences & Tech');
+  const [editUnitIsMandatory, setEditUnitIsMandatory] = useState(true);
+  const [editUnitWeeklyPeriods, setEditUnitWeeklyPeriods] = useState('4');
+  const [editUnitTeacher, setEditUnitTeacher] = useState('');
+  const [editUnitClasses, setEditUnitClasses] = useState<string[]>(['all']);
+  const [savingEditUnit, setSavingEditUnit] = useState(false);
 
   // 1. Listen to students to compute enrollment per class
   useEffect(() => {
@@ -279,7 +299,7 @@ export const Classes: React.FC = () => {
         department: unitDepartment,
         weeklyPeriods: parseInt(unitWeeklyPeriods) || 4,
         teacherName: unitTeacher.trim() || 'Assigned Instructor',
-        applicableClasses: classes.map((c) => c.name),
+        applicableClasses: newUnitClasses.length === 0 ? ['all'] : newUnitClasses,
         createdAt: serverTimestamp(),
       });
 
@@ -288,11 +308,182 @@ export const Classes: React.FC = () => {
       setUnitName('');
       setUnitCode('');
       setUnitTeacher('');
+      setNewUnitClasses(['all']);
     } catch (err) {
       console.error('Error creating unit:', err);
       toast.error('Failed to register curriculum unit', { id: toastId });
     } finally {
       setSavingUnit(false);
+    }
+  };
+
+  // Open Manage Class Units
+  const handleOpenManageClassUnits = (cls: ClassItem) => {
+    setManagingUnitsForClass(cls);
+    setClassUnitSearch('');
+    const activeSubjectIds = subjects
+      .filter(
+        (s) =>
+          !s.applicableClasses ||
+          s.applicableClasses.length === 0 ||
+          s.applicableClasses.includes('all') ||
+          s.applicableClasses.includes(cls.name)
+      )
+      .map((s) => s.id)
+      .filter(Boolean) as string[];
+    setClassUnitsSelection(activeSubjectIds);
+  };
+
+  const handleToggleUnitForClass = (subId: string) => {
+    if (classUnitsSelection.includes(subId)) {
+      setClassUnitsSelection(classUnitsSelection.filter((id) => id !== subId));
+    } else {
+      setClassUnitsSelection([...classUnitsSelection, subId]);
+    }
+  };
+
+  const handleSelectAllUnitsForClass = () => {
+    setClassUnitsSelection(subjects.map((s) => s.id).filter(Boolean) as string[]);
+  };
+
+  const handleSelectCoreUnitsForClass = () => {
+    setClassUnitsSelection(subjects.filter((s) => s.isMandatory).map((s) => s.id).filter(Boolean) as string[]);
+  };
+
+  const handleClearUnitsForClass = () => {
+    setClassUnitsSelection([]);
+  };
+
+  const handleSaveClassUnits = async () => {
+    if (!organization || !currentSchool || !managingUnitsForClass) return;
+    setSavingClassUnits(true);
+    const toastId = toast.loading(`Saving designated units for ${managingUnitsForClass.name}...`);
+
+    try {
+      const batch = writeBatch(db);
+      const allClassNames = classes.map((c) => c.name);
+
+      for (const sub of subjects) {
+        if (!sub.id) continue;
+        const subDocRef = doc(db, 'organizations', organization.id, 'schools', currentSchool.id, 'subjects', sub.id);
+        const isSelected = classUnitsSelection.includes(sub.id);
+        const currentApplicable = sub.applicableClasses || [];
+
+        if (currentApplicable.length === 0 || currentApplicable.includes('all')) {
+          if (!isSelected) {
+            // Unit was for all classes, but now unselected for this class
+            const otherClasses = allClassNames.filter((n) => n !== managingUnitsForClass.name);
+            batch.update(subDocRef, {
+              applicableClasses: otherClasses,
+              updatedAt: serverTimestamp(),
+            });
+          }
+        } else {
+          const hasCurrent = currentApplicable.includes(managingUnitsForClass.name);
+          if (isSelected && !hasCurrent) {
+            batch.update(subDocRef, {
+              applicableClasses: [...currentApplicable, managingUnitsForClass.name],
+              updatedAt: serverTimestamp(),
+            });
+          } else if (!isSelected && hasCurrent) {
+            batch.update(subDocRef, {
+              applicableClasses: currentApplicable.filter((n) => n !== managingUnitsForClass.name),
+              updatedAt: serverTimestamp(),
+            });
+          }
+        }
+      }
+
+      await batch.commit();
+      toast.success(`Assigned ${classUnitsSelection.length} units to ${managingUnitsForClass.name}!`, { id: toastId });
+      setManagingUnitsForClass(null);
+    } catch (err) {
+      console.error('Error saving class units:', err);
+      toast.error('Failed to update class units', { id: toastId });
+    } finally {
+      setSavingClassUnits(false);
+    }
+  };
+
+  const handleAddUnitForClassSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!organization || !currentSchool || !managingUnitsForClass) return;
+    if (!unitName.trim() || !unitCode.trim()) {
+      toast.error('Unit name and code are required');
+      return;
+    }
+
+    const toastId = toast.loading(`Adding ${unitName} to ${managingUnitsForClass.name}...`);
+    try {
+      const unitId = unitCode.toLowerCase().replace(/[^a-z0-9]/g, '-');
+      const docRef = doc(db, 'organizations', organization.id, 'schools', currentSchool.id, 'subjects', unitId);
+      await setDoc(docRef, {
+        name: unitName.trim(),
+        code: unitCode.trim().toUpperCase(),
+        isMandatory: unitIsMandatory,
+        type: unitIsMandatory ? 'core' : 'elective',
+        department: unitDepartment,
+        weeklyPeriods: parseInt(unitWeeklyPeriods) || 4,
+        teacherName: unitTeacher.trim() || 'Assigned Instructor',
+        applicableClasses: [managingUnitsForClass.name],
+        createdAt: serverTimestamp(),
+      });
+
+      setClassUnitsSelection((prev) => [...prev, unitId]);
+      toast.success(`Unit ${unitCode.toUpperCase()} created and assigned to ${managingUnitsForClass.name}!`, { id: toastId });
+      setIsAddUnitForClassOpen(false);
+      setUnitName('');
+      setUnitCode('');
+      setUnitTeacher('');
+    } catch (err) {
+      console.error('Error adding unit for class:', err);
+      toast.error('Failed to add unit for class', { id: toastId });
+    }
+  };
+
+  // Edit Unit
+  const handleOpenEditUnit = (sub: Subject) => {
+    setEditingUnit(sub);
+    setEditUnitName(sub.name);
+    setEditUnitCode(sub.code);
+    setEditUnitDepartment(sub.department || 'Sciences & Tech');
+    setEditUnitIsMandatory(sub.isMandatory !== false);
+    setEditUnitWeeklyPeriods(String(sub.weeklyPeriods || 4));
+    setEditUnitTeacher(sub.teacherName || '');
+    setEditUnitClasses(sub.applicableClasses && sub.applicableClasses.length > 0 ? sub.applicableClasses : ['all']);
+  };
+
+  const handleSaveEditUnit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!organization || !currentSchool || !editingUnit || !editingUnit.id) return;
+    if (!editUnitName.trim() || !editUnitCode.trim()) {
+      toast.error('Unit name and code are required');
+      return;
+    }
+
+    setSavingEditUnit(true);
+    const toastId = toast.loading(`Updating ${editUnitName}...`);
+    try {
+      const docRef = doc(db, 'organizations', organization.id, 'schools', currentSchool.id, 'subjects', editingUnit.id);
+      await updateDoc(docRef, {
+        name: editUnitName.trim(),
+        code: editUnitCode.trim().toUpperCase(),
+        department: editUnitDepartment,
+        weeklyPeriods: parseInt(editUnitWeeklyPeriods) || 4,
+        isMandatory: editUnitIsMandatory,
+        type: editUnitIsMandatory ? 'core' : 'elective',
+        teacherName: editUnitTeacher.trim() || 'Assigned Instructor',
+        applicableClasses: editUnitClasses.length === 0 ? ['all'] : editUnitClasses,
+        updatedAt: serverTimestamp(),
+      });
+
+      toast.success(`Unit ${editUnitName} updated successfully!`, { id: toastId });
+      setEditingUnit(null);
+    } catch (err) {
+      console.error('Error updating unit:', err);
+      toast.error('Failed to update curriculum unit', { id: toastId });
+    } finally {
+      setSavingEditUnit(false);
     }
   };
 
@@ -558,6 +749,13 @@ export const Classes: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {classes.map((cls) => {
                 const percentFull = Math.round((cls.enrolled / cls.capacity) * 100);
+                const classUnits = subjects.filter(
+                  (u) =>
+                    !u.applicableClasses ||
+                    u.applicableClasses.length === 0 ||
+                    u.applicableClasses.includes('all') ||
+                    u.applicableClasses.includes(cls.name)
+                );
                 return (
                   <Card key={cls.id} className="p-5 flex flex-col justify-between hover:shadow-md transition-shadow">
                     <div className="space-y-3">
@@ -581,6 +779,39 @@ export const Classes: React.FC = () => {
                         ))}
                       </div>
 
+                      {/* Assigned Curriculum Units */}
+                      <div className="pt-2 border-t border-slate-100 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-2xs font-bold text-slate-700 flex items-center gap-1">
+                            <BookOpen className="w-3.5 h-3.5 text-[#1d5f99]" />
+                            Curriculum Units:
+                          </span>
+                          <span className="text-2xs font-extrabold px-2 py-0.5 rounded-full bg-blue-50 text-[#1d5f99] border border-blue-200">
+                            {classUnits.length} Assigned
+                          </span>
+                        </div>
+
+                        <div className="flex flex-wrap gap-1">
+                          {classUnits.slice(0, 3).map((u) => (
+                            <span
+                              key={u.id || u.code}
+                              className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 truncate max-w-[120px]"
+                              title={u.name}
+                            >
+                              {u.name}
+                            </span>
+                          ))}
+                          {classUnits.length > 3 && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-200 text-slate-600">
+                              +{classUnits.length - 3} more
+                            </span>
+                          )}
+                          {classUnits.length === 0 && (
+                            <span className="text-[10px] text-amber-600 italic">No units assigned yet</span>
+                          )}
+                        </div>
+                      </div>
+
                       {/* Enrollment status bar */}
                       <div className="space-y-1.5 pt-2">
                         <div className="flex justify-between text-2xs">
@@ -600,11 +831,22 @@ export const Classes: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="pt-4 border-t border-slate-100 mt-4 flex items-center justify-between text-2xs text-slate-500">
-                      <span className="flex items-center gap-1">
-                        <Users className="w-3.5 h-3.5 text-slate-400" />
-                        Class Teacher: <strong className="text-slate-700">{cls.classTeacher}</strong>
+                    <div className="pt-4 border-t border-slate-100 mt-4 flex items-center justify-between text-2xs text-slate-500 gap-2">
+                      <span className="flex items-center gap-1 truncate max-w-[120px]">
+                        <Users className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <span className="truncate">{cls.classTeacher}</span>
                       </span>
+
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleOpenManageClassUnits(cls)}
+                        leftIcon={<FolderTree className="w-3.5 h-3.5 text-[#1d5f99]" />}
+                        className="text-2xs py-1 h-7 font-bold"
+                      >
+                        Manage Class Units
+                      </Button>
                     </div>
                   </Card>
                 );
@@ -771,20 +1013,39 @@ export const Classes: React.FC = () => {
                         </span>
                       </div>
                     </div>
+
+                    {/* Designated Classes */}
+                    <div className="flex items-center gap-1.5 text-2xs text-slate-600 bg-indigo-50/50 p-2 rounded-lg border border-indigo-100/60">
+                      <Layers className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                      <span className="truncate">
+                        {!sub.applicableClasses || sub.applicableClasses.length === 0 || sub.applicableClasses.includes('all')
+                          ? 'Designated for All Classes'
+                          : `Active for: ${sub.applicableClasses.join(', ')}`}
+                      </span>
+                    </div>
                   </div>
 
                   <div className="pt-3 border-t border-slate-100 mt-3 flex items-center justify-between text-2xs">
-                    <span className="text-slate-600">
+                    <span className="text-slate-600 truncate max-w-[120px]">
                       Teacher: <strong className="text-slate-800">{sub.teacherName || 'Departmental Staff'}</strong>
                     </span>
 
-                    <button
-                      onClick={() => handleDeleteUnit(sub)}
-                      className="p-1 rounded text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                      title="Delete unit"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleOpenEditUnit(sub)}
+                        className="p-1.5 rounded-md text-slate-400 hover:text-[#1d5f99] hover:bg-blue-50 transition-colors"
+                        title="Edit unit details"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteUnit(sub)}
+                        className="p-1.5 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                        title="Delete unit"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 </Card>
               ))}
@@ -957,6 +1218,61 @@ export const Classes: React.FC = () => {
             </p>
           </div>
 
+          {/* Target Classes Selection */}
+          <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-bold text-slate-800">
+                Designated Classes / Levels
+              </label>
+              <span className="text-[10px] text-slate-500 font-semibold">
+                {newUnitClasses.includes('all') ? 'All School Classes' : `${newUnitClasses.length} class(es) selected`}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => setNewUnitClasses(['all'])}
+                className={`text-[10.5px] px-2 py-0.5 rounded font-bold border ${
+                  newUnitClasses.includes('all')
+                    ? 'bg-[#1d5f99] text-white border-[#1d5f99]'
+                    : 'bg-white text-slate-700 border-slate-300'
+                }`}
+              >
+                All Classes
+              </button>
+              {classes.map((c) => {
+                const isSelected = newUnitClasses.includes('all') || newUnitClasses.includes(c.name);
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => {
+                      if (newUnitClasses.includes('all')) {
+                        setNewUnitClasses(classes.filter((item) => item.name !== c.name).map((item) => item.name));
+                      } else if (newUnitClasses.includes(c.name)) {
+                        setNewUnitClasses(newUnitClasses.filter((name) => name !== c.name));
+                      } else {
+                        const next = [...newUnitClasses, c.name];
+                        if (next.length === classes.length) {
+                          setNewUnitClasses(['all']);
+                        } else {
+                          setNewUnitClasses(next);
+                        }
+                      }
+                    }}
+                    className={`text-[10.5px] px-2 py-0.5 rounded font-bold border ${
+                      isSelected
+                        ? 'bg-blue-50 text-blue-800 border-blue-300'
+                        : 'bg-white text-slate-600 border-slate-200'
+                    }`}
+                  >
+                    {c.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <div className="flex justify-end gap-3 pt-3 border-t">
             <Button type="button" variant="ghost" onClick={() => setIsAddUnitModalOpen(false)}>
               Cancel
@@ -967,6 +1283,384 @@ export const Classes: React.FC = () => {
           </div>
         </form>
       </Modal>
+
+      {/* ============================================================ */}
+      {/* MODAL: MANAGE CLASS UNITS                                    */}
+      {/* ============================================================ */}
+      {managingUnitsForClass && (
+        <Modal
+          isOpen={managingUnitsForClass !== null}
+          onClose={() => setManagingUnitsForClass(null)}
+          title={`Manage Curriculum Units — ${managingUnitsForClass.name}`}
+          description={`Configure which learning areas are active for ${managingUnitsForClass.name}. Students in this class will only be evaluated on these units in marks entry and report cards.`}
+          maxWidth="2xl"
+        >
+          <div className="space-y-4">
+            {/* Quick Actions Bar */}
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-xs font-bold text-slate-800">
+                  Quick Actions ({classUnitsSelection.length} of {subjects.length} units active):
+                </span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setIsAddUnitForClassOpen(true)}
+                  leftIcon={<Plus className="w-3.5 h-3.5 text-[#1d5f99]" />}
+                  className="text-2xs py-1 h-7"
+                >
+                  Add Custom Unit For This Class
+                </Button>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleSelectAllUnitsForClass}
+                  className="text-2xs px-2.5 py-1 rounded-md font-bold bg-white text-slate-700 border border-slate-300 hover:bg-slate-100 transition"
+                >
+                  Select All Units ({subjects.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSelectCoreUnitsForClass}
+                  className="text-2xs px-2.5 py-1 rounded-md font-bold bg-blue-50 text-[#1d5f99] border border-blue-200 hover:bg-blue-100 transition"
+                >
+                  Core / Mandatory Only ({subjects.filter((s) => s.isMandatory).length})
+                </button>
+                <button
+                  type="button"
+                  onClick={handleClearUnitsForClass}
+                  className="text-2xs px-2.5 py-1 rounded-md font-bold bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition"
+                >
+                  Deselect All
+                </button>
+              </div>
+            </div>
+
+            {/* Filter Search */}
+            <div className="relative">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search school curriculum units..."
+                value={classUnitSearch}
+                onChange={(e) => setClassUnitSearch(e.target.value)}
+                className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#1d5f99]/20"
+              />
+            </div>
+
+            {/* Units Checklist */}
+            <div className="max-h-72 overflow-y-auto divide-y divide-slate-100 border border-slate-200 rounded-xl">
+              {subjects
+                .filter((s) => {
+                  if (!classUnitSearch.trim()) return true;
+                  const term = classUnitSearch.toLowerCase();
+                  return (
+                    s.name.toLowerCase().includes(term) ||
+                    s.code.toLowerCase().includes(term) ||
+                    (s.department && s.department.toLowerCase().includes(term))
+                  );
+                })
+                .map((sub) => {
+                  const isChecked = sub.id ? classUnitsSelection.includes(sub.id) : false;
+                  return (
+                    <label
+                      key={sub.id || sub.code}
+                      className={`flex items-center justify-between p-3 cursor-pointer transition ${
+                        isChecked ? 'bg-blue-50/40 hover:bg-blue-50/70' : 'hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => sub.id && handleToggleUnitForClass(sub.id)}
+                          className="rounded text-[#1d5f99] focus:ring-[#1d5f99] w-4 h-4"
+                        />
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-slate-900 text-xs">{sub.name}</span>
+                            <span className="font-mono text-2xs text-slate-500 font-semibold">{sub.code}</span>
+                          </div>
+                          <span className="text-2xs text-slate-500 block">
+                            {sub.department || 'General'} • {sub.weeklyPeriods || 4} Periods/Wk
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {sub.isMandatory ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-50 text-blue-700 border border-blue-200">
+                            Core
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-50 text-amber-800 border border-amber-200">
+                            Elective
+                          </span>
+                        )}
+                      </div>
+                    </label>
+                  );
+                })}
+            </div>
+
+            <div className="flex justify-end gap-3 pt-3 border-t">
+              <Button type="button" variant="ghost" onClick={() => setManagingUnitsForClass(null)}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                onClick={handleSaveClassUnits}
+                isLoading={savingClassUnits}
+                leftIcon={<Check className="w-4 h-4" />}
+              >
+                Save Class Units ({classUnitsSelection.length} Active)
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* ============================================================ */}
+      {/* MODAL: ADD CUSTOM UNIT SPECIFICALLY FOR CLASS                */}
+      {/* ============================================================ */}
+      {isAddUnitForClassOpen && managingUnitsForClass && (
+        <Modal
+          isOpen={isAddUnitForClassOpen}
+          onClose={() => setIsAddUnitForClassOpen(false)}
+          title={`Add Unit Specifically for ${managingUnitsForClass.name}`}
+          description={`Create a specialized subject (e.g. French, Coding, Art) tailored specifically to ${managingUnitsForClass.name}.`}
+        >
+          <form onSubmit={handleAddUnitForClassSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Unit Name"
+                placeholder="e.g. Aviation Studies, German"
+                value={unitName}
+                onChange={(e) => setUnitName(e.target.value)}
+                required
+              />
+              <Input
+                label="Unit Code"
+                placeholder="e.g. AVI-301, GER-101"
+                value={unitCode}
+                onChange={(e) => setUnitCode(e.target.value.toUpperCase())}
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <Select
+                label="Department"
+                value={unitDepartment}
+                onChange={(e) => setUnitDepartment(e.target.value)}
+                options={[
+                  { label: 'Sciences & Technology', value: 'Sciences & Tech' },
+                  { label: 'Languages & Literature', value: 'Languages' },
+                  { label: 'Humanities & Social Studies', value: 'Humanities' },
+                  { label: 'Creative Arts & Physical Education', value: 'Creative Arts' },
+                  { label: 'Applied Sciences & Agriculture', value: 'Applied Sciences' },
+                  { label: 'Religious & Moral Education', value: 'Religious Studies' },
+                  { label: 'Commerce & Business', value: 'Business Studies' },
+                ]}
+              />
+              <Input
+                label="Weekly Periods"
+                type="number"
+                value={unitWeeklyPeriods}
+                onChange={(e) => setUnitWeeklyPeriods(e.target.value)}
+                min="1"
+                max="15"
+                required
+              />
+            </div>
+
+            <Input
+              label="Assigned Lead Teacher"
+              placeholder="e.g. Mr. Peter Kamau"
+              value={unitTeacher}
+              onChange={(e) => setUnitTeacher(e.target.value)}
+            />
+
+            <div className="flex justify-end gap-3 pt-3 border-t">
+              <Button type="button" variant="ghost" onClick={() => setIsAddUnitForClassOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="primary" leftIcon={<Plus className="w-4 h-4" />}>
+                Create &amp; Assign to {managingUnitsForClass.name}
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* ============================================================ */}
+      {/* MODAL: EDIT CURRICULUM UNIT                                  */}
+      {/* ============================================================ */}
+      {editingUnit && (
+        <Modal
+          isOpen={editingUnit !== null}
+          onClose={() => setEditingUnit(null)}
+          title={`Edit Curriculum Unit — ${editingUnit.name} (${editingUnit.code})`}
+          description="Update subject details, load periods, requirement mode, and designated grade levels."
+        >
+          <form onSubmit={handleSaveEditUnit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Unit Name"
+                value={editUnitName}
+                onChange={(e) => setEditUnitName(e.target.value)}
+                required
+              />
+              <Input
+                label="Unit Code"
+                value={editUnitCode}
+                onChange={(e) => setEditUnitCode(e.target.value.toUpperCase())}
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <Select
+                label="Department"
+                value={editUnitDepartment}
+                onChange={(e) => setEditUnitDepartment(e.target.value)}
+                options={[
+                  { label: 'Sciences & Technology', value: 'Sciences & Tech' },
+                  { label: 'Languages & Literature', value: 'Languages' },
+                  { label: 'Humanities & Social Studies', value: 'Humanities' },
+                  { label: 'Creative Arts & Physical Education', value: 'Creative Arts' },
+                  { label: 'Applied Sciences & Agriculture', value: 'Applied Sciences' },
+                  { label: 'Religious & Moral Education', value: 'Religious Studies' },
+                  { label: 'Commerce & Business', value: 'Business Studies' },
+                ]}
+              />
+              <Input
+                label="Weekly Periods"
+                type="number"
+                value={editUnitWeeklyPeriods}
+                onChange={(e) => setEditUnitWeeklyPeriods(e.target.value)}
+                min="1"
+                max="15"
+                required
+              />
+            </div>
+
+            <Input
+              label="Assigned Lead Teacher"
+              value={editUnitTeacher}
+              onChange={(e) => setEditUnitTeacher(e.target.value)}
+            />
+
+            {/* Mandatory vs Optional Toggle */}
+            <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
+              <label className="block text-xs font-bold text-slate-800">Curriculum Requirement Mode</label>
+              <div className="grid grid-cols-2 gap-3">
+                <label
+                  className={`flex items-center gap-2 p-2.5 rounded-lg border cursor-pointer transition-all ${
+                    editUnitIsMandatory
+                      ? 'border-blue-600 bg-blue-50/50 text-blue-900 font-bold'
+                      : 'border-slate-200 bg-white text-slate-600'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="edit_unit_requirement"
+                    checked={editUnitIsMandatory}
+                    onChange={() => setEditUnitIsMandatory(true)}
+                    className="text-blue-600"
+                  />
+                  <span className="text-xs">Mandatory (Core Unit)</span>
+                </label>
+
+                <label
+                  className={`flex items-center gap-2 p-2.5 rounded-lg border cursor-pointer transition-all ${
+                    !editUnitIsMandatory
+                      ? 'border-amber-600 bg-amber-50/50 text-amber-900 font-bold'
+                      : 'border-slate-200 bg-white text-slate-600'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="edit_unit_requirement"
+                    checked={!editUnitIsMandatory}
+                    onChange={() => setEditUnitIsMandatory(false)}
+                    className="text-amber-600"
+                  />
+                  <span className="text-xs">Optional (Elective)</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Applicable Classes */}
+            <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-bold text-slate-800">
+                  Designated Classes
+                </label>
+                <span className="text-[10px] text-slate-500 font-semibold">
+                  {editUnitClasses.includes('all') ? 'All School Classes' : `${editUnitClasses.length} class(es) selected`}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setEditUnitClasses(['all'])}
+                  className={`text-[10.5px] px-2 py-0.5 rounded font-bold border ${
+                    editUnitClasses.includes('all')
+                      ? 'bg-[#1d5f99] text-white border-[#1d5f99]'
+                      : 'bg-white text-slate-700 border-slate-300'
+                  }`}
+                >
+                  All Classes
+                </button>
+                {classes.map((c) => {
+                  const isSelected = editUnitClasses.includes('all') || editUnitClasses.includes(c.name);
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => {
+                        if (editUnitClasses.includes('all')) {
+                          setEditUnitClasses(classes.filter((item) => item.name !== c.name).map((item) => item.name));
+                        } else if (editUnitClasses.includes(c.name)) {
+                          setEditUnitClasses(editUnitClasses.filter((name) => name !== c.name));
+                        } else {
+                          const next = [...editUnitClasses, c.name];
+                          if (next.length === classes.length) {
+                            setEditUnitClasses(['all']);
+                          } else {
+                            setEditUnitClasses(next);
+                          }
+                        }
+                      }}
+                      className={`text-[10.5px] px-2 py-0.5 rounded font-bold border ${
+                        isSelected
+                          ? 'bg-blue-50 text-blue-800 border-blue-300'
+                          : 'bg-white text-slate-600 border-slate-200'
+                      }`}
+                    >
+                      {c.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-3 border-t">
+              <Button type="button" variant="ghost" onClick={() => setEditingUnit(null)}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="primary" isLoading={savingEditUnit} leftIcon={<Check className="w-4 h-4" />}>
+                Save Changes to Unit
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      )}
     </div>
   );
 };

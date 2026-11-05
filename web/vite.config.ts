@@ -17,9 +17,10 @@ export default defineConfig({
         theme_color: '#1d5f99',
         background_color: '#0B0F19',
         display: 'standalone',
-        orientation: 'any',
+        orientation: 'portrait-primary',
         start_url: './',
         scope: './',
+        categories: ['education', 'productivity'],
         icons: [
           {
             src: 'icons/icon-192.png',
@@ -36,6 +37,29 @@ export default defineConfig({
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable',
+          },
+        ],
+        shortcuts: [
+          {
+            name: 'Take Attendance',
+            short_name: 'Attendance',
+            description: '1-tap fast mark student attendance',
+            url: './attendance',
+            icons: [{ src: 'icons/icon-192.png', sizes: '192x192' }],
+          },
+          {
+            name: 'Learners Directory',
+            short_name: 'Students',
+            description: 'Browse student profiles and admissions',
+            url: './students',
+            icons: [{ src: 'icons/icon-192.png', sizes: '192x192' }],
+          },
+          {
+            name: 'Academic Marks',
+            short_name: 'Academics',
+            description: 'Record assessment marks and grades',
+            url: './academics',
+            icons: [{ src: 'icons/icon-192.png', sizes: '192x192' }],
           },
         ],
       },

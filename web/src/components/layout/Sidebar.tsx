@@ -28,6 +28,7 @@ import {
   Layers,
   ShieldCheck,
   User,
+  Smartphone,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -186,6 +187,29 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
           backgroundColor: 'rgba(0, 0, 0, 0.04)',
         }}
       >
+        {/* Install Mobile PWA App Button */}
+        <button
+          type="button"
+          onClick={() => {
+            window.dispatchEvent(new CustomEvent('edumo-trigger-pwa-install'));
+            if (onClose) onClose();
+          }}
+          className="w-full mb-2 flex items-center justify-between p-2 rounded-xl text-xs font-bold transition-all hover:opacity-90 active:scale-98"
+          style={{
+            backgroundColor: 'rgba(29, 95, 153, 0.1)',
+            color: 'var(--school-primary, #1d5f99)',
+            border: '1px solid rgba(29, 95, 153, 0.2)',
+          }}
+        >
+          <div className="flex items-center gap-2">
+            <Smartphone className="w-3.5 h-3.5" />
+            <span>Install Phone App</span>
+          </div>
+          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[#1d5f99] text-white font-extrabold uppercase">
+            PWA
+          </span>
+        </button>
+
         <div
           className="flex items-center justify-between p-2 rounded-xl shadow-2xs"
           style={{

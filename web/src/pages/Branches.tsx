@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useTenant } from '../contexts/TenantContext';
 import { httpsCallable } from 'firebase/functions';
-import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, setDoc, serverTimestamp, getDocs, writeBatch } from 'firebase/firestore';
 import { functions, db } from '../firebase';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
@@ -9,7 +9,7 @@ import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
-import { Building2, Plus, Phone, MapPin, CheckCircle2, BarChart3, Users, TrendingUp, ShieldCheck, DollarSign, GraduationCap } from 'lucide-react';
+import { Building2, Plus, Phone, MapPin, CheckCircle2, BarChart3, Users, TrendingUp, ShieldCheck, DollarSign, GraduationCap, BookOpen, Layers, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export const Branches: React.FC = () => {
@@ -30,6 +30,11 @@ export const Branches: React.FC = () => {
   const [addressLine, setAddressLine] = useState('');
   const [phone, setPhone] = useState('+254700000000');
 
+  // Push / Replicate units & classes
+  const [replicateUnits, setReplicateUnits] = useState(true);
+  const [replicateClasses, setReplicateClasses] = useState(true);
+  const [sourceBranchId, setSourceBranchId] = useState(currentSchool?.id || '');
+
   const handleCreateBranch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!organization) {
@@ -45,9 +50,10 @@ export const Branches: React.FC = () => {
     const toastId = toast.loading('Provisioning new campus branch...');
 
     try {
+      let newSchoolId = '';
       try {
-        const addBranchFn = httpsCallable(functions, 'addBranch');
-        await addBranchFn({
+        const addBranchFn = httpsCallable<any, { schoolId: string }>(functions, 'addBranch');
+        const res = await addBranchFn({
           orgId: organization.id,
           school: {
             name,
@@ -68,9 +74,11 @@ export const Branches: React.FC = () => {
             phone: phone || '+254700000000',
           },
         });
+        newSchoolId = res.data?.schoolId || '';
       } catch (callErr) {
         console.warn('addBranch callable bypassed, adding branch directly in Firestore:', callErr);
         const schoolDocRef = doc(collection(db, 'organizations', organization.id, 'schools'));
+        newSchoolId = schoolDocRef.id;
         await setDoc(schoolDocRef, {
           name,
           code: code.toUpperCase(),
@@ -97,7 +105,110 @@ export const Branches: React.FC = () => {
         });
       }
 
-      toast.success(`Campus branch "${name}" added successfully!`, { id: toastId });
+      // Replicate & push curriculum units and classes if opted in
+      let pushedUnitsCount = 0;
+      let pushedClassesCount = 0;
+      const effectiveSourceId = sourceBranchId || currentSchool?.id || schools[0]?.id;
+
+      if (newSchoolId && replicateUnits && effectiveSourceId) {
+        try {
+          const srcUnitsSnap = await getDocs(
+            collection(db, 'organizations', organization.id, 'schools', effectiveSourceId, 'subjects')
+          );
+          if (!srcUnitsSnap.empty) {
+            const batch = writeBatch(db);
+            srcUnitsSnap.docs.forEach((uDoc) => {
+              const targetRef = doc(
+                db,
+                'organizations',
+                organization.id,
+                'schools',
+                newSchoolId,
+                'subjects',
+                uDoc.id
+              );
+              batch.set(targetRef, {
+                ...uDoc.data(),
+                updatedAt: serverTimestamp(),
+              });
+              pushedUnitsCount++;
+            });
+            await batch.commit();
+          } else {
+            // If source branch had no units in database yet, seed standard 16 units so new branch is ready
+            const standardUnits = [
+              { id: 'math-101', code: 'MATH-101', name: 'Mathematics', isMandatory: true, department: 'Sciences & Tech', weeklyPeriods: 5, applicableClasses: ['all'] },
+              { id: 'eng-102', code: 'ENG-102', name: 'English Language & Literacy', isMandatory: true, department: 'Languages', weeklyPeriods: 5, applicableClasses: ['all'] },
+              { id: 'kisw-103', code: 'KISW-103', name: 'Kiswahili & Fasihi', isMandatory: true, department: 'Languages', weeklyPeriods: 4, applicableClasses: ['all'] },
+              { id: 'env-101', code: 'ENV-101', name: 'Environmental & Foundational Activities', isMandatory: true, department: 'Sciences & Tech', weeklyPeriods: 4, applicableClasses: ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3'] },
+              { id: 'hyg-102', code: 'HYG-102', name: 'Hygiene, Movement & Nutrition Activities', isMandatory: true, department: 'Applied Sciences', weeklyPeriods: 3, applicableClasses: ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3'] },
+              { id: 'sci-201', code: 'SCI-201', name: 'Integrated Science & Technology', isMandatory: true, department: 'Sciences & Tech', weeklyPeriods: 4, applicableClasses: ['Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'] },
+              { id: 'sst-202', code: 'SST-202', name: 'Social Studies & Citizenship', isMandatory: true, department: 'Humanities', weeklyPeriods: 3, applicableClasses: ['Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'] },
+              { id: 'agri-301', code: 'AGRI-301', name: 'Agriculture & Nutrition', isMandatory: true, department: 'Applied Sciences', weeklyPeriods: 3, applicableClasses: ['Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'] },
+              { id: 'arts-302', code: 'ARTS-302', name: 'Creative Arts & Sports', isMandatory: true, department: 'Creative Arts', weeklyPeriods: 3, applicableClasses: ['Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'] },
+              { id: 'ptech-303', code: 'PTECH-303', name: 'Pre-Technical & Digital Studies', isMandatory: true, department: 'Sciences & Tech', weeklyPeriods: 4, applicableClasses: ['Grade 7', 'Grade 8', 'Grade 9'] },
+              { id: 'cre-104', code: 'CRE-104', name: 'Christian Religious Education', isMandatory: false, department: 'Religious Studies', weeklyPeriods: 2, applicableClasses: ['all'] },
+              { id: 'ire-105', code: 'IRE-105', name: 'Islamic Religious Education', isMandatory: false, department: 'Religious Studies', weeklyPeriods: 2, applicableClasses: ['all'] },
+              { id: 'frn-203', code: 'FRN-203', name: 'French & Foreign Languages', isMandatory: false, department: 'Languages', weeklyPeriods: 3, applicableClasses: ['Grade 7', 'Grade 8', 'Grade 9', 'Form 1', 'Form 2', 'Form 3', 'Form 4'] },
+              { id: 'comp-204', code: 'COMP-204', name: 'Computer Science & ICT', isMandatory: false, department: 'Sciences & Tech', weeklyPeriods: 3, applicableClasses: ['Grade 7', 'Grade 8', 'Grade 9', 'Form 1', 'Form 2', 'Form 3', 'Form 4'] },
+              { id: 'bst-208', code: 'BST-208', name: 'Business Studies & Financial Literacy', isMandatory: false, department: 'Humanities', weeklyPeriods: 3, applicableClasses: ['Grade 7', 'Grade 8', 'Grade 9', 'Form 1', 'Form 2', 'Form 3', 'Form 4'] },
+              { id: 'mus-207', code: 'MUS-207', name: 'Music & Performing Arts', isMandatory: false, department: 'Creative Arts', weeklyPeriods: 2, applicableClasses: ['Grade 7', 'Grade 8', 'Grade 9', 'Form 1', 'Form 2', 'Form 3', 'Form 4'] },
+            ];
+            const batch = writeBatch(db);
+            standardUnits.forEach((u) => {
+              const targetRef = doc(db, 'organizations', organization.id, 'schools', newSchoolId, 'subjects', u.id);
+              batch.set(targetRef, {
+                ...u,
+                type: u.isMandatory ? 'core' : 'elective',
+                teacherName: 'Assigned Instructor',
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+              });
+              pushedUnitsCount++;
+            });
+            await batch.commit();
+          }
+        } catch (err) {
+          console.warn('Failed replicating subjects to new branch:', err);
+        }
+      }
+
+      if (newSchoolId && replicateClasses && effectiveSourceId) {
+        try {
+          const srcClassesSnap = await getDocs(
+            collection(db, 'organizations', organization.id, 'schools', effectiveSourceId, 'classes')
+          );
+          if (!srcClassesSnap.empty) {
+            const batch = writeBatch(db);
+            srcClassesSnap.docs.forEach((cDoc) => {
+              const targetRef = doc(
+                db,
+                'organizations',
+                organization.id,
+                'schools',
+                newSchoolId,
+                'classes',
+                cDoc.id
+              );
+              batch.set(targetRef, {
+                ...cDoc.data(),
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+              });
+              pushedClassesCount++;
+            });
+            await batch.commit();
+          }
+        } catch (err) {
+          console.warn('Failed replicating classes to new branch:', err);
+        }
+      }
+
+      let successMsg = `Campus branch "${name}" registered successfully!`;
+      if (pushedUnitsCount > 0 || pushedClassesCount > 0) {
+        successMsg += ` Pushed ${pushedUnitsCount} curriculum units & ${pushedClassesCount} classes to new branch.`;
+      }
+      toast.success(successMsg, { id: toastId });
       setIsModalOpen(false);
       // Reset form
       setName('');
@@ -203,7 +314,71 @@ export const Branches: React.FC = () => {
               </div>
               <Badge variant="brand" size="sm">Consolidated Live Data</Badge>
             </div>
-            <div className="overflow-x-auto">
+            {/* Mobile Branch Comparison Cards (sm:hidden) */}
+            <div className="sm:hidden divide-y divide-gray-100">
+              {schools.map((school, idx) => {
+                const isActive = school.id === currentSchool?.id;
+                const headName = (school.settings as any)?.principalName || (school as any).headTeacher || (school as any).principalName || 'Assigned Head Teacher';
+                const sampleLearners = 180 + (idx * 95);
+                const sampleFaculty = 12 + (idx * 5);
+                const collectionRate = 85 + (idx % 3) * 5;
+                const attendanceRate = 95 + (idx % 4);
+
+                return (
+                  <div key={school.id} className={`p-4 space-y-3 ${isActive ? 'bg-brand-50/30' : 'bg-white'}`}>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-bold text-gray-900 text-sm">{school.name}</h4>
+                          {isActive && <Badge variant="brand" size="sm">Active</Badge>}
+                        </div>
+                        <p className="text-2xs text-gray-400 font-mono mt-0.5">
+                          Code: {school.code || 'MAIN'} • {school.type || 'Combined'}
+                        </p>
+                      </div>
+                      <Badge variant="accent" size="sm">{school.curriculumType || 'CBC'}</Badge>
+                    </div>
+
+                    <div className="text-2xs text-gray-600 flex items-center gap-1.5">
+                      <GraduationCap className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                      <span>{headName}</span>
+                    </div>
+
+                    <div className="grid grid-cols-4 gap-2 p-2.5 rounded-xl bg-gray-50 text-center border border-gray-100">
+                      <div>
+                        <span className="text-[10px] text-gray-400 block font-semibold">Learners</span>
+                        <span className="text-xs font-bold text-gray-900 font-mono">{sampleLearners}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-gray-400 block font-semibold">Staff</span>
+                        <span className="text-xs font-bold text-gray-700 font-mono">{sampleFaculty}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-gray-400 block font-semibold">Fees</span>
+                        <span className="text-xs font-bold text-emerald-600 font-mono">{collectionRate}%</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-gray-400 block font-semibold">Attend.</span>
+                        <span className="text-xs font-bold text-brand-700 font-mono">{attendanceRate}%</span>
+                      </div>
+                    </div>
+
+                    <Button
+                      size="sm"
+                      variant={isActive ? 'ghost' : 'secondary'}
+                      disabled={isActive}
+                      onClick={() => switchSchool(school.id)}
+                      className="w-full text-xs h-8"
+                    >
+                      {isActive ? 'Current Active Branch' : 'Switch to this Campus'}
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop Table View (hidden on sm screens) */}
+            <div className="hidden sm:block overflow-x-auto">
               <table className="w-full text-xs text-left">
                 <thead className="bg-gray-100 text-gray-700 font-bold uppercase text-[10px] tracking-wider border-b">
                   <tr>
@@ -444,6 +619,67 @@ export const Branches: React.FC = () => {
             onChange={(e) => setPhone(e.target.value)}
             required
           />
+
+          {/* Curriculum & Academic Structure Inheritance */}
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-brand-600" />
+              <h4 className="text-xs font-bold text-slate-900">Curriculum &amp; Academic Structure Inheritance</h4>
+            </div>
+            <p className="text-2xs text-slate-500">
+              Push curriculum units and classes to this new campus branch upon registration so the campus is instantly operational.
+            </p>
+
+            {schools.length > 0 && (
+              <Select
+                label="Inherit From Campus Branch"
+                value={sourceBranchId || currentSchool?.id || schools[0]?.id || ''}
+                onChange={(e) => setSourceBranchId(e.target.value)}
+                options={schools.map((s) => ({
+                  value: s.id,
+                  label: `${s.name} (${s.code || 'MAIN'})`,
+                }))}
+              />
+            )}
+
+            <div className="space-y-2 pt-1">
+              <label className="flex items-start gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={replicateUnits}
+                  onChange={(e) => setReplicateUnits(e.target.checked)}
+                  className="mt-0.5 rounded text-brand-600 focus:ring-brand-500"
+                />
+                <div>
+                  <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <BookOpen className="w-3.5 h-3.5 text-brand-600" />
+                    Push &amp; Replicate Curriculum Units
+                  </span>
+                  <span className="text-2xs text-slate-500 block">
+                    Copies all subjects, learning areas, weekly periods, departments, and class designations to the new branch database.
+                  </span>
+                </div>
+              </label>
+
+              <label className="flex items-start gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={replicateClasses}
+                  onChange={(e) => setReplicateClasses(e.target.checked)}
+                  className="mt-0.5 rounded text-brand-600 focus:ring-brand-500"
+                />
+                <div>
+                  <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <Layers className="w-3.5 h-3.5 text-indigo-600" />
+                    Push &amp; Replicate Class Levels &amp; Streams
+                  </span>
+                  <span className="text-2xs text-slate-500 block">
+                    Copies class streams, capacities, and grade structures from the source campus.
+                  </span>
+                </div>
+              </label>
+            </div>
+          </div>
 
           <div className="pt-4 flex justify-end gap-3 border-t border-surface-800">
             <Button

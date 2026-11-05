@@ -396,3 +396,27 @@
 .strength-bar.fair { background-color: #eab308; }
 .strength-bar.good { background-color: #22c55e; }
 .strength-bar.strong { background-color: #15803d; }
+
+/* ============================================================
+   PWA & MOBILE PHONE SCREEN FIT UTILITIES
+   ============================================================ */
+@supports (padding: max(0px)) {
+  .pb-safe {
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 1rem);
+  }
+  .pt-safe {
+    padding-top: max(env(safe-area-inset-top, 0px), 0.5rem);
+  }
+}
+
+@media (max-width: 768px) {
+  html, body {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  
+  /* Smooth touch momentum scrolling on mobile */
+  .overflow-x-auto, .overflow-y-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+}

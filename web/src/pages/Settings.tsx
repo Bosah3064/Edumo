@@ -49,6 +49,7 @@ import {
   X,
   RefreshCw,
   Layers,
+  Pencil,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
@@ -683,6 +684,16 @@ export const Settings: React.FC = () => {
   const [editingUnitForClasses, setEditingUnitForClasses] = useState<Subject | null>(null);
   const [unitClassesSelection, setUnitClassesSelection] = useState<string[]>([]);
 
+  /* Edit Unit Details Modal State */
+  const [editingUnitDetails, setEditingUnitDetails] = useState<Subject | null>(null);
+  const [editUnitName, setEditUnitName] = useState('');
+  const [editUnitCode, setEditUnitCode] = useState('');
+  const [editUnitDept, setEditUnitDept] = useState('Sciences & Tech');
+  const [editUnitPeriods, setEditUnitPeriods] = useState('4');
+  const [editUnitIsMandatory, setEditUnitIsMandatory] = useState(true);
+  const [editUnitClasses, setEditUnitClasses] = useState<string[]>(['all']);
+  const [editUnitTeacher, setEditUnitTeacher] = useState('');
+
   /* Live Exam Card Preview Modal */
   const [previewExamCardModal, setPreviewExamCardModal] = useState<string | null>(null);
 
@@ -806,6 +817,49 @@ export const Settings: React.FC = () => {
     } catch (err) {
       console.error('Error saving unit classes:', err);
       toast.error('Failed to update class assignments', { id: toastId });
+    }
+  };
+
+  const handleOpenEditUnitModal = (unit: Subject) => {
+    setEditingUnitDetails(unit);
+    setEditUnitName(unit.name || '');
+    setEditUnitCode(unit.code || '');
+    setEditUnitDept(unit.department || 'Sciences & Tech');
+    setEditUnitPeriods(String(unit.weeklyPeriods || 4));
+    setEditUnitIsMandatory(unit.isMandatory !== false);
+    setEditUnitClasses(unit.applicableClasses && unit.applicableClasses.length > 0 ? unit.applicableClasses : ['all']);
+    setEditUnitTeacher(unit.teacherName || '');
+  };
+
+  const handleSaveEditUnitDetails = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!organization || !currentSchool || !editingUnitDetails || !editingUnitDetails.id) return;
+    if (!editUnitName.trim() || !editUnitCode.trim()) {
+      toast.error('Unit name and code are required');
+      return;
+    }
+
+    const toastId = toast.loading(`Updating curriculum unit "${editUnitName}"...`);
+    try {
+      await updateDoc(
+        doc(db, 'organizations', organization.id, 'schools', currentSchool.id, 'subjects', editingUnitDetails.id),
+        {
+          name: editUnitName.trim(),
+          code: editUnitCode.trim().toUpperCase(),
+          department: editUnitDept,
+          weeklyPeriods: Number(editUnitPeriods) || 4,
+          isMandatory: editUnitIsMandatory,
+          type: editUnitIsMandatory ? 'core' : 'elective',
+          applicableClasses: editUnitClasses.length === 0 ? ['all'] : editUnitClasses,
+          teacherName: editUnitTeacher.trim() || 'Assigned Instructor',
+          updatedAt: serverTimestamp(),
+        }
+      );
+      toast.success(`Curriculum unit "${editUnitName}" updated successfully!`, { id: toastId });
+      setEditingUnitDetails(null);
+    } catch (err) {
+      console.error('Error updating unit details:', err);
+      toast.error('Failed to update curriculum unit', { id: toastId });
     }
   };
 
@@ -2357,14 +2411,24 @@ export const Settings: React.FC = () => {
                               </button>
                             </td>
                             <td className="py-2.5 px-3 text-right">
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteUnit(unit)}
-                                className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
-                                title="Delete unit"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
+                              <div className="flex items-center justify-end gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenEditUnitModal(unit)}
+                                  className="p-1.5 rounded-lg text-slate-500 hover:text-brand-700 hover:bg-brand-50 transition"
+                                  title="Edit curriculum unit details"
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteUnit(unit)}
+                                  className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                                  title="Delete unit from this campus"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -3616,6 +3680,214 @@ export const Settings: React.FC = () => {
               </Button>
             </div>
           </div>
+        </Modal>
+      )}
+
+      {/* ============================================================ */}
+      {/*  EDIT CURRICULUM UNIT DETAILS MODAL                          */}
+      {/* ============================================================ */}
+      {editingUnitDetails && (
+        <Modal
+          isOpen={editingUnitDetails !== null}
+          onClose={() => setEditingUnitDetails(null)}
+          title={`Edit Curriculum Unit — ${editingUnitDetails.name} (${editingUnitDetails.code})`}
+          description={`Update details, department, periods, requirement mode, and designated grade levels for ${currentSchool?.name || 'this campus'}.`}
+        >
+          <form onSubmit={handleSaveEditUnitDetails} className="space-y-4 text-left">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
+                label="Unit / Learning Area Name *"
+                placeholder="e.g. Mathematics"
+                value={editUnitName}
+                onChange={(e) => setEditUnitName(e.target.value)}
+                required
+              />
+              <Input
+                label="Unit Code *"
+                placeholder="e.g. MATH-101"
+                value={editUnitCode}
+                onChange={(e) => setEditUnitCode(e.target.value.toUpperCase())}
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Select
+                label="Academic Department"
+                value={editUnitDept}
+                onChange={(e) => setEditUnitDept(e.target.value)}
+                options={[
+                  { value: 'Sciences & Tech', label: 'Sciences & Tech (STEM)' },
+                  { value: 'Languages', label: 'Languages & Literacy' },
+                  { value: 'Humanities', label: 'Humanities & Citizenship' },
+                  { value: 'Applied Sciences', label: 'Applied Sciences & Agriculture' },
+                  { value: 'Creative Arts', label: 'Creative Arts & Sports' },
+                  { value: 'Religious Studies', label: 'Religious Studies (CRE/IRE/HRE)' },
+                  { value: 'Business Studies', label: 'Business Studies & Economics' },
+                  { value: 'Specialized', label: 'Specialized / Technical' },
+                ]}
+              />
+
+              <Input
+                label="Weekly Periods / Lessons"
+                type="number"
+                min="1"
+                max="15"
+                value={editUnitPeriods}
+                onChange={(e) => setEditUnitPeriods(e.target.value)}
+                placeholder="4"
+              />
+            </div>
+
+            <Input
+              label="Assigned Lead Teacher / Instructor"
+              placeholder="e.g. Mr. Peter Kamau"
+              value={editUnitTeacher}
+              onChange={(e) => setEditUnitTeacher(e.target.value)}
+            />
+
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+              <label className="text-xs font-bold text-gray-800 block mb-2">
+                Learning Area Classification
+              </label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 text-xs font-medium text-gray-700 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="editUnitClassification"
+                    checked={editUnitIsMandatory}
+                    onChange={() => setEditUnitIsMandatory(true)}
+                    className="text-brand-600 focus:ring-brand-500"
+                  />
+                  <span><strong className="text-brand-900">Core / Mandatory:</strong> Assessed for all learners</span>
+                </label>
+                <label className="flex items-center gap-2 text-xs font-medium text-gray-700 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="editUnitClassification"
+                    checked={!editUnitIsMandatory}
+                    onChange={() => setEditUnitIsMandatory(false)}
+                    className="text-brand-600 focus:ring-brand-500"
+                  />
+                  <span><strong className="text-purple-900">Elective / Optional:</strong> Selected per student</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Target Classes Selection */}
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-gray-800 block">
+                  Designated Target Classes / Grade Levels
+                </label>
+                <span className="text-[10px] text-slate-500 font-semibold">
+                  {editUnitClasses.includes('all') ? 'Assigned to All School Classes' : `${editUnitClasses.length} class(es) selected`}
+                </span>
+              </div>
+
+              {/* Quick Preset Buttons */}
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setEditUnitClasses(['all'])}
+                  className={`text-[10.5px] px-2 py-0.5 rounded-md font-bold transition border ${
+                    editUnitClasses.includes('all')
+                      ? 'bg-brand-700 text-white border-brand-800'
+                      : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                  }`}
+                >
+                  All Classes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditUnitClasses(['PP1', 'PP2'])}
+                  className="text-[10.5px] px-2 py-0.5 rounded-md font-bold bg-white text-slate-700 border border-slate-300 hover:bg-slate-100"
+                >
+                  Pre-Primary (PP1 - PP2)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditUnitClasses(['Grade 1', 'Grade 2', 'Grade 3'])}
+                  className="text-[10.5px] px-2 py-0.5 rounded-md font-bold bg-white text-slate-700 border border-slate-300 hover:bg-slate-100"
+                >
+                  Lower Primary (Grades 1 - 3)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditUnitClasses(['Grade 4', 'Grade 5', 'Grade 6'])}
+                  className="text-[10.5px] px-2 py-0.5 rounded-md font-bold bg-white text-slate-700 border border-slate-300 hover:bg-slate-100"
+                >
+                  Upper Primary (Grades 4 - 6)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditUnitClasses(['Grade 7', 'Grade 8', 'Grade 9'])}
+                  className="text-[10.5px] px-2 py-0.5 rounded-md font-bold bg-white text-slate-700 border border-slate-300 hover:bg-slate-100"
+                >
+                  Junior Secondary (Grades 7 - 9)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditUnitClasses(['Form 1', 'Form 2', 'Form 3', 'Form 4'])}
+                  className="text-[10.5px] px-2 py-0.5 rounded-md font-bold bg-white text-slate-700 border border-slate-300 hover:bg-slate-100"
+                >
+                  Senior Secondary (Forms 1 - 4)
+                </button>
+              </div>
+
+              {/* Checkbox grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-2 border-t border-slate-200 max-h-48 overflow-y-auto">
+                {ALL_SCHOOL_CLASSES.map((cls) => {
+                  const isChecked = editUnitClasses.includes('all') || editUnitClasses.includes(cls);
+                  return (
+                    <label key={cls} className="flex items-center gap-1.5 text-xs text-slate-700 cursor-pointer p-1 rounded hover:bg-slate-100">
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={(e) => {
+                          if (editUnitClasses.includes('all')) {
+                            if (!e.target.checked) {
+                              setEditUnitClasses(ALL_SCHOOL_CLASSES.filter((c) => c !== cls));
+                            }
+                          } else {
+                            if (e.target.checked) {
+                              const next = [...editUnitClasses, cls];
+                              if (next.length === ALL_SCHOOL_CLASSES.length) {
+                                setEditUnitClasses(['all']);
+                              } else {
+                                setEditUnitClasses(next);
+                              }
+                            } else {
+                              setEditUnitClasses(editUnitClasses.filter((c) => c !== cls));
+                            }
+                          }
+                        }}
+                        className="rounded text-brand-600 focus:ring-brand-500"
+                      />
+                      <span className="font-medium text-2xs">{cls}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setEditingUnitDetails(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                leftIcon={<Check className="w-4 h-4" />}
+              >
+                Save Changes to Unit
+              </Button>
+            </div>
+          </form>
         </Modal>
       )}
 

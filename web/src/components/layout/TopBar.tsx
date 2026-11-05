@@ -54,7 +54,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar }) => {
       <div className="flex items-center gap-2 sm:gap-3">
         {/* Offline / Online indicator pill */}
         <div
-          className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${
+          className={`flex items-center gap-1.5 px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-xs font-bold border ${
             isOnline
               ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
               : 'bg-amber-50 text-amber-700 border-amber-300 animate-pulse'
@@ -68,7 +68,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar }) => {
           ) : (
             <>
               <WifiOff className="w-3.5 h-3.5" />
-              <span>Offline Mode</span>
+              <span className="text-[10px] sm:text-xs">Offline</span>
             </>
           )}
         </div>
@@ -76,7 +76,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar }) => {
         {/* Language switch */}
         <button
           onClick={toggleLanguage}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-gray-50 border border-gray-200 text-xs text-[#1f2937] font-bold transition-colors shadow-xs"
+          className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-gray-50 border border-gray-200 text-xs text-[#1f2937] font-bold transition-colors shadow-xs"
           title="Toggle English / Kiswahili"
         >
           <Globe className="w-3.5 h-3.5 text-[#1d5f99]" />
@@ -88,7 +88,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar }) => {
         {/* Theme toggle */}
         <button
           onClick={toggleTheme}
-          className="p-2 rounded-xl bg-white hover:bg-gray-50 border border-gray-200 text-gray-600 hover:text-[#1d5f99] transition-colors shadow-xs"
+          className="hidden sm:flex p-2 rounded-xl bg-white hover:bg-gray-50 border border-gray-200 text-gray-600 hover:text-[#1d5f99] transition-colors shadow-xs"
           title={`Switch theme mode`}
         >
           {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-500" /> : <Moon className="w-4 h-4 text-[#683669]" />}

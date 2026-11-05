@@ -440,88 +440,174 @@ export const Attendance: React.FC = () => {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="border-b border-surface-800 bg-white/60 text-gray-500 uppercase tracking-wider text-2xs font-semibold">
-                  <th className="py-3 px-4">#</th>
-                  <th className="py-3 px-4">Learner Name</th>
-                  <th className="py-3 px-4">Admission No.</th>
-                  <th className="py-3 px-4 text-center">Quick Tap Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-surface-800/60">
-                {roster.map((student, idx) => (
-                  <tr key={student.studentId} className="hover:bg-gray-100/30 transition-colors">
-                    <td className="py-3 px-4 text-gray-600 font-mono text-2xs">
-                      {idx + 1}
-                    </td>
-                    <td className="py-3 px-4">
-                      <p className="font-semibold text-gray-900">{student.name}</p>
-                    </td>
-                    <td className="py-3 px-4 font-mono text-gray-500">
-                      {student.admissionNo}
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center justify-center gap-1.5 sm:gap-2">
-                        <button
-                          type="button"
-                          onClick={() => updateStudentStatus(student.studentId, 'present')}
-                          className={`px-3 py-1.5 rounded-xl font-medium text-xs transition-all flex items-center gap-1 ${
-                            student.status === 'present'
-                              ? 'bg-accent-600 text-white shadow-md shadow-accent-600/25 ring-2 ring-accent-400'
-                              : 'bg-gray-100 text-gray-500 hover:text-gray-900'
-                          }`}
-                        >
-                          <Check className="w-3.5 h-3.5" />
-                          <span>Present</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => updateStudentStatus(student.studentId, 'absent')}
-                          className={`px-3 py-1.5 rounded-xl font-medium text-xs transition-all flex items-center gap-1 ${
-                            student.status === 'absent'
-                              ? 'bg-danger-600 text-white shadow-md shadow-danger-600/25 ring-2 ring-danger-400'
-                              : 'bg-gray-100 text-gray-500 hover:text-gray-900'
-                          }`}
-                        >
-                          <X className="w-3.5 h-3.5" />
-                          <span>Absent</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => updateStudentStatus(student.studentId, 'late')}
-                          className={`px-3 py-1.5 rounded-xl font-medium text-xs transition-all flex items-center gap-1 ${
-                            student.status === 'late'
-                              ? 'bg-warning-600 text-white shadow-md shadow-warning-600/25 ring-2 ring-warning-400'
-                              : 'bg-gray-100 text-gray-500 hover:text-gray-900'
-                          }`}
-                        >
-                          <Clock className="w-3.5 h-3.5" />
-                          <span>Late</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => updateStudentStatus(student.studentId, 'excused')}
-                          className={`px-3 py-1.5 rounded-xl font-medium text-xs transition-all flex items-center gap-1 ${
-                            student.status === 'excused'
-                              ? 'bg-brand-600 text-white shadow-md shadow-brand-600/25 ring-2 ring-brand-400'
-                              : 'bg-gray-100 text-gray-500 hover:text-gray-900'
-                          }`}
-                        >
-                          <Shield className="w-3.5 h-3.5" />
-                          <span>Excused</span>
-                        </button>
+          <>
+            {/* Mobile Touch-Optimized Cards (sm:hidden) */}
+            <div className="sm:hidden divide-y divide-gray-100">
+              {roster.map((student, idx) => (
+                <div key={student.studentId} className="p-3 bg-white hover:bg-gray-50/80 transition space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5 truncate">
+                      <span className="w-6 h-6 rounded-full bg-slate-100 text-slate-600 font-mono text-2xs font-bold flex items-center justify-center shrink-0">
+                        {idx + 1}
+                      </span>
+                      <div className="truncate">
+                        <p className="font-bold text-gray-900 text-xs truncate">{student.name}</p>
+                        <p className="font-mono text-2xs text-gray-400">{student.admissionNo}</p>
                       </div>
-                    </td>
+                    </div>
+                    <span
+                      className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full capitalize shrink-0 ${
+                        student.status === 'present'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : student.status === 'absent'
+                          ? 'bg-rose-100 text-rose-800'
+                          : student.status === 'late'
+                          ? 'bg-amber-100 text-amber-800'
+                          : 'bg-indigo-100 text-indigo-800'
+                      }`}
+                    >
+                      {student.status}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-1.5 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => updateStudentStatus(student.studentId, 'present')}
+                      className={`py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 active:scale-95 ${
+                        student.status === 'present'
+                          ? 'bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-300'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Present</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updateStudentStatus(student.studentId, 'absent')}
+                      className={`py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 active:scale-95 ${
+                        student.status === 'absent'
+                          ? 'bg-rose-600 text-white shadow-sm ring-2 ring-rose-300'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      <X className="w-3.5 h-3.5" />
+                      <span>Absent</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updateStudentStatus(student.studentId, 'late')}
+                      className={`py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 active:scale-95 ${
+                        student.status === 'late'
+                          ? 'bg-amber-600 text-white shadow-sm ring-2 ring-amber-300'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>Late</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updateStudentStatus(student.studentId, 'excused')}
+                      className={`py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 active:scale-95 ${
+                        student.status === 'excused'
+                          ? 'bg-brand-600 text-white shadow-sm ring-2 ring-brand-300'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      <Shield className="w-3.5 h-3.5" />
+                      <span>Excused</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table View (hidden on sm screens) */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-surface-800 bg-white/60 text-gray-500 uppercase tracking-wider text-2xs font-semibold">
+                    <th className="py-3 px-4">#</th>
+                    <th className="py-3 px-4">Learner Name</th>
+                    <th className="py-3 px-4">Admission No.</th>
+                    <th className="py-3 px-4 text-center">Quick Tap Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-surface-800/60">
+                  {roster.map((student, idx) => (
+                    <tr key={student.studentId} className="hover:bg-gray-100/30 transition-colors">
+                      <td className="py-3 px-4 text-gray-600 font-mono text-2xs">
+                        {idx + 1}
+                      </td>
+                      <td className="py-3 px-4">
+                        <p className="font-semibold text-gray-900">{student.name}</p>
+                      </td>
+                      <td className="py-3 px-4 font-mono text-gray-500">
+                        {student.admissionNo}
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center justify-center gap-1.5 sm:gap-2">
+                          <button
+                            type="button"
+                            onClick={() => updateStudentStatus(student.studentId, 'present')}
+                            className={`px-3 py-1.5 rounded-xl font-medium text-xs transition-all flex items-center gap-1 ${
+                              student.status === 'present'
+                                ? 'bg-accent-600 text-white shadow-md shadow-accent-600/25 ring-2 ring-accent-400'
+                                : 'bg-gray-100 text-gray-500 hover:text-gray-900'
+                            }`}
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                            <span>Present</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => updateStudentStatus(student.studentId, 'absent')}
+                            className={`px-3 py-1.5 rounded-xl font-medium text-xs transition-all flex items-center gap-1 ${
+                              student.status === 'absent'
+                                ? 'bg-danger-600 text-white shadow-md shadow-danger-600/25 ring-2 ring-danger-400'
+                                : 'bg-gray-100 text-gray-500 hover:text-gray-900'
+                            }`}
+                          >
+                            <X className="w-3.5 h-3.5" />
+                            <span>Absent</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => updateStudentStatus(student.studentId, 'late')}
+                            className={`px-3 py-1.5 rounded-xl font-medium text-xs transition-all flex items-center gap-1 ${
+                              student.status === 'late'
+                                ? 'bg-warning-600 text-white shadow-md shadow-warning-600/25 ring-2 ring-warning-400'
+                                : 'bg-gray-100 text-gray-500 hover:text-gray-900'
+                            }`}
+                          >
+                            <Clock className="w-3.5 h-3.5" />
+                            <span>Late</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => updateStudentStatus(student.studentId, 'excused')}
+                            className={`px-3 py-1.5 rounded-xl font-medium text-xs transition-all flex items-center gap-1 ${
+                              student.status === 'excused'
+                                ? 'bg-brand-600 text-white shadow-md shadow-brand-600/25 ring-2 ring-brand-400'
+                                : 'bg-gray-100 text-gray-500 hover:text-gray-900'
+                            }`}
+                          >
+                            <Shield className="w-3.5 h-3.5" />
+                            <span>Excused</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </Card>
     </div>

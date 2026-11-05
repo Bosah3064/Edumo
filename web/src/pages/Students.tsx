@@ -354,100 +354,159 @@ export const Students: React.FC = () => {
             }}
           />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="border-b border-gray-200 bg-gray-50 text-gray-500 uppercase tracking-wider text-2xs font-semibold">
-                  <th className="py-3.5 px-4">Learner</th>
-                  <th className="py-3.5 px-4">Admission No.</th>
-                  <th className="py-3.5 px-4">Class</th>
-                  <th className="py-3.5 px-4">Mode</th>
-                  <th className="py-3.5 px-4">Status</th>
-                  <th className="py-3.5 px-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filteredStudents.map((student) => (
-                  <tr
-                    key={student.id}
-                    className="hover:bg-gray-50 transition-colors cursor-pointer"
-                    onClick={() => setSelectedStudent(student)}
-                  >
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-brand-500/10 text-brand-600 font-semibold flex items-center justify-center shrink-0">
-                          {student.firstName.charAt(0)}
-                        </div>
-                        <div>
-                          <p className="font-semibold text-gray-900">
-                            {student.firstName} {student.lastName}
-                          </p>
-                          <p className="text-2xs text-gray-500 capitalize">
-                            {student.gender || 'Learner'}
-                          </p>
-                        </div>
+          <>
+            {/* Mobile Card List View (sm:hidden) */}
+            <div className="sm:hidden divide-y divide-gray-100">
+              {filteredStudents.map((student) => (
+                <div
+                  key={student.id}
+                  className="p-3.5 bg-white hover:bg-gray-50/80 transition flex items-center justify-between gap-3 cursor-pointer active:bg-gray-100/60"
+                  onClick={() => setSelectedStudent(student)}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-full bg-brand-500/10 text-brand-600 font-bold flex items-center justify-center shrink-0 text-sm">
+                      {student.firstName.charAt(0)}
+                    </div>
+                    <div className="min-w-0 truncate">
+                      <p className="font-bold text-gray-900 text-xs truncate">
+                        {student.firstName} {student.lastName}
+                      </p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="font-mono text-2xs text-gray-500 font-semibold">{student.admissionNumber}</span>
+                        <span className="text-gray-300">•</span>
+                        <span className="text-2xs text-slate-600 font-medium">{student.currentClassId || 'Grade 4'}</span>
+                        <span className="text-gray-300">•</span>
+                        <Badge variant="brand" size="sm" dot>
+                          {student.status || 'Active'}
+                        </Badge>
                       </div>
-                    </td>
-                    <td className="py-3.5 px-4 font-mono font-medium text-gray-600">
-                      {student.admissionNumber}
-                    </td>
-                    <td className="py-3.5 px-4 text-gray-700">
-                      {student.currentClassId || 'Grade 4'}
-                    </td>
-                    <td className="py-3.5 px-4 capitalize">
-                      <Badge
-                        variant={student.boardingStatus === 'boarding' ? 'accent' : 'neutral'}
-                        size="sm"
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setExamCardStudent(student);
+                      }}
+                      className="p-2 rounded-xl text-gray-400 hover:text-brand-600 hover:bg-brand-50 transition-colors"
+                      title="Print Examination Pass / ID"
+                    >
+                      <Printer className="w-4 h-4" />
+                    </button>
+                    {schools.length > 1 && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setTransferStudent(student);
+                        }}
+                        className="p-2 rounded-xl text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                        title="Transfer Branch"
                       >
-                        {student.boardingStatus || 'Day'}
-                      </Badge>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <Badge variant="brand" size="sm" dot>
-                        {student.status || 'Active'}
-                      </Badge>
-                    </td>
-                    <td className="py-3.5 px-4 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setExamCardStudent(student);
-                          }}
-                          className="p-1.5 rounded-lg text-gray-400 hover:text-brand-600 hover:bg-brand-50 transition-colors"
-                          title="Print Examination Card / ID"
+                        <ArrowRightLeft className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table View (hidden on sm screens) */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-gray-200 bg-gray-50 text-gray-500 uppercase tracking-wider text-2xs font-semibold">
+                    <th className="py-3.5 px-4">Learner</th>
+                    <th className="py-3.5 px-4">Admission No.</th>
+                    <th className="py-3.5 px-4">Class</th>
+                    <th className="py-3.5 px-4">Mode</th>
+                    <th className="py-3.5 px-4">Status</th>
+                    <th className="py-3.5 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filteredStudents.map((student) => (
+                    <tr
+                      key={student.id}
+                      className="hover:bg-gray-50 transition-colors cursor-pointer"
+                      onClick={() => setSelectedStudent(student)}
+                    >
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-brand-500/10 text-brand-600 font-semibold flex items-center justify-center shrink-0">
+                            {student.firstName.charAt(0)}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-gray-900">
+                              {student.firstName} {student.lastName}
+                            </p>
+                            <p className="text-2xs text-gray-500 capitalize">
+                              {student.gender || 'Learner'}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 font-mono font-medium text-gray-600">
+                        {student.admissionNumber}
+                      </td>
+                      <td className="py-3.5 px-4 text-gray-700">
+                        {student.currentClassId || 'Grade 4'}
+                      </td>
+                      <td className="py-3.5 px-4 capitalize">
+                        <Badge
+                          variant={student.boardingStatus === 'boarding' ? 'accent' : 'neutral'}
+                          size="sm"
                         >
-                          <Printer className="w-4 h-4" />
-                        </button>
-                        {schools.length > 1 && (
+                          {student.boardingStatus || 'Day'}
+                        </Badge>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <Badge variant="brand" size="sm" dot>
+                          {student.status || 'Active'}
+                        </Badge>
+                      </td>
+                      <td className="py-3.5 px-4 text-right">
+                        <div className="flex items-center justify-end gap-1">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              setTransferStudent(student);
+                              setExamCardStudent(student);
                             }}
-                            className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                            title="Inter-Branch Campus Transfer"
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-brand-600 hover:bg-brand-50 transition-colors"
+                            title="Print Examination Card / ID"
                           >
-                            <ArrowRightLeft className="w-4 h-4" />
+                            <Printer className="w-4 h-4" />
                           </button>
-                        )}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedStudent(student);
-                          }}
-                          className="p-1.5 rounded-lg text-gray-400 hover:text-brand-500 hover:bg-gray-100 transition-colors"
-                          title="View Learner Profile"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                          {schools.length > 1 && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setTransferStudent(student);
+                              }}
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                              title="Inter-Branch Campus Transfer"
+                            >
+                              <ArrowRightLeft className="w-4 h-4" />
+                            </button>
+                          )}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedStudent(student);
+                            }}
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-brand-500 hover:bg-gray-100 transition-colors"
+                            title="View Learner Profile"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </Card>
 
