@@ -8,18 +8,23 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'prompt',
+      registerType: 'autoUpdate',
       includeAssets: ['icons/favicon.svg', 'icons/apple-touch-icon.png', 'logo.png'],
       manifest: {
+        id: '/edumo-school-management',
         name: 'Edumo — School Management',
         short_name: 'Edumo',
         description: 'Smart school management for East African schools',
         theme_color: '#1d5f99',
         background_color: '#0B0F19',
         display: 'standalone',
+        display_override: ['window-controls-overlay', 'standalone', 'minimal-ui'],
         orientation: 'portrait-primary',
         start_url: './',
         scope: './',
+        lang: 'en',
+        dir: 'ltr',
+        prefer_related_applications: false,
         categories: ['education', 'productivity'],
         icons: [
           {

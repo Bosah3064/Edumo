@@ -1,86 +1,44 @@
 import React, { useState, useEffect } from 'react';
-import { Download, X, Smartphone, Share, PlusSquare, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Download, X, Smartphone, Share, PlusSquare, CheckCircle2 } from 'lucide-react';
 import { Button } from '../ui/Button';
-
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
-}
+import { usePWAInstall } from '../../hooks/usePWAInstall';
 
 export const PWAInstallBanner: React.FC = () => {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [isIOS, setIsIOS] = useState(false);
-  const [isStandalone, setIsStandalone] = useState(false);
+  const { isStandalone, isInstalled, canInstall, triggerInstall } = usePWAInstall();
   const [isDismissed, setIsDismissed] = useState(false);
   const [showIOSGuide, setShowIOSGuide] = useState(false);
   const [installedSuccessfully, setInstalledSuccessfully] = useState(false);
 
   useEffect(() => {
-    // 1. Check if already installed / standalone
-    const isStandaloneMode =
-      window.matchMedia('(display-mode: standalone)').matches ||
-      (window.navigator as any).standalone === true;
-
-    setIsStandalone(isStandaloneMode);
-    if (isStandaloneMode) return;
-
-    // 2. Check if user dismissed recently (within 3 days)
-    const dismissedTime = localStorage.getItem('edumo_pwa_dismissed_at');
-    if (dismissedTime) {
-      const daysSinceDismissed = (Date.now() - Number(dismissedTime)) / (1000 * 60 * 60 * 24);
-      if (daysSinceDismissed < 3) {
-        setIsDismissed(true);
+    // If user dismissed recently (within 3 days)
+    try {
+      const dismissedTime = localStorage.getItem('edumo_pwa_dismissed_at');
+      if (dismissedTime) {
+        const daysSinceDismissed = (Date.now() - Number(dismissedTime)) / (1000 * 60 * 60 * 24);
+        if (daysSinceDismissed < 3) {
+          setIsDismissed(true);
+        }
       }
-    }
+    } catch {}
 
-    // 3. Detect iOS
-    const ua = window.navigator.userAgent.toLowerCase();
-    const isIOSDevice = /iphone|ipad|ipod/.test(ua);
-    setIsIOS(isIOSDevice);
-
-    // 4. Capture beforeinstallprompt (Android / Chrome)
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
-    };
-
-    // 5. App installed listener
-    const handleAppInstalled = () => {
-      setInstalledSuccessfully(true);
-      setDeferredPrompt(null);
-      setTimeout(() => setIsDismissed(true), 4000);
-    };
-
-    // 6. Manual trigger listener from settings or menu
+    // Manual trigger listener from settings or menu
     const handleManualTrigger = () => {
       setIsDismissed(false);
-      if (deferredPrompt) {
-        deferredPrompt.prompt();
-      } else if (isIOSDevice) {
-        setShowIOSGuide(true);
-      }
+      handleInstallClick();
     };
 
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    window.addEventListener('appinstalled', handleAppInstalled);
     window.addEventListener('edumo-trigger-pwa-install', handleManualTrigger);
-
     return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-      window.removeEventListener('appinstalled', handleAppInstalled);
       window.removeEventListener('edumo-trigger-pwa-install', handleManualTrigger);
     };
-  }, [deferredPrompt]);
+  }, []);
 
   const handleInstallClick = async () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const choice = await deferredPrompt.userChoice;
-      if (choice.outcome === 'accepted') {
-        setInstalledSuccessfully(true);
-      }
-      setDeferredPrompt(null);
-    } else if (isIOS) {
+    const outcome = await triggerInstall();
+    if (outcome === 'accepted') {
+      setInstalledSuccessfully(true);
+      setTimeout(() => setInstalledSuccessfully(false), 4500);
+    } else if (outcome === 'ios') {
       setShowIOSGuide(true);
     }
   };
@@ -88,11 +46,21 @@ export const PWAInstallBanner: React.FC = () => {
   const handleDismiss = () => {
     setIsDismissed(true);
     setShowIOSGuide(false);
-    localStorage.setItem('edumo_pwa_dismissed_at', String(Date.now()));
+    try {
+      localStorage.setItem('edumo_pwa_dismissed_at', String(Date.now()));
+    } catch {}
   };
 
-  if (isStandalone) return null;
-  if (isDismissed && !showIOSGuide) return null;
+  // IF THE APP IS ALREADY IN THE PHONE OR IN STANDALONE MODE: NEVER SHOW THE BANNER!
+  if (isStandalone || isInstalled || !canInstall) {
+    if (!installedSuccessfully && !showIOSGuide) {
+      return null;
+    }
+  }
+
+  if (isDismissed && !showIOSGuide && !installedSuccessfully) {
+    return null;
+  }
 
   // If installed successfully, show momentary celebration badge
   if (installedSuccessfully) {
@@ -178,9 +146,15 @@ export const PWAInstallBanner: React.FC = () => {
             type="button"
             variant="primary"
             className="w-full"
-            onClick={() => setShowIOSGuide(false)}
+            onClick={() => {
+              setShowIOSGuide(false);
+              try {
+                localStorage.setItem('edumo_pwa_installed', 'true');
+              } catch {}
+              window.dispatchEvent(new CustomEvent('edumo-pwa-state-change'));
+            }}
           >
-            Got It!
+            I've Added It to My Home Screen
           </Button>
         </div>
       </div>
@@ -224,4 +198,3 @@ export const PWAInstallBanner: React.FC = () => {
     </div>
   );
 };
-

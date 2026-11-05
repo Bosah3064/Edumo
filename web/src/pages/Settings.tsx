@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useTenant } from '../contexts/TenantContext';
+import { usePWAInstall } from '../hooks/usePWAInstall';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -577,6 +578,7 @@ export const Settings: React.FC = () => {
   }
 
   /* ---- Section collapse state ---- */
+  const { isInstalled, isStandalone } = usePWAInstall();
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     registration: true,
     branding: true,
@@ -3157,22 +3159,62 @@ export const Settings: React.FC = () => {
           />
 
           {openSections.pwa && (
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-2xl bg-white/60 border border-surface-800 text-xs pt-2">
-              <div>
-                <p className="font-semibold text-gray-900">Local Offline Storage</p>
-                <p className="text-2xs text-gray-500 mt-0.5">
-                  Edumo uses IndexedDB and localStorage to buffer marks and daily attendance while offline.
-                </p>
+            <div className="space-y-3 pt-2">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-2xl bg-white/60 border border-surface-800 text-xs">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold text-gray-900">Phone App (PWA) Status</p>
+                    {isStandalone ? (
+                      <Badge variant="success">Standalone App Active</Badge>
+                    ) : isInstalled ? (
+                      <Badge variant="success">Installed on Device</Badge>
+                    ) : (
+                      <Badge variant="neutral">Web Browser Mode</Badge>
+                    )}
+                  </div>
+                  <p className="text-2xs text-gray-500 mt-1">
+                    {isStandalone || isInstalled
+                      ? 'The app is active on your device. Website install prompts and banners are automatically hidden.'
+                      : 'Install prompts are visible in the web browser until you install the app on your home screen.'}
+                  </p>
+                </div>
+                {isInstalled && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      try {
+                        localStorage.removeItem('edumo_pwa_installed');
+                        localStorage.removeItem('edumo_pwa_dismissed_at');
+                        window.dispatchEvent(new CustomEvent('edumo-pwa-state-change'));
+                        toast.success('Install state reset. Website prompts will now be visible for testing.');
+                        window.location.reload();
+                      } catch {}
+                    }}
+                  >
+                    Reset Install State
+                  </Button>
+                )}
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleClearOfflineCache}
-                leftIcon={<Trash2 className="w-3.5 h-3.5 text-danger-700" />}
-              >
-                Clear Local Cache
-              </Button>
+
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-2xl bg-white/60 border border-surface-800 text-xs">
+                <div>
+                  <p className="font-semibold text-gray-900">Local Offline Storage</p>
+                  <p className="text-2xs text-gray-500 mt-0.5">
+                    Edumo uses IndexedDB and localStorage to buffer marks and daily attendance while offline.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleClearOfflineCache}
+                  leftIcon={<Trash2 className="w-3.5 h-3.5 text-danger-700" />}
+                >
+                  Clear Local Cache
+                </Button>
+              </div>
             </div>
           )}
         </Card>

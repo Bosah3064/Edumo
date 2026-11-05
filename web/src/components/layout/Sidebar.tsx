@@ -4,6 +4,7 @@ import enTranslations from '../../i18n/en.json';
 import swTranslations from '../../i18n/sw.json';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
+import { usePWAInstall } from '../../hooks/usePWAInstall';
 import { EdumoLogo } from '../ui/EdumoLogo';
 import {
   LayoutDashboard,
@@ -39,6 +40,7 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   const { signOut, currentUser, isPlatformAdmin } = useAuth();
   const { currentRole, currentSchool, organization, hasPermission } = useTenant();
+  const { canInstall } = usePWAInstall();
   const navigate = useNavigate();
   const [sidebarLanguage, setSidebarLanguage] = useState<'en' | 'sw'>(() =>
     localStorage.getItem('edumo_sidebar_language') === 'sw' ? 'sw' : 'en'
@@ -224,23 +226,25 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
           backgroundColor: 'rgba(0, 0, 0, 0.04)',
         }}
       >
-        {/* INSTALL PHONE APP BUTTON AT THE BOTTOM */}
-        <button
-          type="button"
-          onClick={() => {
-            window.dispatchEvent(new CustomEvent('edumo-trigger-pwa-install'));
-            if (onClose) onClose();
-          }}
-          className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-extrabold transition-all bg-gradient-to-r from-[#1d5f99] to-[#683669] text-white shadow-sm hover:opacity-95 active:scale-98"
-        >
-          <div className="flex items-center gap-2">
-            <Smartphone className="w-4 h-4 text-white shrink-0" />
-            <span className="text-white font-bold tracking-tight">Install Phone App</span>
-          </div>
-          <span className="text-[10px] px-2 py-0.5 rounded-full bg-white text-[#1d5f99] font-black uppercase tracking-wider shadow-2xs">
-            PWA
-          </span>
-        </button>
+        {/* INSTALL PHONE APP BUTTON AT THE BOTTOM — HIDDEN ONCE INSTALLED OR RUNNING AS APP */}
+        {canInstall && (
+          <button
+            type="button"
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('edumo-trigger-pwa-install'));
+              if (onClose) onClose();
+            }}
+            className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-extrabold transition-all bg-gradient-to-r from-[#1d5f99] to-[#683669] text-white shadow-sm hover:opacity-95 active:scale-98"
+          >
+            <div className="flex items-center gap-2">
+              <Smartphone className="w-4 h-4 text-white shrink-0" />
+              <span className="text-white font-bold tracking-tight">Install Phone App</span>
+            </div>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-white text-[#1d5f99] font-black uppercase tracking-wider shadow-2xs">
+              PWA
+            </span>
+          </button>
+        )}
 
         <div
           className="flex items-center justify-between p-2.5 rounded-xl shadow-2xs"

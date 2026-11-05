@@ -398,8 +398,12 @@
 .strength-bar.strong { background-color: #15803d; }
 
 /* ============================================================
-   PWA & MOBILE PHONE SCREEN FIT UTILITIES
+   PWA & NATIVE MOBILE APP FEEL (ANDROID & IOS)
    ============================================================ */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
 @supports (padding: max(0px)) {
   .pb-safe {
     padding-bottom: max(env(safe-area-inset-bottom, 0px), 1rem);
@@ -418,5 +422,28 @@
   /* Smooth touch momentum scrolling on mobile */
   .overflow-x-auto, .overflow-y-auto {
     -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Standalone PWA app mode native behaviors */
+@media all and (display-mode: standalone), (display-mode: fullscreen) {
+  html, body {
+    overscroll-behavior-y: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  /* Allow text selection in readable content, tables and form fields */
+  input, textarea, [contenteditable="true"], td, th, p, span.selectable {
+    user-select: text;
+    -webkit-user-select: text;
+  }
+
+  /* Hide scrollbars in standalone app mode for ultra-clean native look */
+  ::-webkit-scrollbar {
+    display: none;
+  }
+  * {
+    scrollbar-width: none;
   }
 }
