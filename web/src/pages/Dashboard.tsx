@@ -222,48 +222,70 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in max-w-7xl mx-auto">
-      {/* Top Welcome Banner */}
-      <div className="relative rounded-3xl bg-gradient-to-r from-[#1d5f99] via-[#683669] to-[#a5243d] p-6 sm:p-8 overflow-hidden shadow-2xl">
-        <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-gradient-to-l from-white/5 to-transparent pointer-events-none" />
+      {/* Top Welcome Banner (Master Spec Hero Card - Responsive for any mobile/tablet/desktop screen) */}
+      <div className="relative rounded-2xl sm:rounded-3xl bg-gradient-to-r from-[#1d5f99] via-[#683669] to-[#a5243d] p-4 sm:p-6 md:p-8 overflow-hidden shadow-xl sm:shadow-2xl">
+        <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-gradient-to-l from-white/10 to-transparent pointer-events-none" />
 
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <Badge variant="brand" dot>
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6 min-w-0">
+          <div className="min-w-0 flex-1 space-y-2">
+            {/* Badges container: wraps cleanly on small screens, never overflows */}
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <Badge
+                variant="brand"
+                dot
+                size="sm"
+                className="bg-white/15 text-white border-white/20 backdrop-blur-xs font-semibold text-2xs sm:text-xs"
+              >
                 {curriculumLabels[currentSchool?.curriculumType || 'CBC'] || 'East Africa Standard'}
               </Badge>
               {organization?.type === 'group' && (
-                <Badge variant="accent">
+                <Badge
+                  variant="accent"
+                  size="sm"
+                  className="bg-white/15 text-white border-white/20 backdrop-blur-xs font-semibold text-2xs sm:text-xs"
+                >
                   {schools.length} Campus Branches
                 </Badge>
               )}
             </div>
-            <h1 className="text-2xl sm:text-3xl font-display font-bold text-white tracking-tight">
+
+            {/* Greeting: responsive sizing + break-words so long names fit seamlessly on phones */}
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-display font-bold text-white tracking-tight break-words leading-tight">
               Jambo, {currentUser?.displayName || 'Administrator'} 👋
             </h1>
-            <p className="text-sm text-white/80 mt-1">
-              Active Campus:{' '}
-              <span className="font-semibold text-white">
-                {currentSchool?.name || 'Main Campus'}
-              </span>{' '}
-              — Term 1 Academic Session
-            </p>
+
+            {/* Campus & Term Details: wrapped with min-w-0 */}
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs sm:text-sm text-white/90 min-w-0">
+              <span className="break-words">
+                Active Campus:{' '}
+                <strong className="font-semibold text-white">
+                  {currentSchool?.name || 'Main Campus'}
+                </strong>
+              </span>
+              <span className="text-white/40">•</span>
+              <span className="text-white/85 whitespace-nowrap">
+                Term 1 Academic Session
+              </span>
+            </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          {/* Action Buttons: 2-column balanced grid on phone screens, inline on desktop */}
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 sm:gap-3 w-full md:w-auto shrink-0 pt-1 md:pt-0">
             <Button
               variant="accent"
               size="sm"
+              className="w-full sm:w-auto justify-center text-xs sm:text-sm !py-2.5 sm:!py-2 shadow-sm font-bold active:scale-98 transition-transform"
               onClick={() => navigate('/attendance')}
-              leftIcon={<CalendarCheck2 className="w-4 h-4" />}
+              leftIcon={<CalendarCheck2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />}
             >
               Take Attendance
             </Button>
             <Button
               variant="primary"
               size="sm"
+              className="w-full sm:w-auto justify-center text-xs sm:text-sm !py-2.5 sm:!py-2 shadow-sm font-bold active:scale-98 transition-transform"
               onClick={() => navigate('/students')}
-              leftIcon={<UserPlus className="w-4 h-4" />}
+              leftIcon={<UserPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />}
             >
               Enroll Student
             </Button>
@@ -271,17 +293,17 @@ export const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* KPI Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-6">
-        <Card className="flex items-center justify-between !p-3.5 sm:!p-5">
-          <div className="truncate">
+      {/* KPI Stats Cards - Fully responsive without clipped text on narrow screens */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 md:gap-6">
+        <Card className="flex items-center justify-between !p-3 sm:!p-4 md:!p-5 min-w-0">
+          <div className="flex-1 min-w-0 pr-2">
             <p className="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider truncate">
               Learners
             </p>
-            <h3 className="text-xl sm:text-2xl font-display font-bold text-gray-900 mt-0.5">
+            <h3 className="text-xl sm:text-2xl font-display font-bold text-gray-900 mt-0.5 truncate">
               {loadingStats ? '...' : studentCount}
             </h3>
-            <p className="text-[10px] text-accent-600 mt-0.5 flex items-center gap-1 font-medium truncate">
+            <p className="text-[10px] sm:text-xs text-accent-600 mt-0.5 flex items-center gap-1 font-medium truncate">
               <TrendingUp className="w-3 h-3 shrink-0" />
               <span>Real-time</span>
             </p>
@@ -291,34 +313,40 @@ export const Dashboard: React.FC = () => {
           </div>
         </Card>
 
-        <Card className="flex items-center justify-between !p-3.5 sm:!p-5">
-          <div className="truncate">
+        <Card className="flex items-center justify-between !p-3 sm:!p-4 md:!p-5 min-w-0">
+          <div className="flex-1 min-w-0 pr-2">
             <p className="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider truncate">
               Attendance
             </p>
-            <h3 className="text-xl sm:text-2xl font-display font-bold text-accent-600 mt-0.5">
+            <h3 className="text-xl sm:text-2xl font-display font-bold text-accent-600 mt-0.5 truncate">
               {todayAttendance.rate}
             </h3>
-            <p className="text-[10px] text-gray-500 mt-0.5 font-medium truncate">
-              {todayAttendance.hasData
-                ? `${todayAttendance.present} In • ${todayAttendance.absent} Out`
-                : 'Not marked yet'}
-            </p>
+            <div className="text-[10px] sm:text-xs text-gray-600 mt-0.5 font-medium flex items-center gap-1 flex-wrap">
+              {todayAttendance.hasData ? (
+                <>
+                  <span className="text-emerald-700 font-bold whitespace-nowrap">{todayAttendance.present} In</span>
+                  <span className="text-gray-300">•</span>
+                  <span className="text-rose-700 font-bold whitespace-nowrap">{todayAttendance.absent} Out</span>
+                </>
+              ) : (
+                <span className="text-gray-500">Not marked yet</span>
+              )}
+            </div>
           </div>
           <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-accent-500/10 border border-accent-500/20 flex items-center justify-center text-accent-600 shrink-0">
             <CalendarCheck2 className="w-4 h-4 sm:w-6 sm:h-6" />
           </div>
         </Card>
 
-        <Card className="flex items-center justify-between !p-3.5 sm:!p-5">
-          <div className="truncate">
+        <Card className="flex items-center justify-between !p-3 sm:!p-4 md:!p-5 min-w-0">
+          <div className="flex-1 min-w-0 pr-2">
             <p className="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider truncate">
               Faculty / Staff
             </p>
-            <h3 className="text-xl sm:text-2xl font-display font-bold text-gray-900 mt-0.5">
+            <h3 className="text-xl sm:text-2xl font-display font-bold text-gray-900 mt-0.5 truncate">
               {loadingStats ? '...' : staffCount}
             </h3>
-            <p className="text-[10px] text-gray-500 mt-0.5 font-medium truncate">
+            <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 font-medium truncate">
               Active staff
             </p>
           </div>
@@ -327,15 +355,15 @@ export const Dashboard: React.FC = () => {
           </div>
         </Card>
 
-        <Card className="flex items-center justify-between !p-3.5 sm:!p-5">
-          <div className="truncate">
+        <Card className="flex items-center justify-between !p-3 sm:!p-4 md:!p-5 min-w-0">
+          <div className="flex-1 min-w-0 pr-2">
             <p className="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider truncate">
               Classes
             </p>
-            <h3 className="text-xl sm:text-2xl font-display font-bold text-gray-900 mt-0.5">
+            <h3 className="text-xl sm:text-2xl font-display font-bold text-gray-900 mt-0.5 truncate">
               {loadingStats ? '...' : classCount}
             </h3>
-            <p className="text-[10px] text-brand-600 mt-0.5 font-medium truncate">
+            <p className="text-[10px] sm:text-xs text-brand-600 mt-0.5 font-medium truncate">
               Active streams
             </p>
           </div>
@@ -469,13 +497,13 @@ export const Dashboard: React.FC = () => {
                       : 'bg-gray-50 border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center text-brand-500">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center text-brand-500 shrink-0">
                       <Building2 className="w-5 h-5" />
                     </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-sm font-semibold text-gray-900">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h4 className="text-sm font-semibold text-gray-900 truncate">
                           {branch.name}
                         </h4>
                         {isActive && (
@@ -484,13 +512,13 @@ export const Dashboard: React.FC = () => {
                           </Badge>
                         )}
                       </div>
-                      <p className="text-2xs text-gray-500 mt-0.5">
+                      <p className="text-2xs text-gray-500 mt-0.5 truncate">
                         Code: {branch.code || 'MAIN'} • Level: {branch.type || 'Combined'}
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-6 text-xs">
+                  <div className="flex flex-wrap items-center gap-3 sm:gap-6 text-xs pt-1 sm:pt-0">
                     <div>
                       <span className="text-2xs text-gray-500 block">Learners</span>
                       <span className="font-semibold text-gray-900">
