@@ -57,6 +57,22 @@ export default defineConfig({
             purpose: 'maskable',
           },
         ],
+        screenshots: [
+          {
+            src: 'edumo-classroom-hero.jpg',
+            sizes: '1280x720',
+            type: 'image/jpeg',
+            form_factor: 'wide',
+            label: 'Edumo School Management Workspace',
+          },
+          {
+            src: 'edumo-campus-bg.jpg',
+            sizes: '720x1280',
+            type: 'image/jpeg',
+            form_factor: 'narrow',
+            label: 'Edumo Mobile App',
+          },
+        ],
         shortcuts: [
           {
             name: 'Take Attendance',

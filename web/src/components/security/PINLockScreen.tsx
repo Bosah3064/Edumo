@@ -1,12 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePINLock } from '../../hooks/usePINLock';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
-import { Lock, Delete, Fingerprint, LogOut, ShieldCheck } from 'lucide-react';
+import { Lock, Delete, Fingerprint, LogOut, ShieldCheck, KeyRound, RotateCcw } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-export const PINLockScreen: React.FC = () => {
-  const { unlockWithPin } = usePINLock();
+interface PINLockScreenProps {
+  onUnlocked?: () => void;
+}
+
+export const PINLockScreen: React.FC<PINLockScreenProps> = ({ onUnlocked }) => {
+  const { unlockWithPin, removePin } = usePINLock();
   const { currentUser, signOut } = useAuth();
   const { currentSchool } = useTenant();
 
@@ -36,9 +40,11 @@ export const PINLockScreen: React.FC = () => {
       if (ok) {
         triggerHaptic(20);
         toast.success('App unlocked');
+        if (onUnlocked) onUnlocked();
       } else {
         triggerHaptic(40);
         setErrorShake(true);
+        toast.error('Incorrect PIN. (Default is 1234)');
         setTimeout(() => {
           setDigits('');
           setErrorShake(false);
@@ -54,13 +60,41 @@ export const PINLockScreen: React.FC = () => {
     setDigits(digits.slice(0, -1));
   };
 
+  // Keyboard navigation for desktop & Windows PWA users
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (isVerifying) return;
+      if (e.key >= '0' && e.key <= '9') {
+        e.preventDefault();
+        handleDigitPress(e.key);
+      } else if (e.key === 'Backspace') {
+        e.preventDefault();
+        handleBackspace();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [digits, isVerifying]);
+
+  const handleResetPin = () => {
+    if (
+      window.confirm(
+        'Reset PIN lock? This will unlock your workspace so you can set a new security PIN in Settings.'
+      )
+    ) {
+      removePin();
+      toast.success('PIN lock disabled. Workspace unlocked!');
+      if (onUnlocked) onUnlocked();
+    }
+  };
+
   const handleBiometricPrompt = async () => {
     triggerHaptic(15);
-    // If WebAuthn or Credential Management is available
     if (window.PublicKeyCredential) {
       toast('Biometric prompt triggered on device', { icon: '🔒' });
     } else {
-      toast('Please enter your 4-digit PIN', { icon: 'ℹ️' });
+      toast('Please enter your 4-digit PIN (default: 1234)', { icon: 'ℹ️' });
     }
   };
 
@@ -72,7 +106,7 @@ export const PINLockScreen: React.FC = () => {
           <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#1d5f99] to-[#683669] flex items-center justify-center text-white font-extrabold text-xs shadow-md">
             E
           </div>
-          <span className="text-xs font-bold tracking-tight text-slate-300">
+          <span className="text-xs font-bold tracking-tight text-slate-300 truncate max-w-[180px]">
             {currentSchool?.name || 'Edumo School Management'}
           </span>
         </div>
@@ -83,7 +117,7 @@ export const PINLockScreen: React.FC = () => {
       </div>
 
       {/* Center PIN Area */}
-      <div className="flex flex-col items-center max-w-sm w-full my-auto text-center space-y-6">
+      <div className="flex flex-col items-center max-w-sm w-full my-auto text-center space-y-5">
         <div className="w-16 h-16 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shadow-lg text-[#38bdf8]">
           <Lock className="w-8 h-8" />
         </div>
@@ -92,6 +126,9 @@ export const PINLockScreen: React.FC = () => {
           <h2 className="text-xl font-bold tracking-tight text-white">Enter Security PIN</h2>
           <p className="text-xs text-slate-400 mt-1 truncate max-w-xs mx-auto">
             Welcome back, {currentUser?.displayName || currentUser?.email || 'Educator'}
+          </p>
+          <p className="text-2xs text-[#38bdf8]/80 mt-0.5">
+            Tip: You can use your physical keyboard numpad or tap the screen
           </p>
         </div>
 
@@ -125,7 +162,7 @@ export const PINLockScreen: React.FC = () => {
               key={digit}
               type="button"
               onClick={() => handleDigitPress(digit)}
-              className="h-16 rounded-2xl bg-white/10 hover:bg-white/15 active:bg-white/25 text-2xl font-semibold transition-all duration-100 flex items-center justify-center shadow-xs active:scale-95 border border-white/10"
+              className="h-14 sm:h-16 rounded-2xl bg-white/10 hover:bg-white/15 active:bg-white/25 text-2xl font-semibold transition-all duration-100 flex items-center justify-center shadow-xs active:scale-95 border border-white/10 cursor-pointer"
             >
               {digit}
             </button>
@@ -135,7 +172,7 @@ export const PINLockScreen: React.FC = () => {
           <button
             type="button"
             onClick={handleBiometricPrompt}
-            className="h-16 rounded-2xl bg-transparent hover:bg-white/10 active:bg-white/20 text-slate-400 hover:text-white transition-all flex items-center justify-center active:scale-95"
+            className="h-14 sm:h-16 rounded-2xl bg-transparent hover:bg-white/10 active:bg-white/20 text-slate-400 hover:text-white transition-all flex items-center justify-center active:scale-95 cursor-pointer"
             title="Biometric unlock"
           >
             <Fingerprint className="w-6 h-6 text-[#38bdf8]" />
@@ -145,7 +182,7 @@ export const PINLockScreen: React.FC = () => {
           <button
             type="button"
             onClick={() => handleDigitPress('0')}
-            className="h-16 rounded-2xl bg-white/10 hover:bg-white/15 active:bg-white/25 text-2xl font-semibold transition-all duration-100 flex items-center justify-center shadow-xs active:scale-95 border border-white/10"
+            className="h-14 sm:h-16 rounded-2xl bg-white/10 hover:bg-white/15 active:bg-white/25 text-2xl font-semibold transition-all duration-100 flex items-center justify-center shadow-xs active:scale-95 border border-white/10 cursor-pointer"
           >
             0
           </button>
@@ -154,21 +191,30 @@ export const PINLockScreen: React.FC = () => {
           <button
             type="button"
             onClick={handleBackspace}
-            className="h-16 rounded-2xl bg-transparent hover:bg-white/10 active:bg-white/20 text-slate-400 hover:text-white transition-all flex items-center justify-center active:scale-95"
+            className="h-14 sm:h-16 rounded-2xl bg-transparent hover:bg-white/10 active:bg-white/20 text-slate-400 hover:text-white transition-all flex items-center justify-center active:scale-95 cursor-pointer"
             title="Delete"
           >
             <Delete className="w-6 h-6" />
           </button>
         </div>
 
-        {/* Switch Account / Logout */}
-        <div className="pt-2 text-center">
+        {/* Footer Actions: Reset PIN & Sign In with password */}
+        <div className="pt-2 flex flex-col items-center gap-2">
+          <button
+            type="button"
+            onClick={handleResetPin}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#38bdf8] hover:text-[#7dd3fc] transition-colors py-1 px-3 rounded-lg hover:bg-white/5 cursor-pointer"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>Forgot PIN? Reset &amp; Unlock</span>
+          </button>
+
           <button
             type="button"
             onClick={() => signOut()}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-white transition-colors py-1 px-3 rounded-lg hover:bg-white/5"
+            className="inline-flex items-center gap-1.5 text-2xs font-medium text-slate-400 hover:text-white transition-colors py-1 px-3 rounded-lg hover:bg-white/5 cursor-pointer"
           >
-            <LogOut className="w-3.5 h-3.5" />
+            <LogOut className="w-3 h-3" />
             <span>Sign in with password instead</span>
           </button>
         </div>

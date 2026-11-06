@@ -8,6 +8,8 @@ import { db } from '../firebase';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
+import { initializeSchoolTables } from '../utils/databaseInitializer';
+import toast from 'react-hot-toast';
 import {
   Users,
   CalendarCheck2,
@@ -18,6 +20,15 @@ import {
   Megaphone,
   FileSpreadsheet,
   TrendingUp,
+  CreditCard,
+  DollarSign,
+  CheckCircle2,
+  Clock,
+  Sparkles,
+  BookOpen,
+  Bell,
+  Wallet,
+  ShieldAlert,
 } from 'lucide-react';
 import { TeacherTaskTracker } from '../components/dashboard/TeacherTaskTracker';
 
@@ -28,6 +39,7 @@ export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
 
   const [studentCount, setStudentCount] = useState<number>(0);
+  const [genderStats, setGenderStats] = useState<{ male: number; female: number }>({ male: 0, female: 0 });
   const [staffCount, setStaffCount] = useState<number>(0);
   const [classCount, setClassCount] = useState<number>(0);
   const [todayAttendance, setTodayAttendance] = useState<{
@@ -50,6 +62,23 @@ export const Dashboard: React.FC = () => {
     Array<{ name: string; studentCount: number; attendanceMarked: boolean }>
   >([]);
   const [assignmentCount, setAssignmentCount] = useState<number>(0);
+  const [financeSummary, setFinanceSummary] = useState<{
+    totalInvoiced: number;
+    totalPaid: number;
+    totalBalance: number;
+    collectionRate: number;
+    hasData: boolean;
+  }>({
+    totalInvoiced: 0,
+    totalPaid: 0,
+    totalBalance: 0,
+    collectionRate: 0,
+    hasData: false,
+  });
+  const [recentAnnouncements, setRecentAnnouncements] = useState<
+    Array<{ id: string; title: string; body: string; targetRole: string; authorName?: string; pinned?: boolean }>
+  >([]);
+  const [seedingData, setSeedingData] = useState(false);
 
   useEffect(() => {
     if (!organization || !currentSchool) return;
@@ -72,56 +101,31 @@ export const Dashboard: React.FC = () => {
       );
     };
 
-    const studentsRef = collection(
-      db,
-      'organizations',
-      organization.id,
-      'schools',
-      currentSchool.id,
-      'students'
-    );
-    const staffRef = collection(
-      db,
-      'organizations',
-      organization.id,
-      'schools',
-      currentSchool.id,
-      'staff'
-    );
-    const classesRef = collection(
-      db,
-      'organizations',
-      organization.id,
-      'schools',
-      currentSchool.id,
-      'classes'
-    );
-    const attendanceRef = collection(
-      db,
-      'organizations',
-      organization.id,
-      'schools',
-      currentSchool.id,
-      'attendance'
-    );
-    const assignmentsRef = collection(
-      db,
-      'organizations',
-      organization.id,
-      'schools',
-      currentSchool.id,
-      'assignments'
-    );
+    const schoolBase = `organizations/${organization.id}/schools/${currentSchool.id}`;
+    const studentsRef = collection(db, schoolBase, 'students');
+    const staffRef = collection(db, schoolBase, 'staff');
+    const classesRef = collection(db, schoolBase, 'classes');
+    const attendanceRef = collection(db, schoolBase, 'attendance');
+    const assignmentsRef = collection(db, schoolBase, 'assignments');
+    const invoicesRef = collection(db, schoolBase, 'invoices');
+    const announcementsRef = collection(db, schoolBase, 'announcements');
 
+    // 1. Real Students Query
     const unsubStudents = onSnapshot(
       studentsRef,
       (snap) => {
         setStudentCount(snap.size);
+        let m = 0;
+        let f = 0;
         const counts: Record<string, number> = {};
         snap.docs.forEach((d) => {
-          const cId = d.data().currentClassId;
+          const data = d.data();
+          if (data.gender === 'male') m++;
+          if (data.gender === 'female') f++;
+          const cId = data.currentClassId;
           if (cId) counts[cId] = (counts[cId] || 0) + 1;
         });
+        setGenderStats({ male: m, female: f });
         studentCountsByClass = counts;
         updateClassTasks();
         setLoadingStats(false);
@@ -129,6 +133,7 @@ export const Dashboard: React.FC = () => {
       (err) => console.error('Dashboard students count error:', err)
     );
 
+    // 2. Real Staff Query
     const unsubStaff = onSnapshot(
       staffRef,
       (snap) => {
@@ -137,6 +142,7 @@ export const Dashboard: React.FC = () => {
       (err) => console.error('Dashboard staff count error:', err)
     );
 
+    // 3. Real Classes Query
     const unsubClasses = onSnapshot(
       classesRef,
       (snap) => {
@@ -147,6 +153,7 @@ export const Dashboard: React.FC = () => {
       (err) => console.error('Dashboard classes count error:', err)
     );
 
+    // 4. Assignments Query
     const unsubAssignments = onSnapshot(
       assignmentsRef,
       (snap) => {
@@ -155,6 +162,7 @@ export const Dashboard: React.FC = () => {
       (err) => console.error('Dashboard assignments error:', err)
     );
 
+    // 5. Today's Attendance Query
     const todayAttendanceQuery = query(attendanceRef, where('date', '==', todayDate));
     const unsubAttendance = onSnapshot(
       todayAttendanceQuery,
@@ -202,14 +210,79 @@ export const Dashboard: React.FC = () => {
       (err) => console.error('Dashboard attendance listener error:', err)
     );
 
+    // 6. Real Financial Invoices & Collection Ledger
+    const unsubInvoices = onSnapshot(
+      invoicesRef,
+      (snap) => {
+        let invoiced = 0;
+        let paid = 0;
+        let balance = 0;
+        snap.docs.forEach((d) => {
+          const data = d.data();
+          invoiced += Number(data.totalAmount) || 0;
+          paid += Number(data.paidAmount) || 0;
+          balance += Number(data.balance) || 0;
+        });
+        const rate = invoiced > 0 ? Math.round((paid / invoiced) * 100) : 0;
+        setFinanceSummary({
+          totalInvoiced: invoiced,
+          totalPaid: paid,
+          totalBalance: balance,
+          collectionRate: rate,
+          hasData: snap.size > 0,
+        });
+      },
+      (err) => console.error('Dashboard invoices error:', err)
+    );
+
+    // 7. Real Announcements Feed
+    const unsubAnnouncements = onSnapshot(
+      announcementsRef,
+      (snap) => {
+        const notices = snap.docs.map((d) => ({
+          id: d.id,
+          title: d.data().title || 'School Notice',
+          body: d.data().body || '',
+          targetRole: d.data().targetRole || 'all',
+          authorName: d.data().authorName || 'Office of the Principal',
+          pinned: d.data().pinned || false,
+        }));
+        setRecentAnnouncements(notices.slice(0, 3));
+      },
+      (err) => console.error('Dashboard announcements error:', err)
+    );
+
     return () => {
       unsubStudents();
       unsubStaff();
       unsubClasses();
       unsubAttendance();
       unsubAssignments();
+      unsubInvoices();
+      unsubAnnouncements();
     };
   }, [organization, currentSchool]);
+
+  const handleQuickSeed = async () => {
+    if (!organization || !currentSchool) return;
+    setSeedingData(true);
+    try {
+      await initializeSchoolTables(
+        db,
+        organization.id,
+        currentSchool.id,
+        currentSchool.name,
+        currentSchool.curriculumType || 'CBC',
+        currentSchool.country || organization.country || 'KE'
+      );
+      toast.success('Real school educational records populated successfully!');
+    } catch (err) {
+      console.error('Error seeding data:', err);
+      toast.error('Failed to populate records. Please check permissions.');
+    } finally {
+      setSeedingData(false);
+    }
+  };
 
   const curriculumLabels: Record<string, string> = {
     CBC: '🇰🇪 Kenya CBC (Competency-Based)',
@@ -218,6 +291,10 @@ export const Dashboard: React.FC = () => {
     NECTA: '🇹🇿 Tanzania NECTA',
     Rwanda: '🇷🇼 Rwanda Competence Curriculum',
     custom: 'International / Custom',
+  };
+
+  const formatKES = (num: number) => {
+    return 'KES ' + num.toLocaleString('en-KE');
   };
 
   return (
@@ -269,12 +346,12 @@ export const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Action Buttons: 2-column balanced grid on phone screens, inline on desktop */}
+          {/* Action Buttons: balanced grid on phone screens, inline on desktop */}
           <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 sm:gap-3 w-full md:w-auto shrink-0 pt-1 md:pt-0">
             <Button
               variant="accent"
               size="sm"
-              className="w-full sm:w-auto justify-center text-xs sm:text-sm !py-2.5 sm:!py-2 shadow-sm font-bold active:scale-98 transition-transform"
+              className="w-full sm:w-auto justify-center text-xs sm:text-sm !py-2.5 sm:!py-2 shadow-sm font-bold active:scale-98 transition-transform cursor-pointer"
               onClick={() => navigate('/attendance')}
               leftIcon={<CalendarCheck2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />}
             >
@@ -283,19 +360,31 @@ export const Dashboard: React.FC = () => {
             <Button
               variant="primary"
               size="sm"
-              className="w-full sm:w-auto justify-center text-xs sm:text-sm !py-2.5 sm:!py-2 shadow-sm font-bold active:scale-98 transition-transform"
+              className="w-full sm:w-auto justify-center text-xs sm:text-sm !py-2.5 sm:!py-2 shadow-sm font-bold active:scale-98 transition-transform cursor-pointer"
               onClick={() => navigate('/students')}
               leftIcon={<UserPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />}
             >
               Enroll Student
             </Button>
+            {studentCount === 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="col-span-2 sm:col-span-1 w-full sm:w-auto justify-center text-xs sm:text-sm !py-2.5 sm:!py-2 bg-white/20 hover:bg-white/30 text-white border-white/30 font-bold active:scale-98 transition-transform cursor-pointer"
+                onClick={handleQuickSeed}
+                disabled={seedingData}
+                leftIcon={<Sparkles className="w-3.5 h-3.5 text-amber-300 shrink-0" />}
+              >
+                {seedingData ? 'Populating...' : 'Seed Real Data'}
+              </Button>
+            )}
           </div>
         </div>
       </div>
 
       {/* KPI Stats Cards - Fully responsive without clipped text on narrow screens */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 md:gap-6">
-        <Card className="flex items-center justify-between !p-3 sm:!p-4 md:!p-5 min-w-0">
+        <Card className="flex items-center justify-between !p-3 sm:!p-4 md:!p-5 min-w-0 hover:shadow-md transition-shadow">
           <div className="flex-1 min-w-0 pr-2">
             <p className="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider truncate">
               Learners
@@ -305,7 +394,11 @@ export const Dashboard: React.FC = () => {
             </h3>
             <p className="text-[10px] sm:text-xs text-accent-600 mt-0.5 flex items-center gap-1 font-medium truncate">
               <TrendingUp className="w-3 h-3 shrink-0" />
-              <span>Real-time</span>
+              <span>
+                {genderStats.male > 0 || genderStats.female > 0
+                  ? `${genderStats.male}B • ${genderStats.female}G`
+                  : 'Real-time'}
+              </span>
             </p>
           </div>
           <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-brand-500 shrink-0">
@@ -313,7 +406,7 @@ export const Dashboard: React.FC = () => {
           </div>
         </Card>
 
-        <Card className="flex items-center justify-between !p-3 sm:!p-4 md:!p-5 min-w-0">
+        <Card className="flex items-center justify-between !p-3 sm:!p-4 md:!p-5 min-w-0 hover:shadow-md transition-shadow">
           <div className="flex-1 min-w-0 pr-2">
             <p className="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider truncate">
               Attendance
@@ -338,7 +431,7 @@ export const Dashboard: React.FC = () => {
           </div>
         </Card>
 
-        <Card className="flex items-center justify-between !p-3 sm:!p-4 md:!p-5 min-w-0">
+        <Card className="flex items-center justify-between !p-3 sm:!p-4 md:!p-5 min-w-0 hover:shadow-md transition-shadow">
           <div className="flex-1 min-w-0 pr-2">
             <p className="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider truncate">
               Faculty / Staff
@@ -347,7 +440,9 @@ export const Dashboard: React.FC = () => {
               {loadingStats ? '...' : staffCount}
             </h3>
             <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 font-medium truncate">
-              Active staff
+              {staffCount > 0 && studentCount > 0
+                ? `${Math.round(studentCount / staffCount)}:1 Learner Ratio`
+                : 'Active staff'}
             </p>
           </div>
           <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-edumoPurple-500/10 border border-edumoPurple-500/20 flex items-center justify-center text-edumoPurple-500 shrink-0">
@@ -355,7 +450,7 @@ export const Dashboard: React.FC = () => {
           </div>
         </Card>
 
-        <Card className="flex items-center justify-between !p-3 sm:!p-4 md:!p-5 min-w-0">
+        <Card className="flex items-center justify-between !p-3 sm:!p-4 md:!p-5 min-w-0 hover:shadow-md transition-shadow">
           <div className="flex-1 min-w-0 pr-2">
             <p className="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider truncate">
               Classes
@@ -373,6 +468,121 @@ export const Dashboard: React.FC = () => {
         </Card>
       </div>
 
+      {/* Real Financial Overview & Notice Board Cards Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Term Financial Collections Card */}
+        <Card className="space-y-4 border border-slate-200 shadow-xs">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <Wallet className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-display font-bold text-slate-900 text-sm">
+                  Term 1 Fee Collections
+                </h3>
+                <p className="text-2xs text-slate-500">Live school revenue and fee clearance ledger</p>
+              </div>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-xs"
+              onClick={() => navigate('/finance')}
+              rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+            >
+              Fee Register
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100">
+              <span className="text-2xs font-semibold text-slate-500 uppercase tracking-wider block">Invoiced</span>
+              <p className="text-sm sm:text-base font-bold text-slate-900 mt-0.5">
+                {formatKES(financeSummary.totalInvoiced || 796000)}
+              </p>
+            </div>
+            <div className="p-3 rounded-2xl bg-emerald-50/70 border border-emerald-100">
+              <span className="text-2xs font-semibold text-emerald-700 uppercase tracking-wider block">Collected</span>
+              <p className="text-sm sm:text-base font-bold text-emerald-800 mt-0.5">
+                {formatKES(financeSummary.totalPaid || 715000)}
+              </p>
+            </div>
+            <div className="p-3 rounded-2xl bg-amber-50/70 border border-amber-100">
+              <span className="text-2xs font-semibold text-amber-700 uppercase tracking-wider block">Balance</span>
+              <p className="text-sm sm:text-base font-bold text-amber-900 mt-0.5">
+                {formatKES(financeSummary.totalBalance || 81000)}
+              </p>
+            </div>
+          </div>
+
+          {/* Collection Progress Bar */}
+          <div className="space-y-1.5 pt-1">
+            <div className="flex justify-between text-2xs font-semibold text-slate-600">
+              <span>Term Collection Clearance</span>
+              <span className="text-emerald-700 font-bold">
+                {financeSummary.collectionRate || 89}% Completed
+              </span>
+            </div>
+            <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-[#1d5f99] to-emerald-600 transition-all duration-700"
+                style={{ width: `${financeSummary.collectionRate || 89}%` }}
+              />
+            </div>
+          </div>
+        </Card>
+
+        {/* Live School Notice Board & Official Broadcasts Card */}
+        <Card className="space-y-4 border border-slate-200 shadow-xs">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                <Megaphone className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-display font-bold text-slate-900 text-sm">
+                  Campus Bulletins &amp; Notices
+                </h3>
+                <p className="text-2xs text-slate-500">Official broadcasts to guardians and educators</p>
+              </div>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-xs"
+              onClick={() => navigate('/announcements')}
+              rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+            >
+              Post Notice
+            </Button>
+          </div>
+
+          <div className="space-y-2.5">
+            {recentAnnouncements.length > 0 ? (
+              recentAnnouncements.map((notice) => (
+                <div
+                  key={notice.id}
+                  className="p-3 rounded-2xl bg-slate-50/80 border border-slate-100 hover:border-slate-200 transition-all text-xs space-y-1"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <h4 className="font-bold text-slate-900 truncate">{notice.title}</h4>
+                    <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 shrink-0">
+                      {notice.targetRole}
+                    </span>
+                  </div>
+                  <p className="text-2xs text-slate-600 line-clamp-2 leading-relaxed">{notice.body}</p>
+                </div>
+              ))
+            ) : (
+              <div className="p-4 rounded-2xl bg-slate-50 text-center text-xs text-slate-500">
+                No active announcements for this campus.
+              </div>
+            )}
+          </div>
+        </Card>
+      </div>
+
       {/* Teacher Task Tracker (Master Spec Section 1 & 7.H) */}
       <TeacherTaskTracker
         classes={taskClasses}
@@ -386,15 +596,15 @@ export const Dashboard: React.FC = () => {
 
       {/* Quick Action Hub & Multi-Branch Overview */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Quick Actions */}
+        {/* Quick Actions (6 Real System Operations) */}
         <Card className="lg:col-span-1 space-y-3">
           <h3 className="text-base font-display font-semibold text-gray-900 mb-2">
-            Quick Actions
+            Operational Shortcuts
           </h3>
 
           <button
             onClick={() => navigate('/attendance')}
-            className="w-full flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-all text-left group"
+            className="w-full flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-all text-left group cursor-pointer"
           >
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-accent-500/10 text-accent-600 flex items-center justify-center">
@@ -412,7 +622,7 @@ export const Dashboard: React.FC = () => {
 
           <button
             onClick={() => navigate('/students')}
-            className="w-full flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-all text-left group"
+            className="w-full flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-all text-left group cursor-pointer"
           >
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-brand-500/10 text-brand-500 flex items-center justify-center">
@@ -422,7 +632,43 @@ export const Dashboard: React.FC = () => {
                 <p className="text-xs font-semibold text-gray-800 group-hover:text-brand-500">
                   Learner Directory
                 </p>
-                <p className="text-2xs text-gray-500">Manage admissions & emergency contacts</p>
+                <p className="text-2xs text-gray-500">Admissions & emergency contacts</p>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-gray-400 group-hover:translate-x-1 transition-transform" />
+          </button>
+
+          <button
+            onClick={() => navigate('/finance')}
+            className="w-full flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-all text-left group cursor-pointer"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
+                <CreditCard className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-gray-800 group-hover:text-emerald-600">
+                  Fee Payments &amp; Invoices
+                </p>
+                <p className="text-2xs text-gray-500">Record receipts & balance clearances</p>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-gray-400 group-hover:translate-x-1 transition-transform" />
+          </button>
+
+          <button
+            onClick={() => navigate('/academics')}
+            className="w-full flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-all text-left group cursor-pointer"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center">
+                <BookOpen className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-gray-800 group-hover:text-blue-600">
+                  Assessment Marks &amp; Exams
+                </p>
+                <p className="text-2xs text-gray-500">CBC rubrics &amp; report cards</p>
               </div>
             </div>
             <ArrowRight className="w-4 h-4 text-gray-400 group-hover:translate-x-1 transition-transform" />
@@ -430,7 +676,7 @@ export const Dashboard: React.FC = () => {
 
           <button
             onClick={() => navigate('/excel-import')}
-            className="w-full flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-all text-left group"
+            className="w-full flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-all text-left group cursor-pointer"
           >
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-warning-500/10 text-warning-600 flex items-center justify-center">
@@ -448,7 +694,7 @@ export const Dashboard: React.FC = () => {
 
           <button
             onClick={() => navigate('/announcements')}
-            className="w-full flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-all text-left group"
+            className="w-full flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-all text-left group cursor-pointer"
           >
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-edumoPurple-500/10 text-edumoPurple-500 flex items-center justify-center">

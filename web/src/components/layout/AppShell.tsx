@@ -15,7 +15,7 @@ export const AppShell: React.FC = () => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const { currentSchool } = useTenant();
   const { currentUser, loading } = useAuth();
-  const { isLocked } = usePINLock();
+  const { isLocked, unlock } = usePINLock();
   const location = useLocation();
 
   useEffect(() => {
@@ -53,7 +53,7 @@ export const AppShell: React.FC = () => {
   }
 
   if (isLocked) {
-    return <PINLockScreen />;
+    return <PINLockScreen onUnlocked={unlock} />;
   }
 
   return (

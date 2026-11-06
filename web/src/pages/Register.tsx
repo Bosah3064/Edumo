@@ -470,27 +470,27 @@ export const Register: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] text-[#1f2937] flex flex-col justify-center items-center p-4 sm:p-6 relative overflow-hidden font-sans">
+    <div className="min-h-screen bg-gradient-to-br from-[#0b1329] via-[#0f172a] to-[#1e1b4b] text-slate-100 flex flex-col justify-start items-center p-4 sm:p-6 md:py-10 relative overflow-y-auto font-sans">
       {/* Custom AI Generated Campus Backdrop with Smart Ambient Blur */}
       <div
-        className="absolute inset-0 opacity-25 bg-cover bg-center pointer-events-none mix-blend-overlay"
+        className="fixed inset-0 opacity-20 bg-cover bg-center pointer-events-none mix-blend-overlay"
         style={{
           backgroundImage: `url('./edumo-campus-bg.jpg')`,
         }}
       />
-      <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-[#1d5f99]/20 rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[300px] bg-[#683669]/20 rounded-full blur-[140px] pointer-events-none" />
+      <div className="fixed top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-[#1d5f99]/20 rounded-full blur-[140px] pointer-events-none" />
+      <div className="fixed bottom-1/4 right-1/4 w-[500px] h-[300px] bg-[#683669]/20 rounded-full blur-[140px] pointer-events-none" />
 
-      <div className="w-full max-w-2xl relative z-10 animate-fade-in my-8">
+      <div className="w-full max-w-3xl xl:max-w-4xl relative z-10 animate-fade-in my-4 sm:my-6">
         {/* Header */}
         <div className="text-center mb-6 flex flex-col items-center">
           <div className="mb-3">
             <EdumoLogo size="xl" showText={true} showSubtitle={true} showBadge={true} to="/" />
           </div>
-          <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+          <h2 className="text-2xl sm:text-3xl xl:text-4xl font-black text-white tracking-tight">
             {accountType === 'teacher' ? 'Educator Registration' : t('register.title', 'Register Your School')}
           </h2>
-          <p className="text-sm text-slate-300 mt-1 font-medium max-w-lg">
+          <p className="text-sm sm:text-base text-slate-300 mt-1.5 font-medium max-w-xl">
             {accountType === 'teacher'
               ? 'Join the verified educator network — no ghost schools created, single-campus binding'
               : t('register.subtitle', 'Set up your multi-tenant workspace with country-specific curriculum and branding')}
@@ -498,14 +498,14 @@ export const Register: React.FC = () => {
         </div>
 
         {/* Account Type Selector: Institution vs Verified Educator */}
-        <div className="grid grid-cols-2 gap-2 mb-5 p-1 bg-slate-200/80 rounded-2xl">
+        <div className="grid grid-cols-2 gap-2 mb-6 p-1.5 bg-slate-800/80 backdrop-blur-md rounded-2xl border border-white/10 shadow-lg">
           <button
             type="button"
             onClick={() => setAccountType('institution')}
-            className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all ${
+            className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
               accountType === 'institution'
-                ? 'bg-white text-[#1d5f99] shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-[#1d5f99] text-white shadow-md'
+                : 'text-slate-300 hover:text-white hover:bg-white/5'
             }`}
           >
             <Building2 className="w-4 h-4" />
@@ -514,10 +514,10 @@ export const Register: React.FC = () => {
           <button
             type="button"
             onClick={() => setAccountType('teacher')}
-            className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all ${
+            className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
               accountType === 'teacher'
-                ? 'bg-white text-[#1d5f99] shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-[#1d5f99] text-white shadow-md'
+                : 'text-slate-300 hover:text-white hover:bg-white/5'
             }`}
           >
             <GraduationCap className="w-4 h-4" />
@@ -652,15 +652,15 @@ export const Register: React.FC = () => {
         ) : (
           <>
             {/* Institutional Administrator Only Guidance Notice */}
-            <div className="mb-5 p-3.5 rounded-2xl bg-amber-50/90 border border-amber-200/90 flex items-start gap-3 text-xs text-amber-900 shadow-2xs">
-              <ShieldCheck className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+            <div className="mb-5 p-4 rounded-2xl bg-amber-950/50 border border-amber-500/40 flex items-start gap-3 text-xs text-amber-200 shadow-sm backdrop-blur-md">
+              <ShieldCheck className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
               <div className="space-y-0.5">
-                <span className="font-bold block text-amber-950">
+                <span className="font-bold block text-white text-sm">
                   Institutional Registration Only (School Administrators &amp; Principals)
                 </span>
-                <p className="text-[11px] text-amber-800 leading-relaxed">
-                  This onboarding workflow registers new educational institutions and campus branches. <strong>Teachers, staff members, students, and guardians</strong> do not register here — accounts are provisioned internally by school administration or class teachers.{' '}
-                  <Link to="/login" className="text-[#1d5f99] font-bold underline hover:text-blue-800">
+                <p className="text-xs text-amber-200/90 leading-relaxed font-normal">
+                  This onboarding workflow registers new educational institutions and campus branches. <strong>Teachers, staff members, students, and guardians</strong> do not register here — accounts are provisioned internally by school administration.{' '}
+                  <Link to="/login" className="text-sky-300 font-bold underline hover:text-white">
                     Sign in to your school account &rarr;
                   </Link>
                 </p>
@@ -668,27 +668,35 @@ export const Register: React.FC = () => {
             </div>
 
             {/* Stepper Indicator */}
-            <div className="grid grid-cols-4 gap-2 mb-6">
+            <div className="grid grid-cols-4 gap-2.5 mb-6">
               {[
                 { num: 1, label: 'Institution', icon: Building2 },
                 { num: 2, label: 'Campus', icon: School },
                 { num: 3, label: 'Branding', icon: Palette },
                 { num: 4, label: 'Admin', icon: UserCheck },
-              ].map((s) => (
-                <div
-                  key={s.num}
-                  className={`p-2 rounded-2xl border text-center transition-all ${
-                    step === s.num
-                      ? 'bg-white border-2 border-[#1d5f99] text-[#1d5f99] font-bold shadow-md'
-                      : step > s.num
-                      ? 'bg-white border border-emerald-500/40 text-emerald-600 font-semibold'
-                      : 'bg-white/60 border border-gray-200 text-gray-400'
-                  }`}
-                >
-                  <div className="text-[10px] uppercase tracking-wider font-bold">Step {s.num}</div>
-                  <div className="text-xs font-semibold truncate">{s.label}</div>
-                </div>
-              ))}
+              ].map((s) => {
+                const IconComponent = s.icon;
+                const isCurrent = step === s.num;
+                const isCompleted = step > s.num;
+                return (
+                  <div
+                    key={s.num}
+                    className={`p-3 rounded-2xl border text-center transition-all ${
+                      isCurrent
+                        ? 'bg-white border-2 border-[#1d5f99] text-[#1d5f99] font-bold shadow-lg ring-2 ring-[#1d5f99]/20'
+                        : isCompleted
+                        ? 'bg-emerald-500/10 border-2 border-emerald-400 text-emerald-300 font-bold'
+                        : 'bg-slate-800/80 border border-slate-700 text-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-center gap-1.5 mb-0.5">
+                      <IconComponent className={`w-3.5 h-3.5 ${isCurrent ? 'text-[#1d5f99]' : isCompleted ? 'text-emerald-400' : 'text-slate-400'}`} />
+                      <span className="text-[10px] uppercase tracking-wider font-bold">Step {s.num}</span>
+                    </div>
+                    <div className="text-xs sm:text-sm font-semibold truncate">{s.label}</div>
+                  </div>
+                );
+              })}
             </div>
 
             <Card className="bg-white border border-gray-200 shadow-xl rounded-2xl p-6 sm:p-8">

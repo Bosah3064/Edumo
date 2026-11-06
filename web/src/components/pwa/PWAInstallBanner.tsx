@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Download, X, Smartphone, Share, PlusSquare, CheckCircle2 } from 'lucide-react';
+import { Download, X, Smartphone, Monitor, Share, PlusSquare, CheckCircle2, Laptop } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { usePWAInstall } from '../../hooks/usePWAInstall';
 
 export const PWAInstallBanner: React.FC = () => {
-  const { isStandalone, isInstalled, canInstall, triggerInstall } = usePWAInstall();
+  const { isStandalone, isInstalled, canInstall, isWindows, isDesktop, triggerInstall } = usePWAInstall();
   const [isDismissed, setIsDismissed] = useState(false);
   const [showIOSGuide, setShowIOSGuide] = useState(false);
+  const [showDesktopGuide, setShowDesktopGuide] = useState(false);
   const [installedSuccessfully, setInstalledSuccessfully] = useState(false);
 
   useEffect(() => {
@@ -40,12 +41,15 @@ export const PWAInstallBanner: React.FC = () => {
       setTimeout(() => setInstalledSuccessfully(false), 4500);
     } else if (outcome === 'ios') {
       setShowIOSGuide(true);
+    } else if (outcome === 'desktop-guide' || outcome === 'unavailable') {
+      setShowDesktopGuide(true);
     }
   };
 
   const handleDismiss = () => {
     setIsDismissed(true);
     setShowIOSGuide(false);
+    setShowDesktopGuide(false);
     try {
       localStorage.setItem('edumo_pwa_dismissed_at', String(Date.now()));
     } catch {}
@@ -53,12 +57,12 @@ export const PWAInstallBanner: React.FC = () => {
 
   // IF THE APP IS ALREADY IN THE PHONE OR IN STANDALONE MODE: NEVER SHOW THE BANNER!
   if (isStandalone || isInstalled || !canInstall) {
-    if (!installedSuccessfully && !showIOSGuide) {
+    if (!installedSuccessfully && !showIOSGuide && !showDesktopGuide) {
       return null;
     }
   }
 
-  if (isDismissed && !showIOSGuide && !installedSuccessfully) {
+  if (isDismissed && !showIOSGuide && !showDesktopGuide && !installedSuccessfully) {
     return null;
   }
 
@@ -69,7 +73,94 @@ export const PWAInstallBanner: React.FC = () => {
         <CheckCircle2 className="w-5 h-5 shrink-0 text-white" />
         <div className="flex-1 text-xs">
           <p className="font-bold">Edumo App Installed!</p>
-          <p className="text-2xs opacity-90">Open from your phone’s home screen for full-screen offline access.</p>
+          <p className="text-2xs opacity-90">Open from your desktop or home screen for full-screen offline access.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Windows & Desktop 1-Click Guide Modal
+  if (showDesktopGuide) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+        <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl border border-slate-200 text-slate-800 space-y-4 animate-scale-in">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#1d5f99] to-[#683669] flex items-center justify-center text-white font-bold text-sm shadow-sm">
+                <Monitor className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h4 className="font-bold text-sm text-slate-900">
+                  {isWindows ? 'Install Edumo on Windows' : 'Install Edumo Desktop App'}
+                </h4>
+                <p className="text-2xs text-slate-500">Run as standalone PC application</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowDesktopGuide(false)}
+              className="p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="space-y-3 text-xs">
+            <div className="p-3 rounded-2xl bg-blue-50/70 border border-blue-100 flex items-start gap-3">
+              <div className="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-2xs shrink-0 mt-0.5">
+                1
+              </div>
+              <div>
+                <p className="font-bold text-blue-950">Look in your Browser Address Bar</p>
+                <p className="text-2xs text-blue-800 mt-0.5">
+                  In <strong>Microsoft Edge</strong> or <strong>Google Chrome</strong>, look for the{' '}
+                  <span className="font-mono bg-white px-1.5 py-0.5 rounded border border-blue-200 text-blue-700">
+                    App available. Install Edumo
+                  </span>{' '}
+                  icon on the right side of the address bar.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-2xl bg-purple-50/70 border border-purple-100 flex items-start gap-3">
+              <div className="w-6 h-6 rounded-lg bg-purple-600 text-white flex items-center justify-center font-bold text-2xs shrink-0 mt-0.5">
+                2
+              </div>
+              <div>
+                <p className="font-bold text-purple-950">Or use Browser Settings Menu (...)</p>
+                <p className="text-2xs text-purple-800 mt-0.5">
+                  Click the <strong>(...) menu</strong> in the top-right corner of your browser &rarr; click{' '}
+                  <strong>Apps</strong> &rarr; click <strong>"Install Edumo"</strong>.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-2xl bg-emerald-50/70 border border-emerald-100 flex items-start gap-3">
+              <div className="w-6 h-6 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-2xs shrink-0 mt-0.5">
+                3
+              </div>
+              <div>
+                <p className="font-bold text-emerald-950">Pin to Windows Taskbar</p>
+                <p className="text-2xs text-emerald-800 mt-0.5">
+                  Once installed, Edumo will launch in its own window without browser tabs, and can be pinned to your Windows Start Menu and Taskbar!
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <Button
+            type="button"
+            variant="primary"
+            className="w-full justify-center text-xs font-bold py-2.5"
+            onClick={() => {
+              setShowDesktopGuide(false);
+              try {
+                localStorage.setItem('edumo_pwa_installed', 'true');
+              } catch {}
+              window.dispatchEvent(new CustomEvent('edumo-pwa-state-change'));
+            }}
+          >
+            I Understand / Launch as App
+          </Button>
         </div>
       </div>
     );
@@ -166,15 +257,23 @@ export const PWAInstallBanner: React.FC = () => {
     <div className="fixed bottom-20 lg:bottom-6 left-3 right-3 sm:left-auto sm:right-6 sm:w-96 z-40 p-3 rounded-2xl bg-gradient-to-r from-[#1d5f99] to-[#683669] text-white shadow-2xl border border-white/20 backdrop-blur-md animate-fade-in flex items-center justify-between gap-3">
       <div className="flex items-center gap-2.5 truncate">
         <div className="w-9 h-9 rounded-xl bg-white/20 border border-white/30 flex items-center justify-center text-white shrink-0">
-          <Smartphone className="w-5 h-5" />
+          {isWindows || isDesktop ? (
+            <Monitor className="w-5 h-5" />
+          ) : (
+            <Smartphone className="w-5 h-5" />
+          )}
         </div>
         <div className="truncate text-left">
           <p className="text-xs font-bold leading-tight flex items-center gap-1.5">
-            <span>Install Edumo App</span>
-            <span className="text-[9px] uppercase px-1.5 py-0.2 rounded-full bg-white/20 font-extrabold tracking-wider">PWA</span>
+            <span>{isWindows ? 'Install for Windows' : isDesktop ? 'Install Desktop App' : 'Install Edumo App'}</span>
+            <span className="text-[9px] uppercase px-1.5 py-0.2 rounded-full bg-white/20 font-extrabold tracking-wider">
+              {isWindows ? 'WINDOWS' : 'PWA'}
+            </span>
           </p>
           <p className="text-2xs text-white/80 truncate mt-0.5">
-            Full-screen mobile app with fast offline sync
+            {isWindows || isDesktop
+              ? 'Fast standalone desktop application with offline database sync'
+              : 'Full-screen mobile app with fast offline sync'}
           </p>
         </div>
       </div>

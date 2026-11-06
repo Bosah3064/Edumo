@@ -51,14 +51,21 @@ export const usePWAInstall = () => {
 
   const [hasPrompt, setHasPrompt] = useState<boolean>(Boolean(globalDeferredPrompt));
   const [isIOS, setIsIOS] = useState<boolean>(false);
+  const [isWindows, setIsWindows] = useState<boolean>(false);
+  const [isDesktop, setIsDesktop] = useState<boolean>(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // Detect iOS
+    // Platform detection
     const ua = window.navigator.userAgent.toLowerCase();
     const isIOSDevice = /iphone|ipad|ipod/.test(ua);
+    const isWin = /windows|win32|win64/i.test(ua);
+    const isMobileDevice = /iphone|ipad|ipod|android|mobile/i.test(ua);
+
     setIsIOS(isIOSDevice);
+    setIsWindows(isWin);
+    setIsDesktop(!isMobileDevice);
 
     // Initial sync
     if (detectStandalone()) {
@@ -148,7 +155,7 @@ export const usePWAInstall = () => {
     };
   }, []);
 
-  const triggerInstall = async (): Promise<'accepted' | 'dismissed' | 'ios' | 'unavailable'> => {
+  const triggerInstall = async (): Promise<'accepted' | 'dismissed' | 'ios' | 'desktop-guide' | 'unavailable'> => {
     if (globalDeferredPrompt) {
       globalDeferredPrompt.prompt();
       const choice = await globalDeferredPrompt.userChoice;
@@ -168,10 +175,14 @@ export const usePWAInstall = () => {
       return 'ios';
     }
 
+    if (isWindows || isDesktop) {
+      return 'desktop-guide';
+    }
+
     return 'unavailable';
   };
 
-  // If already installed on phone or running in standalone mode, canInstall is FALSE
+  // If already installed on device or running in standalone mode, canInstall is FALSE
   const canInstall = !isInstalled && !isStandalone;
 
   return {
@@ -180,6 +191,8 @@ export const usePWAInstall = () => {
     canInstall,
     hasPrompt,
     isIOS,
+    isWindows,
+    isDesktop,
     triggerInstall,
   };
 };
