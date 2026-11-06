@@ -7,6 +7,15 @@ interface BeforeInstallPromptEvent extends Event {
 
 let globalDeferredPrompt: BeforeInstallPromptEvent | null = null;
 
+// Capture beforeinstallprompt immediately at script execution time to avoid hydration race conditions
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    globalDeferredPrompt = e as BeforeInstallPromptEvent;
+    window.dispatchEvent(new CustomEvent('edumo-deferred-prompt-ready'));
+  });
+}
+
 export const usePWAInstall = () => {
   const detectStandalone = (): boolean => {
     if (typeof window === 'undefined') return false;
@@ -103,6 +112,10 @@ export const usePWAInstall = () => {
       } catch {}
     };
 
+    const handlePromptReady = () => {
+      setHasPrompt(true);
+    };
+
     // Listen to media query changes (e.g. if opened in standalone window)
     const mediaQuery = window.matchMedia('(display-mode: standalone)');
     const handleMediaChange = (e: MediaQueryListEvent) => {
@@ -117,6 +130,7 @@ export const usePWAInstall = () => {
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('edumo-deferred-prompt-ready', handlePromptReady);
     window.addEventListener('appinstalled', handleAppInstalled);
     window.addEventListener('edumo-pwa-state-change', handleStateChange);
     if (mediaQuery.addEventListener) {
@@ -125,6 +139,7 @@ export const usePWAInstall = () => {
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('edumo-deferred-prompt-ready', handlePromptReady);
       window.removeEventListener('appinstalled', handleAppInstalled);
       window.removeEventListener('edumo-pwa-state-change', handleStateChange);
       if (mediaQuery.removeEventListener) {
