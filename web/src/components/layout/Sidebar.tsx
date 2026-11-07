@@ -37,6 +37,7 @@ import {
   Library as LibraryIcon,
   Home,
   Bell,
+  Check,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -45,10 +46,11 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   const { signOut, currentUser, isPlatformAdmin } = useAuth();
-  const { currentRole, currentSchool, organization, hasPermission } = useTenant();
+  const { currentRole, currentSchool, organization, hasPermission, setRoleOverride, previewRole } = useTenant();
   const { unreadCount } = useNotifications();
   const { canInstall, isWindows, isDesktop } = usePWAInstall();
   const navigate = useNavigate();
+  const [roleMenuOpen, setRoleMenuOpen] = useState(false);
   const [sidebarLanguage, setSidebarLanguage] = useState<'en' | 'sw'>(() =>
     localStorage.getItem('edumo_sidebar_language') === 'sw' ? 'sw' : 'en'
   );
@@ -62,73 +64,168 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
     return () => window.removeEventListener('edumo-sidebar-language-change', handleLanguageChange);
   }, []);
 
+  // Strict Enterprise RBAC Hierarchy
+  const role = (currentRole as string) || 'teacher';
   const isSuperOrPlatformAdmin =
     Boolean(isPlatformAdmin) ||
-    (currentRole as string) === 'superAdmin' ||
-    currentRole === 'platformAdmin' ||
+    role === 'superAdmin' ||
+    role === 'platformAdmin' ||
     (currentUser as any)?.role === 'superAdmin' ||
     (currentUser as any)?.role === 'platformAdmin';
 
-  const isSchoolAdminOrOwner =
-    currentRole === 'orgOwner' ||
-    currentRole === 'platformAdmin' ||
-    (currentRole as string) === 'schoolAdmin' ||
-    (currentRole as string) === 'admin' ||
-    (currentRole as string) === 'principal';
+  const isOwner = role === 'orgOwner' || isSuperOrPlatformAdmin;
+  const isPrincipal = isOwner || role === 'principal' || role === 'admin' || role === 'schoolAdmin';
+  const isIT = isPrincipal || role === 'it_admin' || role === 'it';
+  const isExams = isPrincipal || role === 'exam_officer' || role === 'exams' || role === 'deputy';
+  const isBursar = isPrincipal || role === 'bursar' || role === 'accountant';
+  const isTeacher = isPrincipal || isExams || role === 'teacher' || role === 'educator';
+  const isParent = role === 'guardian' || role === 'parent';
+  const isStudent = role === 'student' || role === 'learner';
+
+  const roleLabel = isOwner
+    ? 'Director / Owner'
+    : isPrincipal
+    ? 'Principal'
+    : role === 'it_admin' || role === 'it'
+    ? 'IT Admin'
+    : role === 'exam_officer' || role === 'exams'
+    ? 'Exams Officer'
+    : role === 'bursar' || role === 'accountant'
+    ? 'Bursar'
+    : isParent
+    ? 'Parent'
+    : isStudent
+    ? 'Student'
+    : 'Educator';
 
   const activeLogo = currentSchool?.branding?.logo || organization?.branding?.logo;
-
   const navTranslations = sidebarLanguage === 'sw' ? swTranslations.nav : enTranslations.nav;
-  const navItems = [
-    { to: '/dashboard', label: navTranslations.dashboard, icon: LayoutDashboard },
-    {
-      to: '/notifications',
-      label: sidebarLanguage === 'sw' ? 'Arifa' : 'Notifications',
-      icon: Bell,
-      badge: unreadCount,
-    },
-    ...(isSchoolAdminOrOwner
-      ? [{ to: '/branches', label: navTranslations.branches, icon: Building2 }]
-      : []),
-    { to: '/students', label: navTranslations.students, icon: Users },
-    { to: '/attendance', label: navTranslations.attendance, icon: CalendarCheck2 },
-    { to: '/classes', label: navTranslations.classes, icon: BookOpen },
-    { to: '/timetable', label: sidebarLanguage === 'sw' ? 'Ratiba ya Masomo' : 'Class Timetable', icon: Calendar },
-    { to: '/academics', label: sidebarLanguage === 'sw' ? 'Matokeo na Alama' : 'Academics & Marks', icon: Award },
-    { to: '/assignments', label: sidebarLanguage === 'sw' ? 'Kazi za Darasa' : 'Assignments', icon: ClipboardCheck },
-    ...(hasPermission('staff.read') || isSchoolAdminOrOwner
-      ? [{ to: '/staff', label: navTranslations.staff, icon: GraduationCap }]
-      : []),
-    { to: '/educator-portal', label: sidebarLanguage === 'sw' ? 'Tovuti ya Walimu' : 'Educator Portal', icon: Sparkles },
-    { to: '/announcements', label: navTranslations.announcements, icon: Megaphone },
-    ...(hasPermission('students.import') || isSchoolAdminOrOwner
-      ? [{ to: '/excel-import', label: navTranslations.excelImport, icon: FileSpreadsheet }]
-      : []),
-    { to: '/reports', label: sidebarLanguage === 'sw' ? 'Ripoti za Excel' : 'Report Builder', icon: FileText },
-    ...(hasPermission('fees.read') || isSchoolAdminOrOwner
-      ? [{ to: '/finance', label: sidebarLanguage === 'sw' ? 'Ada na Fedha' : 'Fees & Finance', icon: CreditCard }]
-      : []),
-    ...(hasPermission('admissions.read') || isSchoolAdminOrOwner
-      ? [{ to: '/admissions', label: sidebarLanguage === 'sw' ? 'Udahili na Usajili' : 'Admissions', icon: UserPlus }]
-      : []),
-    ...(hasPermission('transport.manage') || isSchoolAdminOrOwner
-      ? [{ to: '/operations', label: sidebarLanguage === 'sw' ? 'Uendeshaji wa Shule' : 'Operations & Fleet', icon: Bus }]
-      : []),
-    { to: '/library', label: sidebarLanguage === 'sw' ? 'Maktaba ya Shule' : 'Library & Books', icon: LibraryIcon },
-    { to: '/hostels', label: sidebarLanguage === 'sw' ? 'Bweni na Hosteli' : 'Hostels & Boarding', icon: Home },
-    { to: '/messaging', label: sidebarLanguage === 'sw' ? 'Ujumbe na Wazazi' : 'Messages & Alerts', icon: MessageSquare },
-    ...(hasPermission('library.manage') || isSchoolAdminOrOwner
-      ? [{ to: '/extended', label: sidebarLanguage === 'sw' ? 'Duka & Ghala' : 'Inventory & Store', icon: Layers }]
-      : []),
-    ...(isSuperOrPlatformAdmin
-      ? [{ to: '/platform-console', label: sidebarLanguage === 'sw' ? 'Jopo la Usimamizi' : 'Platform Console', icon: ShieldCheck }]
-      : []),
-    { to: '/parent-portal', label: navTranslations.parentPortal, icon: HeartHandshake },
-    { to: '/profile', label: sidebarLanguage === 'sw' ? 'Wasifu Wangu' : 'My Profile', icon: User },
-    ...(hasPermission('settings.read') || isSchoolAdminOrOwner
-      ? [{ to: '/settings', label: navTranslations.settings, icon: Settings }]
-      : []),
-  ];
+
+  // Build role-tailored navigation items
+  const navItems = (() => {
+    // 1. Parent / Guardian View: strictly limited to child's welfare, fees, report forms, and teacher chat
+    if (isParent) {
+      return [
+        { to: '/dashboard', label: navTranslations.dashboard, icon: LayoutDashboard },
+        { to: '/notifications', label: sidebarLanguage === 'sw' ? 'Arifa' : 'Notifications', icon: Bell, badge: unreadCount },
+        { to: '/parent-portal', label: sidebarLanguage === 'sw' ? 'Wanafunzi Wangu & Ada' : 'My Children & Fees', icon: HeartHandshake },
+        { to: '/messaging', label: sidebarLanguage === 'sw' ? 'Ujumbe na Walimu' : 'Teacher Chat', icon: MessageSquare },
+        { to: '/announcements', label: navTranslations.announcements, icon: Megaphone },
+        { to: '/profile', label: sidebarLanguage === 'sw' ? 'Wasifu Wangu' : 'My Account', icon: User },
+      ];
+    }
+
+    // 2. Student / Learner View: homework, timetable, enrolled subjects, library, and boarding
+    if (isStudent) {
+      return [
+        { to: '/dashboard', label: navTranslations.dashboard, icon: LayoutDashboard },
+        { to: '/notifications', label: sidebarLanguage === 'sw' ? 'Arifa' : 'Notifications', icon: Bell, badge: unreadCount },
+        { to: '/parent-portal', label: sidebarLanguage === 'sw' ? 'Masomo na Madokezo' : 'My Units & Notes', icon: BookOpen },
+        { to: '/timetable', label: sidebarLanguage === 'sw' ? 'Ratiba ya Masomo' : 'Class Timetable', icon: Calendar },
+        { to: '/assignments', label: sidebarLanguage === 'sw' ? 'Kazi za Darasa' : 'My Assignments', icon: ClipboardCheck },
+        { to: '/library', label: sidebarLanguage === 'sw' ? 'Vitabu vya Maktaba' : 'Library Books', icon: LibraryIcon },
+        { to: '/hostels', label: sidebarLanguage === 'sw' ? 'Bweni na Hosteli' : 'Hostel Allocation', icon: Home },
+        { to: '/announcements', label: navTranslations.announcements, icon: Megaphone },
+        { to: '/profile', label: sidebarLanguage === 'sw' ? 'Wasifu Wangu' : 'My Account', icon: User },
+      ];
+    }
+
+    // 3. Exams Officer / Academic Dean: academics, marks, broadsheets, report card generator, master timetable
+    if (role === 'exam_officer' || role === 'exams') {
+      return [
+        { to: '/dashboard', label: navTranslations.dashboard, icon: LayoutDashboard },
+        { to: '/notifications', label: sidebarLanguage === 'sw' ? 'Arifa' : 'Notifications', icon: Bell, badge: unreadCount },
+        { to: '/academics', label: sidebarLanguage === 'sw' ? 'Matokeo na Broadsheets' : 'Academics & Broadsheets', icon: Award },
+        { to: '/reports', label: sidebarLanguage === 'sw' ? 'Ripoti za Matokeo' : 'Report Card Builder', icon: FileText },
+        { to: '/classes', label: navTranslations.classes, icon: BookOpen },
+        { to: '/timetable', label: sidebarLanguage === 'sw' ? 'Ratiba ya Masomo' : 'Master Timetable', icon: Calendar },
+        { to: '/students', label: navTranslations.students, icon: Users },
+        { to: '/announcements', label: navTranslations.announcements, icon: Megaphone },
+        { to: '/messaging', label: sidebarLanguage === 'sw' ? 'Ujumbe wa Shule' : 'Messages & Alerts', icon: MessageSquare },
+        { to: '/profile', label: sidebarLanguage === 'sw' ? 'Wasifu Wangu' : 'My Profile', icon: User },
+      ];
+    }
+
+    // 4. Bursar / Finance Officer: fees, M-Pesa, student billing ledgers, admissions, financial reports
+    if (role === 'bursar' || role === 'accountant') {
+      return [
+        { to: '/dashboard', label: navTranslations.dashboard, icon: LayoutDashboard },
+        { to: '/notifications', label: sidebarLanguage === 'sw' ? 'Arifa' : 'Notifications', icon: Bell, badge: unreadCount },
+        { to: '/finance', label: sidebarLanguage === 'sw' ? 'Ada na Fedha' : 'Fees & Finance', icon: CreditCard },
+        { to: '/admissions', label: sidebarLanguage === 'sw' ? 'Udahili na Bili' : 'Admissions & Billing', icon: UserPlus },
+        { to: '/students', label: sidebarLanguage === 'sw' ? 'Daftari la Wanafunzi' : 'Student Ledger', icon: Users },
+        { to: '/reports', label: sidebarLanguage === 'sw' ? 'Ripoti za Fedha' : 'Financial Reports', icon: FileText },
+        { to: '/announcements', label: navTranslations.announcements, icon: Megaphone },
+        { to: '/messaging', label: sidebarLanguage === 'sw' ? 'Ujumbe wa Malipo' : 'Fee Inquiries', icon: MessageSquare },
+        { to: '/profile', label: sidebarLanguage === 'sw' ? 'Wasifu Wangu' : 'My Profile', icon: User },
+      ];
+    }
+
+    // 5. IT Administrator: user accounts, system configuration, Excel imports, platform console
+    if (role === 'it_admin' || role === 'it') {
+      return [
+        { to: '/dashboard', label: navTranslations.dashboard, icon: LayoutDashboard },
+        { to: '/notifications', label: sidebarLanguage === 'sw' ? 'Arifa' : 'Notifications', icon: Bell, badge: unreadCount },
+        { to: '/staff', label: navTranslations.staff, icon: GraduationCap },
+        { to: '/excel-import', label: navTranslations.excelImport, icon: FileSpreadsheet },
+        { to: '/branches', label: navTranslations.branches, icon: Building2 },
+        { to: '/students', label: navTranslations.students, icon: Users },
+        { to: '/operations', label: sidebarLanguage === 'sw' ? 'Uendeshaji wa Shule' : 'Operations & Fleet', icon: Bus },
+        { to: '/platform-console', label: sidebarLanguage === 'sw' ? 'Jopo la Usimamizi' : 'Platform Console', icon: ShieldCheck },
+        { to: '/settings', label: navTranslations.settings, icon: Settings },
+        { to: '/profile', label: sidebarLanguage === 'sw' ? 'Wasifu Wangu' : 'My Profile', icon: User },
+      ];
+    }
+
+    // 6. Teacher / Class Educator: roll call attendance, my classes, marks entry, educator portal, timetable, assignments
+    if (!isPrincipal) {
+      return [
+        { to: '/dashboard', label: navTranslations.dashboard, icon: LayoutDashboard },
+        { to: '/notifications', label: sidebarLanguage === 'sw' ? 'Arifa' : 'Notifications', icon: Bell, badge: unreadCount },
+        { to: '/attendance', label: navTranslations.attendance, icon: CalendarCheck2 },
+        { to: '/classes', label: navTranslations.classes, icon: BookOpen },
+        { to: '/academics', label: sidebarLanguage === 'sw' ? 'Weka Alama na Matokeo' : 'Enter Marks & CBC', icon: Award },
+        { to: '/educator-portal', label: sidebarLanguage === 'sw' ? 'Tovuti ya Walimu' : 'Educator Portal', icon: Sparkles },
+        { to: '/timetable', label: sidebarLanguage === 'sw' ? 'Ratiba ya Masomo' : 'Class Timetable', icon: Calendar },
+        { to: '/assignments', label: sidebarLanguage === 'sw' ? 'Kazi za Darasa' : 'Assignments', icon: ClipboardCheck },
+        { to: '/library', label: sidebarLanguage === 'sw' ? 'Maktaba ya Shule' : 'Library & Books', icon: LibraryIcon },
+        { to: '/messaging', label: sidebarLanguage === 'sw' ? 'Ujumbe na Wazazi' : 'Guardian Messages', icon: MessageSquare },
+        { to: '/announcements', label: navTranslations.announcements, icon: Megaphone },
+        { to: '/profile', label: sidebarLanguage === 'sw' ? 'Wasifu Wangu' : 'My Profile', icon: User },
+      ];
+    }
+
+    // 7. Principal / Org Owner: full comprehensive institutional suite
+    return [
+      { to: '/dashboard', label: navTranslations.dashboard, icon: LayoutDashboard },
+      { to: '/notifications', label: sidebarLanguage === 'sw' ? 'Arifa' : 'Notifications', icon: Bell, badge: unreadCount },
+      ...(isOwner ? [{ to: '/branches', label: navTranslations.branches, icon: Building2 }] : []),
+      { to: '/students', label: navTranslations.students, icon: Users },
+      { to: '/attendance', label: navTranslations.attendance, icon: CalendarCheck2 },
+      { to: '/classes', label: navTranslations.classes, icon: BookOpen },
+      { to: '/timetable', label: sidebarLanguage === 'sw' ? 'Ratiba ya Masomo' : 'Class Timetable', icon: Calendar },
+      { to: '/academics', label: sidebarLanguage === 'sw' ? 'Matokeo na Alama' : 'Academics & Marks', icon: Award },
+      { to: '/assignments', label: sidebarLanguage === 'sw' ? 'Kazi za Darasa' : 'Assignments', icon: ClipboardCheck },
+      { to: '/staff', label: navTranslations.staff, icon: GraduationCap },
+      { to: '/educator-portal', label: sidebarLanguage === 'sw' ? 'Tovuti ya Walimu' : 'Educator Portal', icon: Sparkles },
+      { to: '/announcements', label: navTranslations.announcements, icon: Megaphone },
+      { to: '/excel-import', label: navTranslations.excelImport, icon: FileSpreadsheet },
+      { to: '/reports', label: sidebarLanguage === 'sw' ? 'Ripoti za Excel' : 'Report Builder', icon: FileText },
+      { to: '/finance', label: sidebarLanguage === 'sw' ? 'Ada na Fedha' : 'Fees & Finance', icon: CreditCard },
+      { to: '/admissions', label: sidebarLanguage === 'sw' ? 'Udahili na Usajili' : 'Admissions', icon: UserPlus },
+      { to: '/operations', label: sidebarLanguage === 'sw' ? 'Uendeshaji wa Shule' : 'Operations & Fleet', icon: Bus },
+      { to: '/library', label: sidebarLanguage === 'sw' ? 'Maktaba ya Shule' : 'Library & Books', icon: LibraryIcon },
+      { to: '/hostels', label: sidebarLanguage === 'sw' ? 'Bweni na Hosteli' : 'Hostels & Boarding', icon: Home },
+      { to: '/messaging', label: sidebarLanguage === 'sw' ? 'Ujumbe na Wazazi' : 'Messages & Alerts', icon: MessageSquare },
+      { to: '/extended', label: sidebarLanguage === 'sw' ? 'Duka & Ghala' : 'Inventory & Store', icon: Layers },
+      ...(isSuperOrPlatformAdmin
+        ? [{ to: '/platform-console', label: sidebarLanguage === 'sw' ? 'Jopo la Usimamizi' : 'Platform Console', icon: ShieldCheck }]
+        : []),
+      { to: '/parent-portal', label: navTranslations.parentPortal, icon: HeartHandshake },
+      { to: '/profile', label: sidebarLanguage === 'sw' ? 'Wasifu Wangu' : 'My Profile', icon: User },
+      { to: '/settings', label: navTranslations.settings, icon: Settings },
+    ];
+  })();
 
   return (
     <aside
@@ -209,6 +306,79 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
             </span>
           </div>
         )}
+
+        {/* Active Role Indicator & Switcher */}
+        <div
+          className="px-4 py-1.5 flex items-center justify-between shrink-0 border-b relative"
+          style={{
+            backgroundColor: 'rgba(29, 95, 153, 0.05)',
+            borderColor: 'var(--sidebar-border, #e2e8f0)',
+          }}
+        >
+          <div className="flex items-center gap-1.5 min-w-0">
+            <ShieldCheck className="w-3.5 h-3.5 text-[#1d5f99] shrink-0" />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              Role:
+            </span>
+            <span className="text-[10px] font-black uppercase text-[#1d5f99] truncate">
+              {roleLabel}
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setRoleMenuOpen((prev) => !prev)}
+            className="text-[9px] font-black uppercase px-2 py-0.5 rounded bg-white text-slate-700 hover:text-[#1d5f99] border border-slate-200 shadow-2xs cursor-pointer transition-colors"
+            title="Switch demo preview role"
+          >
+            {previewRole ? 'Reset' : 'Switch'}
+          </button>
+
+          {/* Quick Role Switcher Popup */}
+          {roleMenuOpen && (
+            <div className="absolute left-2 right-2 top-full mt-1 bg-white rounded-2xl border border-slate-200 shadow-xl p-2 z-50 space-y-1 text-xs">
+              <div className="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                <span>Preview As Role:</span>
+                {previewRole && (
+                  <button
+                    onClick={() => {
+                      setRoleOverride(null);
+                      setRoleMenuOpen(false);
+                    }}
+                    className="text-rose-600 hover:underline cursor-pointer"
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
+              {[
+                { id: 'principal', label: 'Principal (Admin)' },
+                { id: 'exam_officer', label: 'Exams Officer' },
+                { id: 'it_admin', label: 'IT Administrator' },
+                { id: 'teacher', label: 'Teacher (Educator)' },
+                { id: 'bursar', label: 'Bursar (Finance)' },
+                { id: 'guardian', label: 'Parent (Guardian)' },
+                { id: 'student', label: 'Student (Learner)' },
+              ].map((r) => (
+                <button
+                  key={r.id}
+                  onClick={() => {
+                    setRoleOverride(r.id);
+                    setRoleMenuOpen(false);
+                  }}
+                  className={`w-full text-left px-2.5 py-1.5 rounded-xl font-semibold transition-all cursor-pointer flex items-center justify-between ${
+                    role === r.id
+                      ? 'bg-blue-50 text-[#1d5f99] font-bold'
+                      : 'hover:bg-slate-50 text-slate-700'
+                  }`}
+                >
+                  <span>{r.label}</span>
+                  {role === r.id && <Check className="w-3.5 h-3.5 text-[#1d5f99]" />}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Navigation List — Comfortable text-sm font size with smooth scrolling */}
         <nav className="p-3 space-y-1 flex-1 min-h-0 overflow-y-auto overscroll-contain">

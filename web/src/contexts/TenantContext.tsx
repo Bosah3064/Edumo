@@ -27,6 +27,8 @@ interface TenantContextType {
   loading: boolean;
   switchSchool: (schoolId: string) => void;
   hasPermission: (permission: Permission) => boolean;
+  setRoleOverride: (role: string | null) => void;
+  previewRole: string | null;
 }
 
 const TenantContext = createContext<TenantContextType | undefined>(undefined);
@@ -228,8 +230,28 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, [currentSchool]);
 
+  const [previewRole, setPreviewRole] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem('edumo_preview_role') || null;
+  });
+
+  const setRoleOverride = (role: string | null) => {
+    if (role) {
+      localStorage.setItem('edumo_preview_role', role);
+      setPreviewRole(role);
+    } else {
+      localStorage.removeItem('edumo_preview_role');
+      setPreviewRole(null);
+    }
+  };
+
   // Determine current user's role in this school accurately
   const currentRole = useMemo<UserRole | null>(() => {
+    // 0. Manual preview role (useful for instant demo inspection & testing)
+    if (previewRole) {
+      return previewRole as UserRole;
+    }
+
     // 1. Explicit per-school role from token claims
     if (currentSchoolId && claims?.schoolRoles?.[currentSchoolId]) {
       return claims.schoolRoles[currentSchoolId] as UserRole;
@@ -242,24 +264,49 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (userProfileRole) {
       return userProfileRole as UserRole;
     }
-    // 4. If current user is the actual creator/owner of this organization
+    // 4. Match preset demo email accounts
+    const email = currentUser?.email?.toLowerCase() || '';
+    if (email.includes('owner@')) return 'orgOwner';
+    if (email.includes('principal@')) return 'principal';
+    if (email.includes('it@')) return 'admin';
+    if (email.includes('exams@') || email.includes('dean@')) return 'deputy';
+    if (email.includes('bursar@') || email.includes('finance@')) return 'bursar';
+    if (email.includes('parent@')) return 'guardian';
+    if (email.includes('student@')) return 'student';
+
+    // 5. If current user is the actual creator/owner of this organization
     if (organization?.ownerId && currentUser?.uid && organization.ownerId === currentUser.uid) {
       return 'orgOwner';
     }
-    // 5. Default for educators/members: 'teacher' (Never default unprivileged users to orgOwner!)
+    // 6. Default for educators/members: 'teacher'
     return 'teacher';
-  }, [claims, currentSchoolId, userProfileRole, organization?.ownerId, currentUser?.uid]);
+  }, [previewRole, claims, currentSchoolId, userProfileRole, currentUser?.email, organization?.ownerId, currentUser?.uid]);
 
   // Compute permissions for current role
   const userPermissions = useMemo<Permission[]>(() => {
     if (!currentRole) return [];
+    const r = currentRole as string;
     if (
-      currentRole === 'orgOwner' ||
-      currentRole === 'platformAdmin' ||
-      (currentRole as string) === 'schoolAdmin' ||
-      (currentRole as string) === 'admin'
+      r === 'orgOwner' ||
+      r === 'platformAdmin' ||
+      r === 'schoolAdmin' ||
+      r === 'admin' ||
+      r === 'it_admin'
     ) {
       return Object.values(DEFAULT_ROLE_PERMISSIONS).flat();
+    }
+    if (r === 'exam_officer' || r === 'exams') {
+      return [
+        'academics.read',
+        'academics.write',
+        'academics.publish',
+        'academics.reports',
+        'students.read',
+        'attendance.read',
+        'reports.generate',
+        'reports.custom',
+        'comms.send',
+      ];
     }
     return (DEFAULT_ROLE_PERMISSIONS as Record<string, Permission[]>)[currentRole] || [];
   }, [currentRole]);
@@ -299,6 +346,8 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         loading,
         switchSchool,
         hasPermission,
+        setRoleOverride,
+        previewRole,
       }}
     >
       {children}

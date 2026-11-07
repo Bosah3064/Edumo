@@ -1000,6 +1000,7 @@ export const Staff: React.FC = () => {
               options={[
                 { label: 'Subject Teacher / Course Instructor (Subject marks & assignments)', value: 'teacher' },
                 { label: 'Examination Department / Exam Officer (Exams series, locked grade sheets & passes)', value: 'exam_officer' },
+                { label: 'IT Administrator / Systems Specialist (Accounts, import, console & system configuration)', value: 'it_admin' },
                 { label: 'Class Teacher / Homeroom (Roll calls, marks, report remarks & promotion)', value: 'class_teacher' },
                 { label: 'Super Administrator / School Head (Holds all roles & permissions)', value: 'admin' },
                 { label: 'Dean of Studies / Academic Deputy (Exams, broadsheets & timetable)', value: 'deputy' },
@@ -1019,6 +1020,7 @@ export const Staff: React.FC = () => {
               <div className="grid grid-cols-2 gap-2 text-xs">
                 {[
                   { id: 'exam_officer', label: 'Examination Department' },
+                  { id: 'it_admin', label: 'IT Administrator' },
                   { id: 'class_teacher', label: 'Class Teacher' },
                   { id: 'teacher', label: 'Subject Teacher' },
                   { id: 'deputy', label: 'Dean of Studies' },
@@ -1473,6 +1475,7 @@ export const Staff: React.FC = () => {
             <div className="space-y-2">
               {[
                 { id: 'admin', label: 'Super Administrator / School Head', desc: 'Full institutional access across all modules & settings' },
+                { id: 'it_admin', label: 'IT Administrator / Systems Specialist', desc: 'Accounts provisioning, Excel data import, branches & console' },
                 { id: 'exam_officer', label: 'Examination Department / Exam Officer', desc: 'Manage exams series, lock mark sheets, broadsheets & admit passes' },
                 { id: 'class_teacher', label: 'Class Teacher / Homeroom Educator', desc: 'Daily attendance roll calls, report remarks & student promotion' },
                 { id: 'teacher', label: 'Subject Teacher / Course Instructor', desc: 'Enter marks for assigned learning areas & grade assignments' },

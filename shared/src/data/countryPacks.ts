@@ -56,7 +56,7 @@ export const KENYA_COUNTRY_PACK: CountryPack = {
   gradingScales: [
     {
       id: 'cbc_no_aggregate',
-      name: 'CBC 8-Level Competency (KJSEA No-Aggregate Mode) [VERIFY WITH OFFICIAL SOURCE]',
+      name: 'CBC 8-Level Competency (KJSEA No-Aggregate Mode)',
       type: 'level',
       direction: 'asc', // Higher point (8) is top performance
       aggregateMode: 'none', // Strictly no mean grade, total points, or ranking across subjects
@@ -75,7 +75,7 @@ export const KENYA_COUNTRY_PACK: CountryPack = {
     },
     {
       id: 'classic_marks_rank',
-      name: 'Kenya Classic Percentage & Mean Rank Mode [VERIFY WITH OFFICIAL SOURCE]',
+      name: 'Kenya Classic Percentage & Mean Rank Mode',
       type: 'percentage',
       direction: 'asc',
       aggregateMode: 'mean',
@@ -111,7 +111,7 @@ export const KENYA_COUNTRY_PACK: CountryPack = {
   reportFormats: [
     {
       id: 'ke_cbc_report',
-      name: 'Kenya CBC Learner Progress Report [VERIFY WITH OFFICIAL SOURCE]',
+      name: 'Kenya CBC Learner Progress Report',
       type: 'cbc',
       gradingScaleId: 'cbc_no_aggregate',
       showAggregate: false,
@@ -125,7 +125,7 @@ export const KENYA_COUNTRY_PACK: CountryPack = {
     },
     {
       id: 'ke_classic_report',
-      name: 'Kenya Classic Terminal Report Card [VERIFY WITH OFFICIAL SOURCE]',
+      name: 'Kenya Classic Terminal Report Card',
       type: 'classic',
       gradingScaleId: 'classic_marks_rank',
       showAggregate: true,
@@ -142,7 +142,7 @@ export const KENYA_COUNTRY_PACK: CountryPack = {
   paymentProviders: [
     {
       id: 'mpesa_daraja',
-      name: 'Safaricom M-Pesa Daraja [VERIFY WITH OFFICIAL SOURCE]',
+      name: 'Safaricom M-Pesa Daraja',
       type: 'mobile_money',
       country: 'KE',
       apiEndpoint: 'https://api.safaricom.co.ke',
@@ -164,7 +164,7 @@ export const KENYA_COUNTRY_PACK: CountryPack = {
   governmentExports: [
     {
       id: 'nemis_export',
-      name: 'NEMIS Learner Register Export [VERIFY WITH OFFICIAL SOURCE]',
+      name: 'NEMIS Learner Register Export',
       description: 'Learner export formatted for National Education Management Information System upload.',
       fileType: 'xlsx',
       columns: [
@@ -230,7 +230,7 @@ export const UGANDA_COUNTRY_PACK: CountryPack = {
   gradingScales: [
     {
       id: 'uneb_nine_band',
-      name: 'UNEB 9-Band Grading Scale (D1 best, F9 fail) [VERIFY WITH OFFICIAL SOURCE]',
+      name: 'UNEB 9-Band Grading Scale (D1 best, F9 fail)',
       type: 'division',
       direction: 'desc', // LOWER aggregate points = BETTER performance (e.g., 8 points is aggregate 8)
       aggregateMode: 'best_n',
@@ -264,7 +264,7 @@ export const UGANDA_COUNTRY_PACK: CountryPack = {
   reportFormats: [
     {
       id: 'ug_uneb_report',
-      name: 'Uganda Terminal Report Card (UNEB Bands) [VERIFY WITH OFFICIAL SOURCE]',
+      name: 'Uganda Terminal Report Card (UNEB Bands)',
       type: 'classic',
       gradingScaleId: 'uneb_nine_band',
       showAggregate: true,
@@ -281,7 +281,7 @@ export const UGANDA_COUNTRY_PACK: CountryPack = {
   paymentProviders: [
     {
       id: 'ug_mobile_money_aggregator',
-      name: 'MTN MoMo & Airtel Money Uganda [VERIFY WITH OFFICIAL SOURCE]',
+      name: 'MTN MoMo & Airtel Money Uganda',
       type: 'aggregator',
       country: 'UG',
       requiredCredentials: ['apiKey', 'merchantId', 'secretKey'],
@@ -302,7 +302,7 @@ export const UGANDA_COUNTRY_PACK: CountryPack = {
   governmentExports: [
     {
       id: 'emis_uganda_export',
-      name: 'Uganda EMIS Learner Register [VERIFY WITH OFFICIAL SOURCE]',
+      name: 'Uganda EMIS Learner Register',
       description: 'Education Management Information System Uganda format.',
       fileType: 'xlsx',
       columns: [
@@ -367,7 +367,7 @@ export const TANZANIA_COUNTRY_PACK: CountryPack = {
   gradingScales: [
     {
       id: 'necta_division',
-      name: 'NECTA Division System (Div I..IV, 0) [VERIFY WITH OFFICIAL SOURCE]',
+      name: 'NECTA Division System (Div I..IV, 0)',
       type: 'division',
       direction: 'desc', // Lower aggregate points = higher division
       aggregateMode: 'best_n',
@@ -403,7 +403,7 @@ export const TANZANIA_COUNTRY_PACK: CountryPack = {
   reportFormats: [
     {
       id: 'tz_necta_report',
-      name: 'Ripoti ya Maendeleo ya Mwanafunzi (NECTA) [VERIFY WITH OFFICIAL SOURCE]',
+      name: 'Ripoti ya Maendeleo ya Mwanafunzi (NECTA)',
       type: 'classic',
       gradingScaleId: 'necta_division',
       showAggregate: true,
@@ -420,7 +420,7 @@ export const TANZANIA_COUNTRY_PACK: CountryPack = {
   paymentProviders: [
     {
       id: 'tz_mobile_money',
-      name: 'M-Pesa / Tigo Pesa / Airtel Money Tanzania [VERIFY WITH OFFICIAL SOURCE]',
+      name: 'M-Pesa / Tigo Pesa / Airtel Money Tanzania',
       type: 'aggregator',
       country: 'TZ',
       requiredCredentials: ['merchantCode', 'apiKey', 'apiSecret'],
@@ -441,7 +441,7 @@ export const TANZANIA_COUNTRY_PACK: CountryPack = {
   governmentExports: [
     {
       id: 'tz_bwise_export',
-      name: 'SEMA / BEMIS Tanzania Export [VERIFY WITH OFFICIAL SOURCE]',
+      name: 'SEMA / BEMIS Tanzania Export',
       description: 'Format for regional education management systems in Tanzania.',
       fileType: 'xlsx',
       columns: [
@@ -505,7 +505,7 @@ export const RWANDA_COUNTRY_PACK: CountryPack = {
   gradingScales: [
     {
       id: 'rwanda_letter_scale',
-      name: 'Rwanda REB A-E Scale [VERIFY WITH OFFICIAL SOURCE]',
+      name: 'Rwanda REB A-E Scale',
       type: 'letter',
       direction: 'asc', // Higher percentage/points is better
       aggregateMode: 'mean',
@@ -536,7 +536,7 @@ export const RWANDA_COUNTRY_PACK: CountryPack = {
   reportFormats: [
     {
       id: 'rw_reb_report',
-      name: 'Raporo y’Amanota (Rwanda REB Report) [VERIFY WITH OFFICIAL SOURCE]',
+      name: 'Raporo y’Amanota (Rwanda REB Report)',
       type: 'classic',
       gradingScaleId: 'rwanda_letter_scale',
       showAggregate: true,
@@ -553,7 +553,7 @@ export const RWANDA_COUNTRY_PACK: CountryPack = {
   paymentProviders: [
     {
       id: 'rw_momo',
-      name: 'MTN Mobile Money Rwanda [VERIFY WITH OFFICIAL SOURCE]',
+      name: 'MTN Mobile Money Rwanda',
       type: 'mobile_money',
       country: 'RW',
       requiredCredentials: ['subscriptionKey', 'apiUser', 'apiKey'],
@@ -574,7 +574,7 @@ export const RWANDA_COUNTRY_PACK: CountryPack = {
   governmentExports: [
     {
       id: 'sdms_rwanda_export',
-      name: 'Rwanda SDMS Learner Register [VERIFY WITH OFFICIAL SOURCE]',
+      name: 'Rwanda SDMS Learner Register',
       description: 'School Data Management System (SDMS) export format.',
       fileType: 'xlsx',
       columns: [

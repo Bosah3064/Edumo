@@ -245,138 +245,12 @@ export const ParentPortal: React.FC = () => {
               ],
             };
           });
-        } else {
-          // Standard default units for student view
-          unitList = [
-            {
-              id: 'math',
-              name: 'Mathematics',
-              code: 'MATH-101',
-              isMandatory: true,
-              department: 'Sciences & Tech',
-              teacherName: 'Mr. Peter Kamau',
-              weeklyPeriods: 5,
-              grade: '88% (EE)',
-              pdfResources: [
-                { title: 'Algebra & Geometry Fundamentals Guide.pdf', size: '2.1 MB', date: '01 Nov 2026' },
-                { title: 'Term 1 Past Papers (2024 - 2025).pdf', size: '3.4 MB', date: '20 Oct 2026' },
-              ],
-              communications: [
-                {
-                  title: 'Math Olympiad Registration Open',
-                  date: 'Today',
-                  content: 'Interested learners can register for the East Africa Junior Math Contest.',
-                  teacher: 'Mr. Peter Kamau',
-                },
-              ],
-              assignments: [
-                { title: 'Problem Set 5: Ratios and Proportions', dueDate: '08 Nov 2026', status: 'pending' },
-                { title: 'Geometry Proofs Worksheet', dueDate: '29 Oct 2026', status: 'graded', score: '95% (EE)' },
-              ],
-            },
-            {
-              id: 'sci',
-              name: 'Integrated Science',
-              code: 'SCI-201',
-              isMandatory: true,
-              department: 'Sciences & Tech',
-              teacherName: 'Mrs. Joyce Otieno',
-              weeklyPeriods: 4,
-              grade: '84% (ME)',
-              pdfResources: [
-                { title: 'Human Body Systems & Hygiene Notes.pdf', size: '4.2 MB', date: '25 Oct 2026' },
-                { title: 'Living Things Classification Chart.pdf', size: '1.5 MB', date: '12 Oct 2026' },
-              ],
-              communications: [
-                {
-                  title: 'Science Lab Safety Rules',
-                  date: '4 days ago',
-                  content: 'Lab coats required for Wednesday practical session.',
-                  teacher: 'Mrs. Joyce Otieno',
-                },
-              ],
-              assignments: [
-                { title: 'Plant Photosynthesis Lab Report', dueDate: '12 Nov 2026', status: 'pending' },
-              ],
-            },
-            {
-              id: 'eng',
-              name: 'English Language & Literacy',
-              code: 'ENG-102',
-              isMandatory: true,
-              department: 'Languages',
-              teacherName: 'Ms. Amina Hassan',
-              weeklyPeriods: 5,
-              grade: '91% (EE)',
-              pdfResources: [
-                { title: 'Grammar and Composition Guidebook.pdf', size: '3.0 MB', date: '18 Oct 2026' },
-              ],
-              communications: [
-                {
-                  title: 'Spelling Bee Finalists Announced',
-                  date: 'Yesterday',
-                  content: 'Congratulations to our stream representatives for qualifying!',
-                  teacher: 'Ms. Amina Hassan',
-                },
-              ],
-              assignments: [
-                { title: 'Descriptive Essay: My Role Model', dueDate: '07 Nov 2026', status: 'pending' },
-              ],
-            },
-            {
-              id: 'agri',
-              name: 'Agriculture & Nutrition',
-              code: 'AGRI-301',
-              isMandatory: true,
-              department: 'Applied Sciences',
-              teacherName: 'Mr. David Mutua',
-              weeklyPeriods: 3,
-              grade: '86% (ME)',
-              pdfResources: [
-                { title: 'Soil Fertility & Organic Manure Preparation.pdf', size: '1.9 MB', date: '22 Oct 2026' },
-              ],
-              communications: [
-                {
-                  title: 'School Garden Plot Inspection',
-                  date: '02 Nov 2026',
-                  content: 'Group crop monitoring will be evaluated on Tuesday morning.',
-                  teacher: 'Mr. David Mutua',
-                },
-              ],
-              assignments: [
-                { title: 'Kitchen Gardening Project Report', dueDate: '14 Nov 2026', status: 'pending' },
-              ],
-            },
-            {
-              id: 'french',
-              name: 'French Language',
-              code: 'FRE-205',
-              isMandatory: false,
-              department: 'Languages',
-              teacherName: 'Madame Claire Dubois',
-              weeklyPeriods: 2,
-              grade: '79% (AE)',
-              pdfResources: [
-                { title: 'French Vocabulary & Pronunciation Audio Sheet.pdf', size: '2.5 MB', date: '15 Oct 2026' },
-              ],
-              communications: [
-                {
-                  title: 'French Club Film Screening',
-                  date: '5 days ago',
-                  content: 'Join us on Friday 4 PM in the library media center.',
-                  teacher: 'Madame Claire Dubois',
-                },
-              ],
-              assignments: [
-                { title: 'Self-Introduction Dialogue Recording', dueDate: '11 Nov 2026', status: 'pending' },
-              ],
-            },
-          ];
         }
 
         setStudentUnits(unitList);
       } catch (err) {
         console.warn('Could not load subjects for parent portal:', err);
+        setStudentUnits([]);
       }
     };
 
@@ -706,68 +580,78 @@ export const ParentPortal: React.FC = () => {
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {studentUnits.map((unit) => (
-                    <Card
-                      key={unit.id}
-                      onClick={() => {
-                        setSelectedUnit(unit);
-                        setUnitActiveTab('materials');
-                      }}
-                      className="p-5 cursor-pointer hover:border-[#1d5f99] hover:shadow-md transition-all flex flex-col justify-between border-slate-200 bg-white group"
-                    >
-                      <div className="space-y-3">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-center gap-2.5">
-                            <div
-                              className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-xs text-white shadow-2xs ${
-                                unit.isMandatory ? 'bg-[#1d5f99]' : 'bg-amber-600'
-                              }`}
-                            >
-                              {unit.code.slice(0, 3)}
+                {studentUnits.length === 0 ? (
+                  <Card className="text-center py-10 border-dashed border-2 border-slate-200 bg-slate-50/50">
+                    <BookOpen className="w-10 h-10 mx-auto mb-2 text-slate-400" />
+                    <h3 className="text-sm font-bold text-slate-800">No Learning Areas Configured Yet</h3>
+                    <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                      Once curriculum units are published for {activeChild?.className || 'this class'} by the academic directorate, they will appear here with syllabus materials and assignments.
+                    </p>
+                  </Card>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {studentUnits.map((unit) => (
+                      <Card
+                        key={unit.id}
+                        onClick={() => {
+                          setSelectedUnit(unit);
+                          setUnitActiveTab('materials');
+                        }}
+                        className="p-5 cursor-pointer hover:border-[#1d5f99] hover:shadow-md transition-all flex flex-col justify-between border-slate-200 bg-white group"
+                      >
+                        <div className="space-y-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-center gap-2.5">
+                              <div
+                                className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-xs text-white shadow-2xs ${
+                                  unit.isMandatory ? 'bg-[#1d5f99]' : 'bg-amber-600'
+                                }`}
+                              >
+                                {unit.code.slice(0, 3)}
+                              </div>
+                              <div>
+                                <h3 className="font-extrabold text-slate-900 text-sm group-hover:text-[#1d5f99] transition-colors">
+                                  {unit.name}
+                                </h3>
+                                <span className="text-2xs font-mono font-bold text-slate-400">{unit.code}</span>
+                              </div>
+                            </div>
+
+                            <Badge variant={unit.isMandatory ? 'brand' : 'neutral'}>
+                              {unit.isMandatory ? 'Core Unit' : 'Elective'}
+                            </Badge>
+                          </div>
+
+                          {/* Quick Metrics Bar */}
+                          <div className="grid grid-cols-3 gap-1.5 p-2 rounded-lg bg-slate-50 border border-slate-100 text-center text-2xs">
+                            <div>
+                              <span className="text-slate-400 block font-semibold text-[9px]">PDFs</span>
+                              <span className="font-black text-slate-800">{unit.pdfResources.length} Notes</span>
                             </div>
                             <div>
-                              <h3 className="font-extrabold text-slate-900 text-sm group-hover:text-[#1d5f99] transition-colors">
-                                {unit.name}
-                              </h3>
-                              <span className="text-2xs font-mono font-bold text-slate-400">{unit.code}</span>
+                              <span className="text-slate-400 block font-semibold text-[9px]">Tasks</span>
+                              <span className="font-black text-slate-800">{unit.assignments.length} Tasks</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 block font-semibold text-[9px]">Performance</span>
+                              <span className="font-black text-emerald-700">EE / 88%</span>
                             </div>
                           </div>
 
-                          <Badge variant={unit.isMandatory ? 'brand' : 'neutral'}>
-                            {unit.isMandatory ? 'Core Unit' : 'Elective'}
-                          </Badge>
-                        </div>
-
-                        {/* Quick Metrics Bar */}
-                        <div className="grid grid-cols-3 gap-1.5 p-2 rounded-lg bg-slate-50 border border-slate-100 text-center text-2xs">
-                          <div>
-                            <span className="text-slate-400 block font-semibold text-[9px]">PDFs</span>
-                            <span className="font-black text-slate-800">{unit.pdfResources.length} Notes</span>
-                          </div>
-                          <div>
-                            <span className="text-slate-400 block font-semibold text-[9px]">Tasks</span>
-                            <span className="font-black text-slate-800">{unit.assignments.length} Tasks</span>
-                          </div>
-                          <div>
-                            <span className="text-slate-400 block font-semibold text-[9px]">Performance</span>
-                            <span className="font-black text-emerald-700">EE / 88%</span>
+                          <div className="text-2xs text-slate-500 pt-1 flex items-center justify-between">
+                            <span>Teacher: <strong className="text-slate-700">{unit.teacherName}</strong></span>
+                            <span>{unit.weeklyPeriods} Periods/Wk</span>
                           </div>
                         </div>
 
-                        <div className="text-2xs text-slate-500 pt-1 flex items-center justify-between">
-                          <span>Teacher: <strong className="text-slate-700">{unit.teacherName}</strong></span>
-                          <span>{unit.weeklyPeriods} Periods/Wk</span>
+                        <div className="pt-3 border-t border-slate-100 mt-3 flex items-center justify-between text-2xs text-[#1d5f99] font-bold group-hover:translate-x-0.5 transition-transform">
+                          <span>Open Unit Courseware &amp; Tasks</span>
+                          <ChevronRight className="w-4 h-4" />
                         </div>
-                      </div>
-
-                      <div className="pt-3 border-t border-slate-100 mt-3 flex items-center justify-between text-2xs text-[#1d5f99] font-bold group-hover:translate-x-0.5 transition-transform">
-                        <span>Open Unit Courseware &amp; Tasks</span>
-                        <ChevronRight className="w-4 h-4" />
-                      </div>
-                    </Card>
-                  ))}
-                </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}

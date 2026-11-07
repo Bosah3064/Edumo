@@ -259,6 +259,9 @@ export const Academics: React.FC = () => {
   };
 
   const activeScale = getActiveGradingScale();
+  const cleanScaleName = (activeScale.name || 'CBC 8-Level Competency')
+    .replace(/\s*\[VERIFY WITH OFFICIAL SOURCE\]/gi, '')
+    .trim();
   const isCBC = activeScale.id.includes('cbc') || (currentSchool?.gradingMode as string) === 'cbc_no_aggregate';
 
   // 1. Listen to real-time students for selected class & stream
@@ -748,25 +751,25 @@ export const Academics: React.FC = () => {
   return (
     <div className="space-y-6 max-w-7xl mx-auto animate-fade-in pb-12">
       {/* Top Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white/70 backdrop-blur-xs p-5 rounded-2xl border border-gray-200/80 shadow-2xs">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <Badge variant="brand" dot>
-              {activeScale.name}
+      <div className="flex flex-col lg:flex-row lg:items-start xl:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-gray-200 shadow-2xs">
+        <div className="min-w-0 flex-1 space-y-1.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="brand" dot className="shrink-0">
+              {cleanScaleName}
             </Badge>
-            <span className="text-2xs text-gray-500 font-semibold">
+            <span className="text-2xs text-gray-600 font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 shrink-0">
               {currentSchool?.name || 'Main Campus'} • Academic Year 2026
             </span>
           </div>
           <h1 className="text-2xl font-display font-black text-gray-900 tracking-tight">
             Academics &amp; Assessment Engine
           </h1>
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-gray-500">
             Real marks entry, stream performance diagnostics, and CBC competency tracking
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 shrink-0 pt-2 lg:pt-0">
           {activeTab === 'gradebook' && (
             <>
               <Button
@@ -1056,7 +1059,7 @@ export const Academics: React.FC = () => {
             </div>
             <div className="flex items-center gap-3 text-2xs text-gray-500">
               <span>Exam Series: <strong className="text-brand-700">{assessmentTitle}</strong></span>
-              <span>Grading: <strong className="text-gray-700">{activeScale.name}</strong></span>
+              <span>Grading: <strong className="text-gray-700">{cleanScaleName}</strong></span>
             </div>
           </div>
 
