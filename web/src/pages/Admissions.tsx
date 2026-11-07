@@ -214,11 +214,15 @@ export const Admissions: React.FC = () => {
   const filteredApps = applications.filter((app) => {
     const matchesTab = activeTab === 'all' || app.status === activeTab;
     const matchesClass = classFilter === 'all' || app.targetClass === classFilter;
-    const fullName = `${app.applicantFirstName} ${app.applicantLastName}`.toLowerCase();
+    const fullName = `${app.applicantFirstName || ''} ${app.applicantLastName || ''}`.toLowerCase();
+    const appNo = (app.applicationNumber || '').toLowerCase();
+    const guardian = (app.guardianName || '').toLowerCase();
+    const q = (searchQuery || '').toLowerCase().trim();
     const matchesQuery =
-      fullName.includes(searchQuery.toLowerCase()) ||
-      app.applicationNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      app.guardianName.toLowerCase().includes(searchQuery.toLowerCase());
+      !q ||
+      fullName.includes(q) ||
+      appNo.includes(q) ||
+      guardian.includes(q);
     return matchesTab && matchesClass && matchesQuery;
   });
 

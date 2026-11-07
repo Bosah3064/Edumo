@@ -631,10 +631,12 @@ export const Classes: React.FC = () => {
 
   // Filtered Units
   const filteredUnits = subjects.filter((u) => {
+    const q = (unitSearch || '').toLowerCase().trim();
     const matchesSearch =
-      u.name.toLowerCase().includes(unitSearch.toLowerCase()) ||
-      u.code.toLowerCase().includes(unitSearch.toLowerCase()) ||
-      (u.department && u.department.toLowerCase().includes(unitSearch.toLowerCase()));
+      !q ||
+      (u.name || '').toLowerCase().includes(q) ||
+      (u.code || '').toLowerCase().includes(q) ||
+      (u.department && u.department.toLowerCase().includes(q));
 
     const matchesType =
       unitTypeFilter === 'all' ||
@@ -1358,8 +1360,8 @@ export const Classes: React.FC = () => {
                   if (!classUnitSearch.trim()) return true;
                   const term = classUnitSearch.toLowerCase();
                   return (
-                    s.name.toLowerCase().includes(term) ||
-                    s.code.toLowerCase().includes(term) ||
+                    (s.name || '').toLowerCase().includes(term) ||
+                    (s.code || '').toLowerCase().includes(term) ||
                     (s.department && s.department.toLowerCase().includes(term))
                   );
                 })

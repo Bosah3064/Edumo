@@ -555,8 +555,8 @@ export const Academics: React.FC = () => {
         prev.map((student) => {
           const match = marks.find(
             (m) =>
-              m.admissionNumber.toLowerCase() === student.admissionNumber.toLowerCase() ||
-              m.name.toLowerCase() === student.name.toLowerCase()
+              (m.admissionNumber || '').toLowerCase() === (student.admissionNumber || '').toLowerCase() ||
+              (m.name || '').toLowerCase() === (student.name || '').toLowerCase()
           );
           if (match && match.isValid) {
             return {

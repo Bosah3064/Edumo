@@ -100,15 +100,31 @@ export const ParentPortal: React.FC = () => {
 
     const unsubStudents = onSnapshot(studentsRef, (snap) => {
       const userPhone = currentUser?.phoneNumber;
-      const userEmail = currentUser?.email;
+      const userEmail = currentUser?.email?.toLowerCase().trim();
 
       const matchedStudents = snap.docs.filter((d) => {
         const data = d.data();
-        if (!userPhone && !userEmail) return true; // Show enrolled children in campus
-        const contacts = data.emergencyContacts || [];
-        const hasMatchingPhone = userPhone && contacts.some((c: { phone?: string }) => c.phone === userPhone);
-        const hasMatchingEmail = userEmail && data.schoolEmail === userEmail;
-        return hasMatchingPhone || hasMatchingEmail || true;
+        // If not logged in as a parent (e.g. previewing as admin or demo without credentials), show students
+        if (!userPhone && !userEmail) return true;
+
+        // Strict role-based isolation: Match guardian phone or email
+        const guardianPhone = data.guardianPhone || data.parentPhone || '';
+        const guardianEmail = (data.guardianEmail || data.parentEmail || '').toLowerCase().trim();
+        const contacts = Array.isArray(data.emergencyContacts) ? data.emergencyContacts : [];
+
+        const hasPhoneMatch = Boolean(userPhone && (guardianPhone === userPhone || contacts.some((c: any) => c.phone === userPhone)));
+        const hasEmailMatch = Boolean(userEmail && (guardianEmail === userEmail || data.schoolEmail?.toLowerCase() === userEmail || contacts.some((c: any) => c.email?.toLowerCase() === userEmail)));
+
+        // Demo account pairing: if demo parent 'parent@family.org' is testing, match the demo children
+        const isDemoParent = userEmail === 'parent@family.org';
+        const isDemoChild = isDemoParent && (
+          (data.firstName || '').toLowerCase().includes('kevin') ||
+          (data.firstName || '').toLowerCase().includes('zawadi') ||
+          (data.admissionNumber || '').includes('001') ||
+          (data.admissionNumber || '').includes('002')
+        );
+
+        return hasPhoneMatch || hasEmailMatch || isDemoChild;
       });
 
       const childList: LinkedChild[] = matchedStudents.map((d) => {
@@ -161,9 +177,12 @@ export const ParentPortal: React.FC = () => {
     };
   }, [organization, currentSchool, currentUser]);
 
-  // Load units / subjects for the student
+  // Load units / subjects for the student (Class-level aware)
   useEffect(() => {
     if (!organization || !currentSchool) return;
+
+    const selectedChild = children.find((c) => c.id === selectedChildId);
+    const childClass = (selectedChild?.className || 'Grade 4').toLowerCase();
 
     const fetchUnits = async () => {
       try {
@@ -179,10 +198,19 @@ export const ParentPortal: React.FC = () => {
 
         let unitList: UnitDetail[] = [];
         if (!snap.empty) {
-          unitList = snap.docs.map((d) => {
-            const data = d.data();
+          const allDocs = snap.docs.map((d) => ({ id: d.id, data: d.data() }));
+          // Filter by applicableClasses for this specific learner's class stream
+          const filteredDocs = allDocs.filter(({ data }) => {
+            if (!data.applicableClasses || !Array.isArray(data.applicableClasses) || data.applicableClasses.length === 0) {
+              return true;
+            }
+            if (data.applicableClasses.includes('all')) return true;
+            return data.applicableClasses.some((ac: string) => childClass.includes(ac.toLowerCase()));
+          });
+
+          unitList = (filteredDocs.length > 0 ? filteredDocs : allDocs).map(({ id, data }) => {
             return {
-              id: d.id,
+              id,
               name: data.name || 'Subject Unit',
               code: data.code || 'UNIT',
               isMandatory: data.isMandatory !== false,

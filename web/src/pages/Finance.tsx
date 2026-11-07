@@ -358,10 +358,25 @@ export const Finance: React.FC = () => {
     );
 
     const unsubInvoices = onSnapshot(invRef, (snap) => {
-      const list: InvoiceItem[] = snap.docs.map((d) => ({
-        id: d.id,
-        ...(d.data() as Omit<InvoiceItem, 'id'>),
-      }));
+      const list: InvoiceItem[] = snap.docs.map((d) => {
+        const data = d.data();
+        return {
+          id: d.id,
+          invoiceNumber: data.invoiceNumber || `INV-${d.id.slice(0, 6).toUpperCase()}`,
+          studentId: data.studentId || d.id,
+          studentName: data.studentName || data.title || 'Student Account',
+          admissionNumber: data.admissionNumber || data.code || 'ADM/2026',
+          className: data.className || 'General',
+          guardianPhone: data.guardianPhone || '',
+          termId: data.termId || 'Term 1',
+          totalAmount: Number(data.totalAmount || 0),
+          paidAmount: Number(data.paidAmount || 0),
+          balance: Number(data.balance !== undefined ? data.balance : (data.totalAmount || 0) - (data.paidAmount || 0)),
+          currency: data.currency || currency,
+          status: data.status || 'partial',
+          dueDate: data.dueDate || new Date().toISOString().slice(0, 10),
+        };
+      });
 
       if (list.length === 0) {
         const sampleInvoices: InvoiceItem[] = [
@@ -383,26 +398,35 @@ export const Finance: React.FC = () => {
   }, [organization, currentSchool, currency]);
 
   // Aggregate Metrics
-  const totalBilled = invoices.reduce((acc, i) => acc + i.totalAmount, 0);
-  const totalCollected = invoices.reduce((acc, i) => acc + i.paidAmount, 0);
-  const totalOutstanding = invoices.reduce((acc, i) => acc + i.balance, 0);
+  const totalBilled = invoices.reduce((acc, i) => acc + (i.totalAmount || 0), 0);
+  const totalCollected = invoices.reduce((acc, i) => acc + (i.paidAmount || 0), 0);
+  const totalOutstanding = invoices.reduce((acc, i) => acc + (i.balance || 0), 0);
   const collectionRate = totalBilled > 0 ? Math.round((totalCollected / totalBilled) * 100) : 0;
 
-  const totalPledged = pledges.reduce((acc, p) => acc + p.amountPledged, 0);
-  const totalPledgesFulfilled = pledges.reduce((acc, p) => acc + p.amountFulfilled, 0);
-  const totalPledgesOutstanding = pledges.reduce((acc, p) => acc + p.balanceRemaining, 0);
+  const totalPledged = pledges.reduce((acc, p) => acc + (p.amountPledged || 0), 0);
+  const totalPledgesFulfilled = pledges.reduce((acc, p) => acc + (p.amountFulfilled || 0), 0);
+  const totalPledgesOutstanding = pledges.reduce((acc, p) => acc + (p.balanceRemaining || 0), 0);
 
   const totalVouchersPaid = vouchers
     .filter((v) => v.status === 'paid')
-    .reduce((acc, v) => acc + v.amount, 0);
+    .reduce((acc, v) => acc + (v.amount || 0), 0);
 
-  // Filtered invoices
+  // Filtered invoices (guaranteed null-safe on every property)
   const filteredInvoices = invoices.filter((i) => {
+    const q = (searchQuery || '').toLowerCase().trim();
+    const studentName = (i.studentName || '').toLowerCase();
+    const admissionNumber = (i.admissionNumber || '').toLowerCase();
+    const invoiceNumber = (i.invoiceNumber || '').toLowerCase();
+    const title = ((i as any).title || '').toLowerCase();
+
     const matchesSearch =
-      i.studentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      i.admissionNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      i.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesClass = classFilter === 'all' || i.className === classFilter;
+      !q ||
+      studentName.includes(q) ||
+      admissionNumber.includes(q) ||
+      invoiceNumber.includes(q) ||
+      title.includes(q);
+
+    const matchesClass = classFilter === 'all' || (i.className || '') === classFilter;
     return matchesSearch && matchesClass;
   });
 
@@ -757,41 +781,73 @@ export const Finance: React.FC = () => {
       {/* TAB 1: Financial Overview & Cash Flow Waterfall */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
-          {/* Top KPI Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-            <Card className="p-4 space-y-1">
-              <span className="text-2xs font-bold text-gray-400 uppercase tracking-wider">Total Expected Invoiced</span>
-              <p className="text-2xl font-bold font-mono text-gray-900">
-                {currency} {totalBilled.toLocaleString()}
-              </p>
-              <span className="text-2xs text-gray-500">Gross termly tuition &amp; boarding</span>
-            </Card>
+          {/* Top KPI Cards with High-Contrast Colors */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="p-5 rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-700 text-white shadow-md flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-blue-100">Total Invoiced</span>
+                <div className="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center">
+                  <CreditCard className="w-4 h-4 text-white" />
+                </div>
+              </div>
+              <div className="mt-3">
+                <p className="text-2xl sm:text-3xl font-black font-mono">
+                  {currency} {totalBilled.toLocaleString()}
+                </p>
+                <p className="text-2xs text-blue-100 mt-1 font-medium">Gross tuition &amp; boarding fees</p>
+              </div>
+            </div>
 
-            <Card className="p-4 space-y-1">
-              <span className="text-2xs font-bold text-gray-400 uppercase tracking-wider">Actual Collections (Cash/M-Pesa)</span>
-              <p className="text-2xl font-bold font-mono text-emerald-600">
-                {currency} {totalCollected.toLocaleString()}
-              </p>
-              <span className="text-2xs text-emerald-600 font-semibold">{collectionRate}% Recovery Efficiency</span>
-            </Card>
+            <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-600 via-teal-600 to-emerald-700 text-white shadow-md flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-emerald-100">Actual Collections</span>
+                <div className="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center">
+                  <HandCoins className="w-4 h-4 text-white" />
+                </div>
+              </div>
+              <div className="mt-3">
+                <p className="text-2xl sm:text-3xl font-black font-mono">
+                  {currency} {totalCollected.toLocaleString()}
+                </p>
+                <p className="text-2xs text-emerald-100 mt-1 font-medium">
+                  {collectionRate}% Recovery Efficiency
+                </p>
+              </div>
+            </div>
 
-            <Card className="p-4 space-y-1">
-              <span className="text-2xs font-bold text-gray-400 uppercase tracking-wider">Outstanding Fee Arrears</span>
-              <p className="text-2xl font-bold font-mono text-danger-500">
-                {currency} {totalOutstanding.toLocaleString()}
-              </p>
-              <span className="text-2xs text-danger-500 font-semibold">{debtorsList.length} Accounts in Arrears</span>
-            </Card>
+            <div className="p-5 rounded-2xl bg-gradient-to-br from-rose-600 via-red-600 to-pink-700 text-white shadow-md flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-rose-100">Fee Arrears</span>
+                <div className="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center">
+                  <AlertCircle className="w-4 h-4 text-white" />
+                </div>
+              </div>
+              <div className="mt-3">
+                <p className="text-2xl sm:text-3xl font-black font-mono">
+                  {currency} {totalOutstanding.toLocaleString()}
+                </p>
+                <p className="text-2xs text-rose-100 mt-1 font-medium">
+                  {debtorsList.length} Accounts Pending Payment
+                </p>
+              </div>
+            </div>
 
-            <Card className="p-4 space-y-1 border-brand-300 bg-brand-50/20">
-              <span className="text-2xs font-bold text-brand-800 uppercase tracking-wider">Parent Pledges Pipeline</span>
-              <p className="text-2xl font-bold font-mono text-brand-700">
-                {currency} {totalPledged.toLocaleString()}
-              </p>
-              <span className="text-2xs text-brand-700 font-semibold">
-                {totalPledgesOutstanding > 0 ? `${currency} ${totalPledgesOutstanding.toLocaleString()} Pending` : 'All Fulfilled'}
-              </span>
-            </Card>
+            <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-600 via-orange-600 to-amber-700 text-white shadow-md flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-amber-100">Parent Pledges</span>
+                <div className="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center">
+                  <Clock className="w-4 h-4 text-white" />
+                </div>
+              </div>
+              <div className="mt-3">
+                <p className="text-2xl sm:text-3xl font-black font-mono">
+                  {currency} {totalPledged.toLocaleString()}
+                </p>
+                <p className="text-2xs text-amber-100 mt-1 font-medium">
+                  {totalPledgesOutstanding > 0 ? `${currency} ${totalPledgesOutstanding.toLocaleString()} Pending` : 'All Commitments Fulfilled'}
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Cashflow Summary Cards */}

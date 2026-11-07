@@ -50,19 +50,53 @@ export async function initializeSchoolTables(
     created.push('classes');
   }
 
-  // 2. Subjects / Curriculum Units Table
+  // 2. Subjects / Curriculum Units Table (Structured for Pre-Primary, Lower Primary, Upper Primary & Junior Sec)
   const subjectsRef = collection(db, schoolBase, 'subjects');
   const subjectsSnap = await getDocs(subjectsRef);
   if (subjectsSnap.empty) {
     const defaultUnits = [
-      { id: 'math-101', code: 'MATH-101', name: 'Mathematics', isMandatory: true, department: 'Sciences & Tech', weeklyPeriods: 5 },
-      { id: 'eng-102', code: 'ENG-102', name: 'English Language & Literacy', isMandatory: true, department: 'Languages', weeklyPeriods: 5 },
-      { id: 'kisw-103', code: 'KISW-103', name: 'Kiswahili & Fasihi', isMandatory: true, department: 'Languages', weeklyPeriods: 4 },
-      { id: 'sci-201', code: 'SCI-201', name: 'Integrated Science', isMandatory: true, department: 'Sciences & Tech', weeklyPeriods: 4 },
-      { id: 'sst-202', code: 'SST-202', name: 'Social Studies & Citizenship', isMandatory: true, department: 'Humanities', weeklyPeriods: 3 },
-      { id: 'agri-301', code: 'AGRI-301', name: 'Agriculture & Nutrition', isMandatory: true, department: 'Applied Sciences', weeklyPeriods: 3 },
-      { id: 'arts-302', code: 'ARTS-302', name: 'Creative Arts & Sports', isMandatory: true, department: 'Creative Arts', weeklyPeriods: 3 },
-      { id: 'cre-104', code: 'CRE-104', name: 'Christian Religious Education', isMandatory: false, department: 'Religious Studies', weeklyPeriods: 2 },
+      // Pre-Primary (PP1, PP2)
+      { id: 'math-pp', code: 'MATH-PP', name: 'Mathematical Activities', isMandatory: true, department: 'Pre-Primary Core', weeklyPeriods: 5, applicableClasses: ['PP1', 'PP2'] },
+      { id: 'lang-pp', code: 'LANG-PP', name: 'Language Activities', isMandatory: true, department: 'Pre-Primary Core', weeklyPeriods: 5, applicableClasses: ['PP1', 'PP2'] },
+      { id: 'env-pp', code: 'ENV-PP', name: 'Environmental Activities', isMandatory: true, department: 'Pre-Primary Core', weeklyPeriods: 4, applicableClasses: ['PP1', 'PP2'] },
+      { id: 'psy-pp', code: 'PSY-PP', name: 'Psychomotor & Creative Activities', isMandatory: true, department: 'Pre-Primary Core', weeklyPeriods: 5, applicableClasses: ['PP1', 'PP2'] },
+      { id: 'rel-pp', code: 'REL-PP', name: 'Religious Education Activities', isMandatory: false, department: 'Pre-Primary Elective', weeklyPeriods: 2, applicableClasses: ['PP1', 'PP2'] },
+
+      // Lower Primary (Grade 1 - 3)
+      { id: 'math-lp', code: 'MATH-LP', name: 'Mathematical Activities', isMandatory: true, department: 'Lower Primary Core', weeklyPeriods: 5, applicableClasses: ['Grade 1', 'Grade 2', 'Grade 3'] },
+      { id: 'eng-lp', code: 'ENG-LP', name: 'English Language Activities', isMandatory: true, department: 'Lower Primary Core', weeklyPeriods: 5, applicableClasses: ['Grade 1', 'Grade 2', 'Grade 3'] },
+      { id: 'kisw-lp', code: 'KISW-LP', name: 'Kiswahili Language Activities', isMandatory: true, department: 'Lower Primary Core', weeklyPeriods: 4, applicableClasses: ['Grade 1', 'Grade 2', 'Grade 3'] },
+      { id: 'env-lp', code: 'ENV-LP', name: 'Environmental Activities', isMandatory: true, department: 'Lower Primary Core', weeklyPeriods: 4, applicableClasses: ['Grade 1', 'Grade 2', 'Grade 3'] },
+      { id: 'hyg-lp', code: 'HYG-LP', name: 'Hygiene & Nutrition Activities', isMandatory: true, department: 'Lower Primary Core', weeklyPeriods: 3, applicableClasses: ['Grade 1', 'Grade 2', 'Grade 3'] },
+      { id: 'creat-lp', code: 'CREAT-LP', name: 'Movement & Creative Activities', isMandatory: true, department: 'Lower Primary Core', weeklyPeriods: 4, applicableClasses: ['Grade 1', 'Grade 2', 'Grade 3'] },
+      { id: 'cre-lp', code: 'CRE-LP', name: 'Christian Religious Education', isMandatory: false, department: 'Religious Studies', weeklyPeriods: 2, applicableClasses: ['Grade 1', 'Grade 2', 'Grade 3'] },
+      { id: 'indig-lp', code: 'INDIG-LP', name: 'Indigenous Language Activities', isMandatory: false, department: 'Languages Elective', weeklyPeriods: 2, applicableClasses: ['Grade 1', 'Grade 2', 'Grade 3'] },
+
+      // Upper Primary (Grade 4 - 6)
+      { id: 'math-up', code: 'MATH-UP', name: 'Mathematics', isMandatory: true, department: 'Sciences & Tech', weeklyPeriods: 5, applicableClasses: ['Grade 4', 'Grade 5', 'Grade 6'] },
+      { id: 'eng-up', code: 'ENG-UP', name: 'English Language', isMandatory: true, department: 'Languages', weeklyPeriods: 5, applicableClasses: ['Grade 4', 'Grade 5', 'Grade 6'] },
+      { id: 'kisw-up', code: 'KISW-UP', name: 'Kiswahili', isMandatory: true, department: 'Languages', weeklyPeriods: 4, applicableClasses: ['Grade 4', 'Grade 5', 'Grade 6'] },
+      { id: 'sci-up', code: 'SCI-UP', name: 'Science & Technology', isMandatory: true, department: 'Sciences & Tech', weeklyPeriods: 4, applicableClasses: ['Grade 4', 'Grade 5', 'Grade 6'] },
+      { id: 'agri-up', code: 'AGRI-UP', name: 'Agriculture & Nutrition', isMandatory: true, department: 'Applied Sciences', weeklyPeriods: 3, applicableClasses: ['Grade 4', 'Grade 5', 'Grade 6'] },
+      { id: 'sst-up', code: 'SST-UP', name: 'Social Studies', isMandatory: true, department: 'Humanities', weeklyPeriods: 3, applicableClasses: ['Grade 4', 'Grade 5', 'Grade 6'] },
+      { id: 'arts-up', code: 'ARTS-UP', name: 'Creative Arts (Art, Craft & Music)', isMandatory: true, department: 'Creative Arts', weeklyPeriods: 3, applicableClasses: ['Grade 4', 'Grade 5', 'Grade 6'] },
+      { id: 'phe-up', code: 'PHE-UP', name: 'Physical & Health Education', isMandatory: true, department: 'Physical Education', weeklyPeriods: 2, applicableClasses: ['Grade 4', 'Grade 5', 'Grade 6'] },
+      { id: 'cre-up', code: 'CRE-UP', name: 'Christian Religious Education', isMandatory: false, department: 'Religious Studies', weeklyPeriods: 2, applicableClasses: ['Grade 4', 'Grade 5', 'Grade 6'] },
+      { id: 'french-up', code: 'FREN-UP', name: 'French Language', isMandatory: false, department: 'Foreign Languages', weeklyPeriods: 2, applicableClasses: ['Grade 4', 'Grade 5', 'Grade 6'] },
+
+      // Junior Secondary (Grade 7 - 9)
+      { id: 'math-jss', code: 'MATH-JSS', name: 'Mathematics', isMandatory: true, department: 'Sciences & Tech', weeklyPeriods: 5, applicableClasses: ['Grade 7', 'Grade 8', 'Grade 9'] },
+      { id: 'eng-jss', code: 'ENG-JSS', name: 'English', isMandatory: true, department: 'Languages', weeklyPeriods: 5, applicableClasses: ['Grade 7', 'Grade 8', 'Grade 9'] },
+      { id: 'kisw-jss', code: 'KISW-JSS', name: 'Kiswahili', isMandatory: true, department: 'Languages', weeklyPeriods: 4, applicableClasses: ['Grade 7', 'Grade 8', 'Grade 9'] },
+      { id: 'sci-jss', code: 'SCI-JSS', name: 'Integrated Science', isMandatory: true, department: 'Sciences & Tech', weeklyPeriods: 4, applicableClasses: ['Grade 7', 'Grade 8', 'Grade 9'] },
+      { id: 'hlth-jss', code: 'HLTH-JSS', name: 'Health Education', isMandatory: true, department: 'Sciences & Tech', weeklyPeriods: 2, applicableClasses: ['Grade 7', 'Grade 8', 'Grade 9'] },
+      { id: 'tech-jss', code: 'TECH-JSS', name: 'Pre-Technical Studies', isMandatory: true, department: 'Technical & Applied', weeklyPeriods: 4, applicableClasses: ['Grade 7', 'Grade 8', 'Grade 9'] },
+      { id: 'sst-jss', code: 'SST-JSS', name: 'Social Studies', isMandatory: true, department: 'Humanities', weeklyPeriods: 3, applicableClasses: ['Grade 7', 'Grade 8', 'Grade 9'] },
+      { id: 'agri-jss', code: 'AGRI-JSS', name: 'Agriculture & Nutrition', isMandatory: true, department: 'Applied Sciences', weeklyPeriods: 3, applicableClasses: ['Grade 7', 'Grade 8', 'Grade 9'] },
+      { id: 'bus-jss', code: 'BUS-JSS', name: 'Business Studies', isMandatory: true, department: 'Commercial Studies', weeklyPeriods: 3, applicableClasses: ['Grade 7', 'Grade 8', 'Grade 9'] },
+      { id: 'arts-jss', code: 'ARTS-JSS', name: 'Creative Arts & Sports', isMandatory: true, department: 'Creative Arts', weeklyPeriods: 3, applicableClasses: ['Grade 7', 'Grade 8', 'Grade 9'] },
+      { id: 'comp-jss', code: 'COMP-JSS', name: 'Computer Science / ICT', isMandatory: false, department: 'ICT & Computing', weeklyPeriods: 2, applicableClasses: ['Grade 7', 'Grade 8', 'Grade 9'] },
+      { id: 'cre-jss', code: 'CRE-JSS', name: 'Religious Studies (CRE / IRE)', isMandatory: false, department: 'Religious Studies', weeklyPeriods: 2, applicableClasses: ['Grade 7', 'Grade 8', 'Grade 9'] },
     ];
     for (const u of defaultUnits) {
       await setDoc(doc(db, schoolBase, 'subjects', u.id), {
@@ -185,9 +219,9 @@ export async function initializeSchoolTables(
   const invoicesSnap = await getDocs(invoicesRef);
   if (invoicesSnap.empty) {
     const defaultInvoices = [
-      { invoiceNumber: 'INV-2026-001', termId: 'Term 1 2026', title: 'Tuition & Academic Activity Fee', totalAmount: 476000, paidAmount: 420000, balance: 56000, status: 'partial', createdAt: serverTimestamp() },
-      { invoiceNumber: 'INV-2026-002', termId: 'Term 1 2026', title: 'Hot Lunch & Nutrition Program', totalAmount: 180000, paidAmount: 165000, balance: 15000, status: 'partial', createdAt: serverTimestamp() },
-      { invoiceNumber: 'INV-2026-003', termId: 'Term 1 2026', title: 'Campus Transport Route Services', totalAmount: 140000, paidAmount: 130000, balance: 10000, status: 'partial', createdAt: serverTimestamp() },
+      { invoiceNumber: 'INV-2026-001', termId: 'Term 1 2026', title: 'Tuition & Academic Activity Fee', studentName: 'General Institutional Billing', admissionNumber: 'SCH-FEES', className: 'All Classes', totalAmount: 476000, paidAmount: 420000, balance: 56000, status: 'partial', createdAt: serverTimestamp() },
+      { invoiceNumber: 'INV-2026-002', termId: 'Term 1 2026', title: 'Hot Lunch & Nutrition Program', studentName: 'Campus Nutrition Ledger', admissionNumber: 'SCH-MEALS', className: 'All Classes', totalAmount: 180000, paidAmount: 165000, balance: 15000, status: 'partial', createdAt: serverTimestamp() },
+      { invoiceNumber: 'INV-2026-003', termId: 'Term 1 2026', title: 'Campus Transport Route Services', studentName: 'Transport Fleet Billing', admissionNumber: 'SCH-BUS', className: 'All Classes', totalAmount: 140000, paidAmount: 130000, balance: 10000, status: 'partial', createdAt: serverTimestamp() },
     ];
     for (const inv of defaultInvoices) {
       await setDoc(doc(invoicesRef), inv);

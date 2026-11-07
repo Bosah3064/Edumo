@@ -41,6 +41,106 @@ import { getSchoolEmailDomain } from '../utils/admission';
 import { exportStaffDirectory } from '../utils/excelExport';
 import { READY_ROLES, computeCombinedCapabilities } from '../utils/roles';
 
+export type AcademicLevel = 'auto' | 'pre_primary' | 'lower_primary' | 'upper_primary' | 'junior_secondary' | 'senior_secondary' | 'all';
+
+export const LEVEL_LEARNING_AREAS: Record<'pre_primary' | 'lower_primary' | 'upper_primary' | 'junior_secondary' | 'senior_secondary', { label: string; short: string; units: string[] }> = {
+  pre_primary: {
+    label: 'Pre-Primary (PP1 - PP2)',
+    short: 'Pre-Primary',
+    units: [
+      'Mathematical Activities',
+      'Language Activities',
+      'Environmental Activities',
+      'Psychomotor & Creative Activities',
+      'Religious Education Activities (CRE/IRE/HRE)',
+    ],
+  },
+  lower_primary: {
+    label: 'Lower Primary (Grade 1 - 3)',
+    short: 'Lower Primary (G1-3)',
+    units: [
+      'Mathematical Activities',
+      'English Language Activities',
+      'Kiswahili Language Activities',
+      'Environmental Activities',
+      'Hygiene & Nutrition Activities',
+      'Movement & Creative Activities',
+      'Religious Education (CRE / IRE / HRE)',
+      'Indigenous Language Activities',
+    ],
+  },
+  upper_primary: {
+    label: 'Upper Primary (Grade 4 - 6)',
+    short: 'Upper Primary (G4-6)',
+    units: [
+      'Mathematics',
+      'English Language',
+      'Kiswahili',
+      'Science & Technology',
+      'Agriculture & Nutrition',
+      'Social Studies',
+      'Creative Arts (Art, Craft & Music)',
+      'Physical & Health Education (PHE)',
+      'Religious Education (CRE / IRE / HRE)',
+    ],
+  },
+  junior_secondary: {
+    label: 'Junior Secondary (Grade 7 - 9)',
+    short: 'Junior Sec (G7-9)',
+    units: [
+      'Mathematics',
+      'English',
+      'Kiswahili',
+      'Integrated Science',
+      'Health Education',
+      'Social Studies',
+      'Agriculture & Nutrition',
+      'Pre-Technical Studies',
+      'Business Studies',
+      'Creative Arts & Sports',
+      'Religious Education (CRE / IRE)',
+    ],
+  },
+  senior_secondary: {
+    label: 'Senior Secondary (Form 1 - 4)',
+    short: 'Secondary (F1-4)',
+    units: [
+      'Mathematics (Pure / Alt B)',
+      'English Language & Literature',
+      'Kiswahili & Fasihi',
+      'Biology',
+      'Chemistry',
+      'Physics',
+      'History & Government',
+      'Geography',
+      'Business Studies',
+      'Agriculture',
+      'Computer Studies',
+      'Religious Studies (CRE / IRE)',
+    ],
+  },
+};
+
+export function detectLevelFromClassName(className: string = ''): 'pre_primary' | 'lower_primary' | 'upper_primary' | 'junior_secondary' | 'senior_secondary' {
+  const c = className.toLowerCase();
+  if (c.includes('pp1') || c.includes('pp2') || c.includes('nursery') || c.includes('baby') || c.includes('kindergarten') || c.includes('playgroup')) {
+    return 'pre_primary';
+  }
+  if (c.includes('grade 1') || c.includes('grade 2') || c.includes('grade 3') || c.includes('class 1') || c.includes('class 2') || c.includes('class 3')) {
+    return 'lower_primary';
+  }
+  if (c.includes('grade 4') || c.includes('grade 5') || c.includes('grade 6') || c.includes('class 4') || c.includes('class 5') || c.includes('class 6')) {
+    return 'upper_primary';
+  }
+  if (c.includes('grade 7') || c.includes('grade 8') || c.includes('grade 9') || c.includes('jss') || c.includes('junior')) {
+    return 'junior_secondary';
+  }
+  if (c.includes('form') || c.includes('grade 10') || c.includes('grade 11') || c.includes('grade 12') || c.includes('high') || c.includes('secondary')) {
+    return 'senior_secondary';
+  }
+  return 'lower_primary';
+}
+
 const DEFAULT_COMMON_UNITS = [
   'Mathematics',
   'English Language',
@@ -101,6 +201,7 @@ export const Staff: React.FC = () => {
   const [editStaffClass, setEditStaffClass] = useState('');
   const [editStaffSubjects, setEditStaffSubjects] = useState<string[]>([]);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [editLevelFilter, setEditLevelFilter] = useState<AcademicLevel>('auto');
 
   // Invite Form
   const [staffName, setStaffName] = useState('');
@@ -113,11 +214,35 @@ export const Staff: React.FC = () => {
   const [assignedSubjects, setAssignedSubjects] = useState<string[]>([]);
   const [customSubjectInput, setCustomSubjectInput] = useState('');
   const [schoolUnits, setSchoolUnits] = useState<Array<{ id: string; name: string; code?: string }>>([]);
+  const [inviteLevelFilter, setInviteLevelFilter] = useState<AcademicLevel>('auto');
   const [createLoginAccount, setCreateLoginAccount] = useState(true);
   const [tempPassword, setTempPassword] = useState('Edumo@2026');
   const [classesList, setClassesList] = useState<Array<{ id: string; name: string }>>([]);
   const [generatedInviteCode, setGeneratedInviteCode] = useState<string | null>(null);
   const [generatedSchoolId, setGeneratedSchoolId] = useState<string>('');
+
+  // Helper to fetch level-aware learning areas
+  const getUnitsForLevel = (filterLevel: AcademicLevel, assignedClassName: string) => {
+    let targetKey: 'pre_primary' | 'lower_primary' | 'upper_primary' | 'junior_secondary' | 'senior_secondary' = 'lower_primary';
+    if (filterLevel === 'auto') {
+      targetKey = detectLevelFromClassName(assignedClassName);
+    } else if (filterLevel !== 'all') {
+      targetKey = filterLevel;
+    }
+
+    if (filterLevel === 'all') {
+      const allStandard = Object.values(LEVEL_LEARNING_AREAS).flatMap((l) => l.units);
+      return Array.from(new Set([...schoolUnits.map((u) => u.name), ...allStandard]));
+    }
+
+    const levelDef = LEVEL_LEARNING_AREAS[targetKey];
+    const standardUnits = levelDef ? levelDef.units : [];
+    const matchingSchoolUnits = schoolUnits
+      .filter((u) => standardUnits.some((su) => su.toLowerCase() === u.name.toLowerCase()))
+      .map((u) => u.name);
+
+    return Array.from(new Set([...matchingSchoolUnits, ...standardUnits]));
+  };
 
   // Manage Roles Modal for existing staff
   const [manageRolesStaff, setManageRolesStaff] = useState<StaffMember | null>(null);
@@ -574,6 +699,67 @@ export const Staff: React.FC = () => {
         </div>
       </div>
 
+      {/* Top Metric Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-700 text-white shadow-md flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-blue-100">Total Faculty</span>
+            <div className="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center">
+              <GraduationCap className="w-4 h-4 text-white" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <p className="text-2xl sm:text-3xl font-black">{staffList.length}</p>
+            <p className="text-2xs text-blue-100 mt-0.5 font-medium">Registered staff &amp; educators</p>
+          </div>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-600 via-teal-600 to-emerald-700 text-white shadow-md flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-100">Class Teachers</span>
+            <div className="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center">
+              <UserCheck className="w-4 h-4 text-white" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <p className="text-2xl sm:text-3xl font-black">
+              {staffList.filter((m) => (m.roles || [m.role]).includes('class_teacher')).length}
+            </p>
+            <p className="text-2xs text-emerald-100 mt-0.5 font-medium">Homeroom attendance leads</p>
+          </div>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-600 via-violet-600 to-purple-700 text-white shadow-md flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-purple-100">Subject Teachers</span>
+            <div className="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center">
+              <BookOpen className="w-4 h-4 text-white" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <p className="text-2xl sm:text-3xl font-black">
+              {staffList.filter((m) => (m.roles || [m.role]).includes('teacher')).length}
+            </p>
+            <p className="text-2xs text-purple-100 mt-0.5 font-medium">Multi-unit course instructors</p>
+          </div>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-600 via-orange-600 to-amber-700 text-white shadow-md flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-amber-100">Admin &amp; Leadership</span>
+            <div className="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center">
+              <ShieldCheck className="w-4 h-4 text-white" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <p className="text-2xl sm:text-3xl font-black">
+              {staffList.filter((m) => (m.roles || [m.role]).some((r) => ['admin', 'principal', 'deputy', 'bursar'].includes(r))).length}
+            </p>
+            <p className="text-2xs text-amber-100 mt-0.5 font-medium">Executive &amp; finance board</p>
+          </div>
+        </div>
+      </div>
+
       {/* Search Bar */}
       <div className="flex items-center gap-4">
         <div className="w-full sm:w-96 relative">
@@ -922,13 +1108,53 @@ export const Staff: React.FC = () => {
                   </div>
                 )}
 
-                {/* Quick Unit Suggestion Pills */}
+                {/* Level-Aware Unit Suggestion Pills */}
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
-                    Available School Units (Click to toggle):
-                  </span>
-                  <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto p-1">
-                    {Array.from(new Set([...schoolUnits.map((u) => u.name), ...DEFAULT_COMMON_UNITS])).map((unitName) => {
+                  <div className="flex flex-wrap items-center justify-between gap-1 mb-2">
+                    <span className="text-[10px] uppercase font-bold text-slate-500">
+                      Curriculum Level Filter:
+                    </span>
+                    <span className="text-2xs text-[#1d5f99] font-bold">
+                      {inviteLevelFilter === 'auto'
+                        ? `Auto-Matched to ${assignedClass || 'Class'} (${LEVEL_LEARNING_AREAS[detectLevelFromClassName(assignedClass)].short})`
+                        : inviteLevelFilter === 'all'
+                        ? 'All School Levels'
+                        : LEVEL_LEARNING_AREAS[inviteLevelFilter as keyof typeof LEVEL_LEARNING_AREAS]?.label}
+                    </span>
+                  </div>
+
+                  {/* Level Tabs */}
+                  <div className="flex items-center gap-1 overflow-x-auto pb-1.5 scrollbar-none">
+                    {[
+                      { id: 'auto', label: '★ Auto-Match' },
+                      { id: 'lower_primary', label: 'Lower Primary (G1-3)' },
+                      { id: 'upper_primary', label: 'Upper Primary (G4-6)' },
+                      { id: 'junior_secondary', label: 'Junior Sec (G7-9)' },
+                      { id: 'senior_secondary', label: 'Secondary (F1-4)' },
+                      { id: 'pre_primary', label: 'Pre-Primary (PP1-2)' },
+                      { id: 'all', label: 'All Units' },
+                    ].map((tab) => {
+                      const isSel = inviteLevelFilter === tab.id;
+                      return (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          onClick={() => setInviteLevelFilter(tab.id as AcademicLevel)}
+                          className={`text-2xs px-2.5 py-1 rounded-full font-bold whitespace-nowrap transition-all cursor-pointer ${
+                            isSel
+                              ? 'bg-[#1d5f99] text-white shadow-xs'
+                              : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          {tab.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Filtered Unit Pills */}
+                  <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-2 bg-white rounded-xl border border-slate-200 mt-1.5">
+                    {getUnitsForLevel(inviteLevelFilter, assignedClass).map((unitName) => {
                       const isSelected = assignedSubjects.includes(unitName);
                       return (
                         <button
@@ -941,10 +1167,10 @@ export const Staff: React.FC = () => {
                               setAssignedSubjects([...assignedSubjects, unitName]);
                             }
                           }}
-                          className={`text-2xs px-2 py-1 rounded-md border font-medium transition-all ${
+                          className={`text-2xs px-2.5 py-1.5 rounded-lg border font-semibold transition-all cursor-pointer ${
                             isSelected
-                              ? 'bg-brand-600 text-white border-brand-700 shadow-xs'
-                              : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                              ? 'bg-blue-600 text-white border-blue-700 shadow-xs'
+                              : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-blue-300 hover:bg-blue-50/50'
                           }`}
                         >
                           {isSelected ? '✓ ' : '+ '}{unitName}
@@ -1392,13 +1618,74 @@ export const Staff: React.FC = () => {
               />
             </div>
 
-            {/* Assigned Units Multi-Select */}
+            {/* Assigned Units Multi-Select with Level Filtering */}
             <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
-              <span className="text-xs font-bold text-slate-800 block">
-                Assigned Teaching Units / Learning Areas ({editStaffSubjects.length})
-              </span>
-              <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto p-1">
-                {Array.from(new Set([...schoolUnits.map((u) => u.name), ...DEFAULT_COMMON_UNITS])).map((uName) => {
+              <div className="flex flex-wrap items-center justify-between gap-1">
+                <span className="text-xs font-bold text-slate-800">
+                  Assigned Teaching Units / Learning Areas ({editStaffSubjects.length})
+                </span>
+                <span className="text-2xs text-[#1d5f99] font-bold">
+                  {editLevelFilter === 'auto'
+                    ? `Auto-Matched to ${editStaffClass || 'Class'} (${LEVEL_LEARNING_AREAS[detectLevelFromClassName(editStaffClass)].short})`
+                    : editLevelFilter === 'all'
+                    ? 'All School Levels'
+                    : LEVEL_LEARNING_AREAS[editLevelFilter as keyof typeof LEVEL_LEARNING_AREAS]?.label}
+                </span>
+              </div>
+
+              {/* Level Tabs */}
+              <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-none">
+                {[
+                  { id: 'auto', label: '★ Auto-Match' },
+                  { id: 'lower_primary', label: 'Lower Primary (G1-3)' },
+                  { id: 'upper_primary', label: 'Upper Primary (G4-6)' },
+                  { id: 'junior_secondary', label: 'Junior Sec (G7-9)' },
+                  { id: 'senior_secondary', label: 'Secondary (F1-4)' },
+                  { id: 'pre_primary', label: 'Pre-Primary (PP1-2)' },
+                  { id: 'all', label: 'All Units' },
+                ].map((tab) => {
+                  const isSel = editLevelFilter === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setEditLevelFilter(tab.id as AcademicLevel)}
+                      className={`text-2xs px-2.5 py-1 rounded-full font-bold whitespace-nowrap transition-all cursor-pointer ${
+                        isSel
+                          ? 'bg-purple-700 text-white shadow-xs'
+                          : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Selected Badges */}
+              {editStaffSubjects.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 p-2 bg-white rounded-lg border border-slate-200 max-h-20 overflow-y-auto">
+                  {editStaffSubjects.map((s) => (
+                    <span
+                      key={s}
+                      className="inline-flex items-center gap-1 text-2xs font-semibold px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200"
+                    >
+                      {s}
+                      <button
+                        type="button"
+                        onClick={() => setEditStaffSubjects(editStaffSubjects.filter((x) => x !== s))}
+                        className="hover:text-red-600"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Unit Pills */}
+              <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-2 bg-white rounded-xl border border-slate-200">
+                {getUnitsForLevel(editLevelFilter, editStaffClass).map((uName) => {
                   const isSel = editStaffSubjects.includes(uName);
                   return (
                     <button
@@ -1411,10 +1698,10 @@ export const Staff: React.FC = () => {
                           setEditStaffSubjects([...editStaffSubjects, uName]);
                         }
                       }}
-                      className={`text-2xs px-2 py-1 rounded-md border font-medium transition-all ${
+                      className={`text-2xs px-2.5 py-1.5 rounded-lg border font-semibold transition-all cursor-pointer ${
                         isSel
-                          ? 'bg-purple-600 text-white border-purple-700'
-                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                          ? 'bg-purple-600 text-white border-purple-700 shadow-xs'
+                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-purple-300 hover:bg-purple-50/50'
                       }`}
                     >
                       {isSel ? '✓ ' : '+ '}{uName}

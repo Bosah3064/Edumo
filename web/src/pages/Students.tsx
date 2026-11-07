@@ -268,13 +268,17 @@ export const Students: React.FC = () => {
   };
 
   const filteredStudents = students.filter((s) => {
-    const matchesSearch =
-      `${s.firstName} ${s.lastName} ${s.admissionNumber}`
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || s.status === statusFilter;
+    const q = (searchQuery || '').toLowerCase().trim();
+    const fullName = `${s.firstName || ''} ${s.lastName || ''} ${s.admissionNumber || ''}`.toLowerCase();
+    const matchesSearch = !q || fullName.includes(q);
+    const matchesStatus = statusFilter === 'all' || (s.status || 'active') === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  const totalLearners = students.length;
+  const dayLearners = students.filter((s) => (s.boardingStatus || 'day') === 'day').length;
+  const boardingLearners = students.filter((s) => s.boardingStatus === 'boarding').length;
+  const activeLearners = students.filter((s) => (s.status || 'active') === 'active').length;
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto animate-fade-in">
@@ -282,7 +286,7 @@ export const Students: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-display font-bold text-gray-900 tracking-tight">
-            Students & Learners
+            Students &amp; Learners
           </h1>
           <p className="text-xs text-gray-500 mt-1">
             Enrolled learners at {currentSchool?.name || 'Main Campus'}
@@ -310,6 +314,61 @@ export const Students: React.FC = () => {
           >
             Enroll New Student
           </Button>
+        </div>
+      </div>
+
+      {/* Top Colorful Metric Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-700 text-white shadow-md flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-blue-100">Total Learners</span>
+            <div className="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center">
+              <Users className="w-4 h-4 text-white" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <p className="text-2xl sm:text-3xl font-black">{totalLearners}</p>
+            <p className="text-2xs text-blue-100 mt-0.5 font-medium">Active learner admissions</p>
+          </div>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-600 via-teal-600 to-emerald-700 text-white shadow-md flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-100">Active Roster</span>
+            <div className="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center">
+              <Sparkles className="w-4 h-4 text-white" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <p className="text-2xl sm:text-3xl font-black">{activeLearners}</p>
+            <p className="text-2xs text-emerald-100 mt-0.5 font-medium">Currently in class attendance</p>
+          </div>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-600 via-violet-600 to-purple-700 text-white shadow-md flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-purple-100">Day Scholars</span>
+            <div className="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center">
+              <Users className="w-4 h-4 text-white" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <p className="text-2xl sm:text-3xl font-black">{dayLearners}</p>
+            <p className="text-2xs text-purple-100 mt-0.5 font-medium">Daily commute students</p>
+          </div>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-600 via-orange-600 to-amber-700 text-white shadow-md flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-amber-100">Boarding Wing</span>
+            <div className="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center">
+              <Calendar className="w-4 h-4 text-white" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <p className="text-2xl sm:text-3xl font-black">{boardingLearners}</p>
+            <p className="text-2xs text-amber-100 mt-0.5 font-medium">Campus residency students</p>
+          </div>
         </div>
       </div>
 
