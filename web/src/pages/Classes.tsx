@@ -1012,32 +1012,34 @@ export const Classes: React.FC = () => {
   return (
     <div className="space-y-6 max-w-7xl mx-auto animate-fade-in pb-12">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="p-2 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-sm">
-              <Layers className="w-5 h-5" />
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white/70 backdrop-blur-xs p-5 rounded-2xl border border-slate-200/80 shadow-2xs">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <Badge variant="brand" dot>
+              {currentSchool?.curriculumType || 'CBC Curriculum'}
+            </Badge>
+            <span className="text-2xs text-slate-500 font-semibold">
+              {currentSchool?.name || 'Main Campus'}
             </span>
-            <h1 className="text-2xl font-display font-extrabold text-slate-900 tracking-tight">
-              Classes &amp; Stream Management
-            </h1>
           </div>
+          <h1 className="text-2xl font-display font-black text-slate-900 tracking-tight">
+            Classes &amp; Stream Architecture
+          </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Real academic structure for <strong>{currentSchool?.name || 'School'}</strong> •{' '}
-            Curriculum: <span className="font-semibold text-slate-700">{currentSchool?.curriculumType || 'CBC / National'}</span>
+            Configure academic grade levels, multi-stream cohorts, and learning area distributions
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
           {classes.length === 0 && (
             <Button
               variant="secondary"
               size="sm"
               onClick={handleSeedStandardClasses}
               leftIcon={<Sparkles className="w-4 h-4 text-brand-600" />}
-              className="border-blue-200 text-blue-700 hover:bg-blue-50"
+              className="border-blue-200 text-blue-700 hover:bg-blue-50 font-bold"
             >
-              Setup Standard Classes
+              Setup Standard CBC Structure
             </Button>
           )}
 
@@ -1047,7 +1049,7 @@ export const Classes: React.FC = () => {
               size="sm"
               onClick={() => setIsAddClassModalOpen(true)}
               leftIcon={<Plus className="w-4 h-4" />}
-              className="shadow-sm"
+              className="shadow-sm font-bold"
             >
               Add New Class
             </Button>
@@ -1059,6 +1061,7 @@ export const Classes: React.FC = () => {
                 onClick={handleSeedStandardUnits}
                 isLoading={seedingCurriculum}
                 leftIcon={<Sparkles className="w-4 h-4 text-brand-600" />}
+                className="font-bold"
               >
                 Load Standard Units
               </Button>
@@ -1067,7 +1070,7 @@ export const Classes: React.FC = () => {
                 size="sm"
                 onClick={() => setIsAddUnitModalOpen(true)}
                 leftIcon={<Plus className="w-4 h-4" />}
-                className="shadow-sm"
+                className="shadow-sm font-bold"
               >
                 Add Unit / Subject
               </Button>
@@ -1415,16 +1418,16 @@ export const Classes: React.FC = () => {
                     </div>
 
                     {/* Card Actions Footer */}
-                    <div className="pt-3 border-t border-slate-100 mt-4 flex items-center justify-between gap-2">
+                    <div className="pt-3 border-t border-slate-100 mt-4 grid grid-cols-2 gap-2">
                       <Button
                         type="button"
                         variant="secondary"
                         size="sm"
                         onClick={() => handleOpenManageStreams(cls)}
-                        leftIcon={<FolderTree className="w-3.5 h-3.5 text-emerald-600" />}
-                        className="text-2xs py-1 h-7 font-bold flex-1"
+                        leftIcon={<FolderTree className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
+                        className="text-2xs py-1 h-8 font-bold justify-center"
                       >
-                        Streams ({cls.streams.length})
+                        <span className="truncate">Streams ({cls.streams.length})</span>
                       </Button>
 
                       <Button
@@ -1432,10 +1435,10 @@ export const Classes: React.FC = () => {
                         variant="secondary"
                         size="sm"
                         onClick={() => handleOpenManageClassUnits(cls)}
-                        leftIcon={<BookOpen className="w-3.5 h-3.5 text-[#1d5f99]" />}
-                        className="text-2xs py-1 h-7 font-bold flex-1"
+                        leftIcon={<BookOpen className="w-3.5 h-3.5 text-[#1d5f99] shrink-0" />}
+                        className="text-2xs py-1 h-8 font-bold justify-center"
                       >
-                        Units ({classUnits.length})
+                        <span className="truncate">Units ({classUnits.length})</span>
                       </Button>
                     </div>
                   </Card>

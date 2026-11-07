@@ -29,19 +29,20 @@ export const MobileNav: React.FC<MobileNavProps> = ({ onOpenMore }) => {
   };
 
   const isTeacher = currentRole === 'teacher';
+  const isSwahili = typeof localStorage !== 'undefined' && localStorage.getItem('edumo_sidebar_lang') === 'sw';
 
   const items = isTeacher
     ? [
-        { to: '/dashboard', label: t('nav.dashboard') || 'Home', icon: LayoutDashboard },
-        { to: '/attendance', label: t('nav.attendance') || 'Roll Call', icon: CalendarCheck2 },
-        { to: '/academics', label: t('nav.academics') || 'Marks', icon: GraduationCap },
-        { to: '/educator-portal', label: 'My Portal', icon: Sparkles },
+        { to: '/dashboard', label: isSwahili ? 'Dashibodi' : 'Dashboard', icon: LayoutDashboard },
+        { to: '/attendance', label: isSwahili ? 'Mahudhurio' : 'Attendance', icon: CalendarCheck2 },
+        { to: '/academics', label: isSwahili ? 'Matokeo' : 'Academics', icon: GraduationCap },
+        { to: '/educator-portal', label: isSwahili ? 'Walimu' : 'Teacher Portal', icon: Sparkles },
       ]
     : [
-        { to: '/dashboard', label: t('nav.dashboard') || 'Home', icon: LayoutDashboard },
-        { to: '/attendance', label: t('nav.attendance') || 'Roll Call', icon: CalendarCheck2 },
-        { to: '/students', label: t('nav.students') || 'Learners', icon: Users },
-        { to: '/academics', label: t('nav.academics') || 'Grades', icon: GraduationCap },
+        { to: '/dashboard', label: isSwahili ? 'Dashibodi' : 'Dashboard', icon: LayoutDashboard },
+        { to: '/attendance', label: isSwahili ? 'Mahudhurio' : 'Attendance', icon: CalendarCheck2 },
+        { to: '/students', label: isSwahili ? 'Wanafunzi' : 'Learners', icon: Users },
+        { to: '/academics', label: isSwahili ? 'Matokeo' : 'Academics', icon: GraduationCap },
       ];
 
   return (

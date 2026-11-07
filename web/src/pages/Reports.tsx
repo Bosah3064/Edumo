@@ -318,13 +318,9 @@ export const Reports: React.FC = () => {
       });
 
       if (studentsList.length === 0) {
-        // Sample fallback so export is always demonstrated cleanly
-        studentsList = [
-          { admissionNumber: 'ADM-001', firstName: 'Faith', lastName: 'Wanjiku', gender: 'female', className: 'Grade 6', upiOrLin: 'UPI-992812', specialNeeds: 'NONE' },
-          { admissionNumber: 'ADM-002', firstName: 'Brian', lastName: 'Kiprono', gender: 'male', className: 'Grade 6', upiOrLin: 'UPI-992813', specialNeeds: 'NONE' },
-          { admissionNumber: 'ADM-003', firstName: 'Amina', lastName: 'Mohammed', gender: 'female', className: 'Grade 6', upiOrLin: 'UPI-992814', specialNeeds: 'NONE' },
-          { admissionNumber: 'ADM-004', firstName: 'Emmanuel', lastName: 'Ochieng', gender: 'male', className: 'Grade 6', upiOrLin: 'UPI-992815', specialNeeds: 'VISUAL' },
-        ];
+        toast.error('No registered learners found in your school directory. Please enroll learners or import an Excel list first.', { id: toastId });
+        setGenerating(false);
+        return;
       }
 
       if (format === 'ke_nemis') {

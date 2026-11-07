@@ -350,6 +350,34 @@ service cloud.firestore {
           allow read, write: if isAuthenticated();
         }
 
+        match /library_books/{id} {
+          allow read, write: if isAuthenticated();
+        }
+
+        match /library_loans/{id} {
+          allow read, write: if isAuthenticated();
+        }
+
+        match /hostel/{id} {
+          allow read, write: if isAuthenticated();
+        }
+
+        match /hostels/{id} {
+          allow read, write: if isAuthenticated();
+        }
+
+        match /hostel_allocations/{id} {
+          allow read, write: if isAuthenticated();
+        }
+
+        match /pickups/{id} {
+          allow read, write: if isAuthenticated();
+        }
+
+        match /canteen_wallets/{id} {
+          allow read, write: if isAuthenticated();
+        }
+
         match /events/{id} {
           allow read, write: if isAuthenticated();
         }
@@ -384,10 +412,7 @@ service cloud.firestore {
           allow read, write: if isAuthenticated();
         }
 
-        // ===== HOSTEL / BOARDING =====
-        match /hostel/{id} {
-          allow read, write: if isAuthenticated();
-        }
+        // ===== HOSTEL / BOARDING & INVENTORY =====
 
         // ===== INVENTORY & STORE =====
         match /inventory/{id} {

@@ -7,7 +7,6 @@ import { EdumoLogo } from '../components/ui/EdumoLogo';
 import {
   Mail,
   Lock,
-  Phone,
   ArrowRight,
   ShieldCheck,
   Sparkles,
@@ -17,7 +16,6 @@ import {
   EyeOff,
   UserCheck,
   GraduationCap,
-  Building2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -27,11 +25,9 @@ export const Login: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [mode, setMode] = useState<'email' | 'phone'>('email');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
 
   // If already authenticated, redirect to destination or dashboard
@@ -61,17 +57,6 @@ export const Login: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handlePhoneSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!phone) {
-      toast.error('Please provide a mobile phone number');
-      return;
-    }
-    setLoading(true);
-    toast.success('SMS verification code sent to ' + phone);
-    setLoading(false);
   };
 
   const handleQuickLogin = (presetEmail: string) => {
@@ -160,130 +145,69 @@ export const Login: React.FC = () => {
             </p>
           </div>
 
-          {/* Auth Mode Toggle Tabs */}
-          <div className="flex p-1.5 bg-slate-100 rounded-xl border border-slate-200">
-            <button
-              type="button"
-              onClick={() => setMode('email')}
-              className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all ${
-                mode === 'email'
-                  ? 'bg-white text-[#1d5f99] shadow-sm border border-slate-200'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Email &amp; Password
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode('phone')}
-              className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all ${
-                mode === 'phone'
-                  ? 'bg-white text-[#1d5f99] shadow-sm border border-slate-200'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Mobile OTP Sign In
-            </button>
-          </div>
+          {/* Email & Password Form */}
+          <form onSubmit={handleEmailSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5">
+                Institutional Email Address
+              </label>
+              <div className="relative">
+                <Mail className="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="email"
+                  placeholder="e.g. principal@academy.ac.ke"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3 rounded-xl border-2 border-slate-200 bg-slate-50 focus:bg-white focus:border-[#1d5f99] text-sm text-slate-900 font-medium placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1d5f99]/20 transition-all"
+                  required
+                />
+              </div>
+            </div>
 
-          {/* Form */}
-          {mode === 'email' ? (
-            <form onSubmit={handleEmailSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5">
-                  Institutional Email Address
+            <div>
+              <div className="flex justify-between items-center mb-1.5">
+                <label className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                  Password
                 </label>
-                <div className="relative">
-                  <Mail className="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="email"
-                    placeholder="e.g. principal@academy.ac.ke"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 rounded-xl border-2 border-slate-200 bg-slate-50 focus:bg-white focus:border-[#1d5f99] text-sm text-slate-900 font-medium placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1d5f99]/20 transition-all"
-                    required
-                  />
-                </div>
+                <Link
+                  to="/forgot-password"
+                  className="text-xs text-[#1d5f99] hover:underline font-bold"
+                >
+                  Forgot password?
+                </Link>
               </div>
-
-              <div>
-                <div className="flex justify-between items-center mb-1.5">
-                  <label className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                    Password
-                  </label>
-                  <Link
-                    to="/forgot-password"
-                    className="text-xs text-[#1d5f99] hover:underline font-bold"
-                  >
-                    Forgot password?
-                  </Link>
-                </div>
-                <div className="relative">
-                  <Lock className="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="••••••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-11 pr-11 py-3 rounded-xl border-2 border-slate-200 bg-slate-50 focus:bg-white focus:border-[#1d5f99] text-sm text-slate-900 font-medium placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1d5f99]/20 transition-all"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1"
-                    title={showPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
+              <div className="relative">
+                <Lock className="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-11 pr-11 py-3 rounded-xl border-2 border-slate-200 bg-slate-50 focus:bg-white focus:border-[#1d5f99] text-sm text-slate-900 font-medium placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1d5f99]/20 transition-all"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1"
+                  title={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
+            </div>
 
-              <Button
-                type="submit"
-                variant="primary"
-                size="lg"
-                isLoading={loading}
-                className="w-full font-bold shadow-md text-sm py-3.5 mt-2 bg-[#1d5f99] hover:bg-[#164a78]"
-                rightIcon={<ArrowRight className="w-4 h-4" />}
-              >
-                Sign In to School Portal
-              </Button>
-            </form>
-          ) : (
-            <form onSubmit={handlePhoneSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5">
-                  Registered Mobile Phone
-                </label>
-                <div className="relative">
-                  <Phone className="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="tel"
-                    placeholder="+254712345678"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 rounded-xl border-2 border-slate-200 bg-slate-50 focus:bg-white focus:border-[#1d5f99] text-sm text-slate-900 font-medium placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1d5f99]/20 transition-all"
-                    required
-                  />
-                </div>
-                <p className="text-xs text-slate-500 mt-1.5 font-medium">
-                  Use international format: <strong>+254</strong> (Kenya), <strong>+256</strong> (Uganda), <strong>+255</strong> (Tanzania), <strong>+250</strong> (Rwanda)
-                </p>
-              </div>
-
-              <Button
-                type="submit"
-                variant="primary"
-                size="lg"
-                isLoading={loading}
-                className="w-full font-bold shadow-md text-sm py-3.5 mt-2 bg-[#1d5f99] hover:bg-[#164a78]"
-                rightIcon={<ArrowRight className="w-4 h-4" />}
-              >
-                Send SMS Verification Code
-              </Button>
-            </form>
-          )}
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              isLoading={loading}
+              className="w-full font-bold shadow-md text-sm py-3.5 mt-2 bg-[#1d5f99] hover:bg-[#164a78]"
+              rightIcon={<ArrowRight className="w-4 h-4" />}
+            >
+              Sign In to School Portal
+            </Button>
+          </form>
 
           {/* Quick-test Presets for Local Emulators / Demo */}
           <div className="pt-4 border-t border-slate-200">

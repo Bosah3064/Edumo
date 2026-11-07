@@ -4,6 +4,7 @@ import enTranslations from '../../i18n/en.json';
 import swTranslations from '../../i18n/sw.json';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
+import { useNotifications } from '../../contexts/NotificationContext';
 import { usePWAInstall } from '../../hooks/usePWAInstall';
 import { EdumoLogo } from '../ui/EdumoLogo';
 import {
@@ -35,6 +36,7 @@ import {
   X,
   Library as LibraryIcon,
   Home,
+  Bell,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -44,6 +46,7 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   const { signOut, currentUser, isPlatformAdmin } = useAuth();
   const { currentRole, currentSchool, organization, hasPermission } = useTenant();
+  const { unreadCount } = useNotifications();
   const { canInstall, isWindows, isDesktop } = usePWAInstall();
   const navigate = useNavigate();
   const [sidebarLanguage, setSidebarLanguage] = useState<'en' | 'sw'>(() =>
@@ -78,6 +81,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   const navTranslations = sidebarLanguage === 'sw' ? swTranslations.nav : enTranslations.nav;
   const navItems = [
     { to: '/dashboard', label: navTranslations.dashboard, icon: LayoutDashboard },
+    {
+      to: '/notifications',
+      label: sidebarLanguage === 'sw' ? 'Arifa' : 'Notifications',
+      icon: Bell,
+      badge: unreadCount,
+    },
     ...(isSchoolAdminOrOwner
       ? [{ to: '/branches', label: navTranslations.branches, icon: Building2 }]
       : []),
@@ -228,7 +237,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                 }
               >
                 <Icon className="w-4.5 h-4.5 shrink-0" />
-                <span className="truncate">{item.label}</span>
+                <span className="truncate flex-1">{item.label}</span>
+                {Boolean((item as any).badge && (item as any).badge > 0) && (
+                  <span className="ml-auto px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-rose-500 text-white shrink-0">
+                    {(item as any).badge > 9 ? '9+' : (item as any).badge}
+                  </span>
+                )}
               </NavLink>
             );
           })}

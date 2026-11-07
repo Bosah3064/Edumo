@@ -283,23 +283,29 @@ export const Students: React.FC = () => {
   return (
     <div className="space-y-6 max-w-7xl mx-auto animate-fade-in">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-display font-bold text-gray-900 tracking-tight">
-            Students &amp; Learners
-          </h1>
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white/70 backdrop-blur-xs p-5 rounded-2xl border border-gray-200/80 shadow-2xs">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="p-2 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-sm">
+              <Users className="w-5 h-5" />
+            </span>
+            <h1 className="text-2xl font-display font-black text-gray-900 tracking-tight">
+              Learners &amp; Student Directory
+            </h1>
+          </div>
           <p className="text-xs text-gray-500 mt-1">
-            Enrolled learners at {currentSchool?.name || 'Main Campus'}
+            Enrolled learner records and institutional register for <strong>{currentSchool?.name || 'Main Campus'}</strong>
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           <Button
             variant="secondary"
             size="sm"
             onClick={handleExportExcel}
             isLoading={exportingExcel}
             leftIcon={<Download className="w-4 h-4" />}
+            className="font-bold"
           >
             Export Excel (.xlsx)
           </Button>
@@ -311,8 +317,9 @@ export const Students: React.FC = () => {
               setIsEnrollModalOpen(true);
             }}
             leftIcon={<UserPlus className="w-4 h-4" />}
+            className="shadow-sm font-bold"
           >
-            Enroll New Student
+            Enroll New Learner
           </Button>
         </div>
       </div>

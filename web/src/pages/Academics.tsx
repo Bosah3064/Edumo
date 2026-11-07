@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTenant } from '../contexts/TenantContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useOffline } from '../contexts/OfflineContext';
@@ -45,6 +46,7 @@ import {
   Check,
   ArrowRight,
   UserCheck,
+  UserPlus,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
@@ -83,6 +85,7 @@ interface LearnerMarkRow {
 }
 
 export const Academics: React.FC = () => {
+  const navigate = useNavigate();
   const { organization, currentSchool } = useTenant();
   const { currentUser } = useAuth();
   const { isOnline, queueOfflineAction } = useOffline();
@@ -95,6 +98,9 @@ export const Academics: React.FC = () => {
   const [executingPromotion, setExecutingPromotion] = useState(false);
   const [passCutoffPct, setPassCutoffPct] = useState(50);
 
+  // Real-time School Classes from Firestore
+  const [schoolClasses, setSchoolClasses] = useState<Array<{ id: string; name: string; streams: string[] }>>([]);
+
   // Filters & Selection
   const [selectedClass, setSelectedClass] = useState('Grade 4');
   const [selectedStream, setSelectedStream] = useState('all');
@@ -103,6 +109,32 @@ export const Academics: React.FC = () => {
   const [assessmentTitle, setAssessmentTitle] = useState('Term 1 Mid-Term Assessment');
   const [maxScore, setMaxScore] = useState(50);
   const [selectedLearnerId, setSelectedLearnerId] = useState<string>('');
+
+  // 1. Dynamic Real-time School Classes from Firestore
+  useEffect(() => {
+    if (!organization || !currentSchool) return;
+    const classesRef = collection(db, 'organizations', organization.id, 'schools', currentSchool.id, 'classes');
+    const unsub = onSnapshot(classesRef, (snap) => {
+      const list = snap.docs.map((d) => {
+        const data = d.data();
+        return {
+          id: d.id,
+          name: data.name || 'Class',
+          streams: Array.isArray(data.streams) && data.streams.length > 0 ? data.streams : ['East', 'West'],
+        };
+      });
+      list.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+      setSchoolClasses(list);
+      if (list.length > 0 && !list.some((c) => c.name.toLowerCase() === selectedClass.toLowerCase())) {
+        setSelectedClass(list[0].name);
+      }
+    });
+    return () => unsub();
+  }, [organization?.id, currentSchool?.id]);
+
+  // Derived available streams for the currently selected class
+  const activeClassObj = schoolClasses.find((c) => c.name.toLowerCase() === selectedClass.toLowerCase());
+  const availableStreams = activeClassObj?.streams || ['East', 'West'];
 
   // Dynamic Real-time School Subjects from Firestore (no hardcoding)
   const [schoolSubjects, setSchoolSubjects] = useState<Subject[]>([]);
@@ -243,37 +275,40 @@ export const Academics: React.FC = () => {
     );
 
     const unsubStudents = onSnapshot(studentsRef, async (snap) => {
+      const selClass = (selectedClass || '').trim().toLowerCase();
       let classStudents = snap.docs
         .map((d, idx) => {
           const data = d.data();
-          const streams = ['East', 'West', 'North'];
+          const studentClassName = (data.currentClassId || data.className || data.class || '').toString().trim();
+          const studentStream = (data.currentStreamId || data.stream || data.streamName || '').toString().trim();
           return {
             studentId: d.id,
             admissionNumber: data.admissionNumber || `ADM-${1000 + idx}`,
-            name: `${data.firstName || ''} ${data.lastName || ''}`.trim() || `Learner ${idx + 1}`,
-            className: data.currentClassId || 'Grade 4',
-            stream: data.currentStreamId || streams[idx % streams.length],
-            previousScore: 28 + (idx % 20),
+            name: `${data.firstName || ''} ${data.lastName || ''}`.trim() || data.name || `Learner ${idx + 1}`,
+            className: studentClassName,
+            stream: studentStream || 'East',
+            previousScore: 0,
           };
         })
-        .filter((s) => s.className === selectedClass);
-
-      if (classStudents.length === 0) {
-        // High-quality demonstration learners if collection is fresh
-        classStudents = [
-          { studentId: 'stu-01', admissionNumber: 'ADM-101', name: 'Amina Wangari Mwangi', className: selectedClass, stream: 'East', previousScore: 42 },
-          { studentId: 'stu-02', admissionNumber: 'ADM-102', name: 'Brian Kiprono Cheruiyot', className: selectedClass, stream: 'West', previousScore: 38 },
-          { studentId: 'stu-03', admissionNumber: 'ADM-103', name: 'Cynthia Achieng Otieno', className: selectedClass, stream: 'East', previousScore: 45 },
-          { studentId: 'stu-04', admissionNumber: 'ADM-104', name: 'David Mutua Kimani', className: selectedClass, stream: 'North', previousScore: 24 },
-          { studentId: 'stu-05', admissionNumber: 'ADM-105', name: 'Esther Nyambura Njoroge', className: selectedClass, stream: 'West', previousScore: 48 },
-          { studentId: 'stu-06', admissionNumber: 'ADM-106', name: 'Felix Ouma Odhiambo', className: selectedClass, stream: 'North', previousScore: 18 },
-          { studentId: 'stu-07', admissionNumber: 'ADM-107', name: 'Grace Makena Mutwiri', className: selectedClass, stream: 'East', previousScore: 35 },
-          { studentId: 'stu-08', admissionNumber: 'ADM-108', name: 'Hassan Juma Bakari', className: selectedClass, stream: 'West', previousScore: 22 },
-        ];
-      }
+        .filter((s) => {
+          const sc = s.className.toLowerCase();
+          return sc === selClass || sc.replace(/[^a-z0-9]/g, '') === selClass.replace(/[^a-z0-9]/g, '');
+        });
 
       if (selectedStream !== 'all') {
-        classStudents = classStudents.filter((s) => (s.stream || '').toLowerCase() === (selectedStream || '').toLowerCase());
+        const selStr = (selectedStream || '').toLowerCase().trim();
+        classStudents = classStudents.filter((s) => {
+          const str = (s.stream || '').toLowerCase().trim();
+          return str === selStr || str.includes(selStr) || selStr.includes(str);
+        });
+      }
+
+      // NO mock fallback array! When collection is empty, display genuine zero-state
+      if (classStudents.length === 0) {
+        setRoster([]);
+        setSelectedLearnerId('');
+        setLoading(false);
+        return;
       }
 
       // Fetch saved marks document
@@ -296,17 +331,17 @@ export const Academics: React.FC = () => {
         const existingEntries = marksSnap.exists() ? marksSnap.data()?.entries || {} : {};
 
         setRoster(
-          classStudents.map((s, idx) => ({
+          classStudents.map((s) => ({
             studentId: s.studentId,
             admissionNumber: s.admissionNumber,
             name: s.name,
             stream: s.stream,
-            previousScore: s.previousScore,
+            previousScore: existingEntries[s.studentId]?.previousScore ?? 0,
             score:
               existingEntries[s.studentId]?.score !== undefined
                 ? existingEntries[s.studentId].score
-                : 32 + (idx * 3) % (maxScore - 10),
-            comments: existingEntries[s.studentId]?.comments || 'Steady competency progression in strand tasks.',
+                : '',
+            comments: existingEntries[s.studentId]?.comments || '',
           }))
         );
         if (!selectedLearnerId && classStudents.length > 0) {
@@ -315,14 +350,14 @@ export const Academics: React.FC = () => {
       } catch (err) {
         console.warn('Marks doc read error:', err);
         setRoster(
-          classStudents.map((s, idx) => ({
+          classStudents.map((s) => ({
             studentId: s.studentId,
             admissionNumber: s.admissionNumber,
             name: s.name,
             stream: s.stream,
-            previousScore: s.previousScore,
-            score: 30 + (idx * 2) % (maxScore - 8),
-            comments: 'Demonstrating consistent foundational skill acquisition.',
+            previousScore: 0,
+            score: '',
+            comments: '',
           }))
         );
         if (!selectedLearnerId && classStudents.length > 0) {
@@ -713,25 +748,25 @@ export const Academics: React.FC = () => {
   return (
     <div className="space-y-6 max-w-7xl mx-auto animate-fade-in pb-12">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white/70 backdrop-blur-xs p-5 rounded-2xl border border-gray-200/80 shadow-2xs">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 mb-1">
             <Badge variant="brand" dot>
               {activeScale.name}
             </Badge>
-            <span className="text-2xs text-gray-500">
+            <span className="text-2xs text-gray-500 font-semibold">
               {currentSchool?.name || 'Main Campus'} • Academic Year 2026
             </span>
           </div>
-          <h1 className="text-2xl font-display font-extrabold text-gray-900 tracking-tight">
+          <h1 className="text-2xl font-display font-black text-gray-900 tracking-tight">
             Academics &amp; Assessment Engine
           </h1>
           <p className="text-xs text-gray-500 mt-1">
-            Real marks entry, stream performance diagnostics, at-risk early detection, and CBC report cards
+            Real marks entry, stream performance diagnostics, and CBC competency tracking
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           {activeTab === 'gradebook' && (
             <>
               <Button
@@ -739,6 +774,7 @@ export const Academics: React.FC = () => {
                 size="sm"
                 onClick={handleDownloadExcelTemplate}
                 leftIcon={<Download className="w-4 h-4" />}
+                className="font-bold"
               >
                 Export Sheet (.xlsx)
               </Button>
@@ -748,6 +784,7 @@ export const Academics: React.FC = () => {
                 size="sm"
                 onClick={() => setIsUploadModalOpen(true)}
                 leftIcon={<UploadCloud className="w-4 h-4" />}
+                className="font-bold"
               >
                 Import Marks (.xlsx)
               </Button>
@@ -758,6 +795,7 @@ export const Academics: React.FC = () => {
                 onClick={handleSaveMarks}
                 isLoading={saving}
                 leftIcon={<Save className="w-4 h-4" />}
+                className="shadow-sm font-bold"
               >
                 Save Register
               </Button>
@@ -770,6 +808,7 @@ export const Academics: React.FC = () => {
               size="sm"
               onClick={handleExportFullExamAnalysis}
               leftIcon={<Download className="w-4 h-4" />}
+              className="shadow-sm font-bold"
             >
               Export Exam Analysis (.xlsx)
             </Button>
@@ -781,6 +820,7 @@ export const Academics: React.FC = () => {
               size="sm"
               onClick={() => setIsNewSeriesModalOpen(true)}
               leftIcon={<Plus className="w-4 h-4" />}
+              className="shadow-sm font-bold"
             >
               New Exam Series
             </Button>
@@ -802,8 +842,10 @@ export const Academics: React.FC = () => {
           </div>
           <div className="mt-3">
             <div className="text-3xl font-black tracking-tight">{roster.length}</div>
-            <p className="text-xs text-blue-100 mt-1 font-medium">
-              Learners in {selectedClass} • {selectedStream === 'all' ? 'All Streams' : `${selectedStream.toUpperCase()} Stream`}
+            <p className="text-xs text-blue-100 mt-1 font-medium truncate">
+              {roster.length === 0
+                ? `No learners in ${selectedClass}`
+                : `${roster.length} learners enrolled in ${selectedClass}`}
             </p>
           </div>
         </div>
@@ -820,10 +862,12 @@ export const Academics: React.FC = () => {
           </div>
           <div className="mt-3">
             <div className="text-3xl font-black tracking-tight">
-              {enteredScores.length > 0 ? `${classMeanPct}%` : 'N/A'}
+              {enteredScores.length > 0 ? `${classMeanPct}%` : '—'}
             </div>
             <p className="text-xs text-emerald-100 mt-1 font-medium">
-              Pass Rate: {classPassRate}% ({enteredScores.length}/{roster.length} recorded)
+              {enteredScores.length > 0
+                ? `Pass Rate: ${classPassRate}% (${enteredScores.length}/${roster.length} recorded)`
+                : 'No marks entered yet'}
             </p>
           </div>
         </div>
@@ -839,7 +883,7 @@ export const Academics: React.FC = () => {
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl font-black tracking-tight truncate" title={assessmentTitle}>
+            <div className="text-xl sm:text-2xl font-black tracking-tight truncate" title={assessmentTitle}>
               {assessmentTitle}
             </div>
             <p className="text-xs text-purple-100 mt-1 font-medium">
@@ -860,20 +904,20 @@ export const Academics: React.FC = () => {
           </div>
           <div className="mt-3">
             <div className="text-3xl font-black tracking-tight">{atRiskLearners.length}</div>
-            <p className="text-xs text-rose-100 mt-1 font-medium">
-              {atRiskLearners.length === 0 ? 'All learners progressing well' : 'Learners requiring remedial focus'}
+            <p className="text-xs text-rose-100 mt-1 font-medium truncate">
+              {atRiskLearners.length === 0 ? 'No learners requiring remediation' : `${atRiskLearners.length} learners requiring focus`}
             </p>
           </div>
         </div>
       </div>
 
       {/* Navigation Sub-Tabs */}
-      <div className="flex gap-2 border-b border-gray-200 overflow-x-auto">
+      <div className="flex gap-2 border-b border-gray-200 overflow-x-auto pb-1 scrollbar-none">
         <button
           onClick={() => setActiveTab('gradebook')}
           className={`pb-3 px-4 text-xs font-bold transition flex items-center gap-2 border-b-2 whitespace-nowrap ${
             activeTab === 'gradebook'
-              ? 'border-brand-600 text-brand-600'
+              ? 'border-brand-600 text-brand-600 font-extrabold'
               : 'border-transparent text-gray-500 hover:text-gray-900'
           }`}
         >
@@ -885,7 +929,7 @@ export const Academics: React.FC = () => {
           onClick={() => setActiveTab('series')}
           className={`pb-3 px-4 text-xs font-bold transition flex items-center gap-2 border-b-2 whitespace-nowrap ${
             activeTab === 'series'
-              ? 'border-brand-600 text-brand-600'
+              ? 'border-brand-600 text-brand-600 font-extrabold'
               : 'border-transparent text-gray-500 hover:text-gray-900'
           }`}
         >
@@ -897,7 +941,7 @@ export const Academics: React.FC = () => {
           onClick={() => setActiveTab('diagnostics')}
           className={`pb-3 px-4 text-xs font-bold transition flex items-center gap-2 border-b-2 whitespace-nowrap ${
             activeTab === 'diagnostics'
-              ? 'border-brand-600 text-brand-600'
+              ? 'border-brand-600 text-brand-600 font-extrabold'
               : 'border-transparent text-gray-500 hover:text-gray-900'
           }`}
         >
@@ -909,7 +953,7 @@ export const Academics: React.FC = () => {
           onClick={() => setActiveTab('at_risk')}
           className={`pb-3 px-4 text-xs font-bold transition flex items-center gap-2 border-b-2 whitespace-nowrap ${
             activeTab === 'at_risk'
-              ? 'border-danger-500 text-danger-500'
+              ? 'border-danger-500 text-danger-500 font-extrabold'
               : 'border-transparent text-gray-500 hover:text-gray-900'
           }`}
         >
@@ -921,7 +965,7 @@ export const Academics: React.FC = () => {
           onClick={() => setActiveTab('trajectory')}
           className={`pb-3 px-4 text-xs font-bold transition flex items-center gap-2 border-b-2 whitespace-nowrap ${
             activeTab === 'trajectory'
-              ? 'border-brand-600 text-brand-600'
+              ? 'border-brand-600 text-brand-600 font-extrabold'
               : 'border-transparent text-gray-500 hover:text-gray-900'
           }`}
         >
@@ -943,16 +987,20 @@ export const Academics: React.FC = () => {
       </div>
 
       {/* Global Interactive Filter Bar (Used Across All Analytics Views) */}
-      <Card className="grid grid-cols-1 sm:grid-cols-5 gap-3 p-4 bg-gray-50/70 border-gray-200">
+      <Card className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 p-4 bg-gray-50/70 border-gray-200">
         <Select
           label="Class / Grade"
           value={selectedClass}
           onChange={(e) => setSelectedClass(e.target.value)}
-          options={[
-            'PP1', 'PP2',
-            'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8',
-            'Form 1', 'Form 2', 'Form 3', 'Form 4',
-          ].map((c) => ({ value: c, label: c }))}
+          options={
+            schoolClasses.length > 0
+              ? schoolClasses.map((c) => ({ value: c.name, label: c.name }))
+              : [
+                  'PP1', 'PP2',
+                  'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8',
+                  'Form 1', 'Form 2', 'Form 3', 'Form 4',
+                ].map((c) => ({ value: c, label: c }))
+          }
         />
 
         <Select
@@ -961,9 +1009,10 @@ export const Academics: React.FC = () => {
           onChange={(e) => setSelectedStream(e.target.value)}
           options={[
             { value: 'all', label: 'All Streams' },
-            { value: 'east', label: 'East Stream' },
-            { value: 'west', label: 'West Stream' },
-            { value: 'north', label: 'North Stream' },
+            ...availableStreams.map((st) => ({
+              value: st.toLowerCase(),
+              label: `${st} Stream`,
+            })),
           ]}
         />
 
@@ -1012,12 +1061,39 @@ export const Academics: React.FC = () => {
           </div>
 
           {loading ? (
-            <div className="p-12 text-center text-gray-500">Loading student roster...</div>
-          ) : roster.length === 0 ? (
             <div className="p-12 text-center text-gray-500">
-              <Users className="w-10 h-10 mx-auto mb-2 text-gray-400" />
-              <h4 className="font-semibold text-gray-800">No learners found in {selectedClass}</h4>
-              <p className="text-xs text-gray-500 mt-1">Enroll students or assign them to this class.</p>
+              <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-3" />
+              <p className="text-xs font-semibold">Loading student roster...</p>
+            </div>
+          ) : roster.length === 0 ? (
+            <div className="p-10 sm:p-14 text-center bg-white rounded-2xl border-2 border-dashed border-gray-200 m-4">
+              <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-3 shadow-2xs">
+                <Users className="w-7 h-7" />
+              </div>
+              <h4 className="font-bold text-gray-900 text-base">No learners enrolled in {selectedClass}</h4>
+              <p className="text-xs text-gray-500 mt-1 max-w-md mx-auto">
+                There are currently no registered learners assigned to {selectedClass} {selectedStream !== 'all' ? `(${selectedStream} Stream)` : ''}. You can enroll new learners or import class rosters via Excel.
+              </p>
+              <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+                <Button
+                  size="sm"
+                  variant="primary"
+                  onClick={() => navigate('/students')}
+                  leftIcon={<UserPlus className="w-4 h-4" />}
+                  className="font-bold shadow-sm"
+                >
+                  Enroll Learner in Directory
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => navigate('/excel-import')}
+                  leftIcon={<UploadCloud className="w-4 h-4" />}
+                  className="font-bold"
+                >
+                  Import Class Roster via Excel
+                </Button>
+              </div>
             </div>
           ) : (
             <>

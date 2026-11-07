@@ -6,6 +6,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { TenantProvider } from './contexts/TenantContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { OfflineProvider } from './contexts/OfflineContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import { router } from './router';
 
 const queryClient = new QueryClient({
@@ -24,21 +25,23 @@ export const App: React.FC = () => {
         <AuthProvider>
           <TenantProvider>
             <OfflineProvider>
-              <RouterProvider router={router} />
-              <Toaster
-                position="top-right"
-                toastOptions={{
-                  duration: 4000,
-                  style: {
-                    background: '#1E293B',
-                    color: '#F8FAFC',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: '1rem',
-                    fontSize: '0.9375rem',
-                    boxShadow: '0 20px 40px rgba(0, 0, 0, 0.5)',
-                  },
-                }}
-              />
+              <NotificationProvider>
+                <RouterProvider router={router} />
+                <Toaster
+                  position="top-right"
+                  toastOptions={{
+                    duration: 4000,
+                    style: {
+                      background: '#1E293B',
+                      color: '#F8FAFC',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: '1rem',
+                      fontSize: '0.9375rem',
+                      boxShadow: '0 20px 40px rgba(0, 0, 0, 0.5)',
+                    },
+                  }}
+                />
+              </NotificationProvider>
             </OfflineProvider>
           </TenantProvider>
         </AuthProvider>

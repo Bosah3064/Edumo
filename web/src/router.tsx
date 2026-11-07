@@ -29,6 +29,7 @@ import { PlatformConsole } from './pages/PlatformConsole';
 import { Profile } from './pages/Profile';
 import { EducatorPortal } from './pages/EducatorPortal';
 import { PrivacyPolicy } from './pages/PrivacyPolicy';
+import { Notifications } from './pages/Notifications';
 
 export const router = createBrowserRouter([
   // Public routes
@@ -140,6 +141,10 @@ export const router = createBrowserRouter([
       {
         path: '/parent-portal',
         element: <ParentPortal />,
+      },
+      {
+        path: '/notifications',
+        element: <Notifications />,
       },
       {
         path: '/settings',

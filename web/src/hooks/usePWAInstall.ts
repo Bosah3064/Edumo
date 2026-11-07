@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -17,7 +17,7 @@ if (typeof window !== 'undefined') {
 }
 
 export const usePWAInstall = () => {
-  const detectStandalone = (): boolean => {
+  const detectStandalone = useCallback((): boolean => {
     if (typeof window === 'undefined') return false;
     return Boolean(
       window.matchMedia('(display-mode: standalone)').matches ||
@@ -26,31 +26,12 @@ export const usePWAInstall = () => {
       (window.navigator as any).standalone === true ||
       document.referrer.includes('android-app://')
     );
-  };
+  }, []);
 
-  const [isStandalone, setIsStandalone] = useState<boolean>(() => {
-    return detectStandalone();
-  });
-
-  const [isInstalled, setIsInstalled] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    if (detectStandalone()) {
-      try {
-        localStorage.setItem('edumo_pwa_installed', 'true');
-      } catch {
-        // Safe storage fallback
-      }
-      return true;
-    }
-    try {
-      return localStorage.getItem('edumo_pwa_installed') === 'true';
-    } catch {
-      return false;
-    }
-  });
-
-  const [hasPrompt, setHasPrompt] = useState<boolean>(Boolean(globalDeferredPrompt));
+  const [isStandalone, setIsStandalone] = useState<boolean>(() => detectStandalone());
+  const [hasPrompt, setHasPrompt] = useState<boolean>(() => Boolean(globalDeferredPrompt));
   const [isIOS, setIsIOS] = useState<boolean>(false);
+  const [isAndroid, setIsAndroid] = useState<boolean>(false);
   const [isWindows, setIsWindows] = useState<boolean>(false);
   const [isDesktop, setIsDesktop] = useState<boolean>(false);
 
@@ -60,37 +41,17 @@ export const usePWAInstall = () => {
     // Platform detection
     const ua = window.navigator.userAgent.toLowerCase();
     const isIOSDevice = /iphone|ipad|ipod/.test(ua);
+    const isAndroidDevice = /android/.test(ua);
     const isWin = /windows|win32|win64/i.test(ua);
     const isMobileDevice = /iphone|ipad|ipod|android|mobile/i.test(ua);
 
     setIsIOS(isIOSDevice);
+    setIsAndroid(isAndroidDevice);
     setIsWindows(isWin);
     setIsDesktop(!isMobileDevice);
 
     // Initial sync
-    if (detectStandalone()) {
-      setIsStandalone(true);
-      setIsInstalled(true);
-      try {
-        localStorage.setItem('edumo_pwa_installed', 'true');
-      } catch {}
-    }
-
-    // Chrome / Android getInstalledRelatedApps API
-    if ('getInstalledRelatedApps' in navigator) {
-      (navigator as any)
-        .getInstalledRelatedApps()
-        .then((relatedApps: any[]) => {
-          if (relatedApps && relatedApps.length > 0) {
-            setIsInstalled(true);
-            try {
-              localStorage.setItem('edumo_pwa_installed', 'true');
-            } catch {}
-            window.dispatchEvent(new CustomEvent('edumo-pwa-state-change'));
-          }
-        })
-        .catch(() => {});
-    }
+    setIsStandalone(detectStandalone());
 
     // Capture beforeinstallprompt
     const handleBeforeInstallPrompt = (e: Event) => {
@@ -99,28 +60,16 @@ export const usePWAInstall = () => {
       setHasPrompt(true);
     };
 
-    // App installed event
-    const handleAppInstalled = () => {
-      setIsInstalled(true);
-      globalDeferredPrompt = null;
-      setHasPrompt(false);
-      try {
-        localStorage.setItem('edumo_pwa_installed', 'true');
-      } catch {}
-      window.dispatchEvent(new CustomEvent('edumo-pwa-state-change'));
-    };
-
-    // Recheck state on custom event
-    const handleStateChange = () => {
-      try {
-        if (localStorage.getItem('edumo_pwa_installed') === 'true' || detectStandalone()) {
-          setIsInstalled(true);
-        }
-      } catch {}
-    };
-
     const handlePromptReady = () => {
       setHasPrompt(true);
+    };
+
+    // App installed event
+    const handleAppInstalled = () => {
+      globalDeferredPrompt = null;
+      setHasPrompt(false);
+      setIsStandalone(true);
+      window.dispatchEvent(new CustomEvent('edumo-pwa-state-change'));
     };
 
     // Listen to media query changes (e.g. if opened in standalone window)
@@ -128,10 +77,6 @@ export const usePWAInstall = () => {
     const handleMediaChange = (e: MediaQueryListEvent) => {
       if (e.matches) {
         setIsStandalone(true);
-        setIsInstalled(true);
-        try {
-          localStorage.setItem('edumo_pwa_installed', 'true');
-        } catch {}
         window.dispatchEvent(new CustomEvent('edumo-pwa-state-change'));
       }
     };
@@ -139,7 +84,6 @@ export const usePWAInstall = () => {
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('edumo-deferred-prompt-ready', handlePromptReady);
     window.addEventListener('appinstalled', handleAppInstalled);
-    window.addEventListener('edumo-pwa-state-change', handleStateChange);
     if (mediaQuery.addEventListener) {
       mediaQuery.addEventListener('change', handleMediaChange);
     }
@@ -148,42 +92,44 @@ export const usePWAInstall = () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('edumo-deferred-prompt-ready', handlePromptReady);
       window.removeEventListener('appinstalled', handleAppInstalled);
-      window.removeEventListener('edumo-pwa-state-change', handleStateChange);
       if (mediaQuery.removeEventListener) {
         mediaQuery.removeEventListener('change', handleMediaChange);
       }
     };
-  }, []);
+  }, [detectStandalone]);
 
-  const triggerInstall = async (): Promise<'accepted' | 'dismissed' | 'ios' | 'desktop-guide' | 'unavailable'> => {
+  const triggerInstall = async (): Promise<'accepted' | 'dismissed' | 'guide'> => {
     if (globalDeferredPrompt) {
-      globalDeferredPrompt.prompt();
-      const choice = await globalDeferredPrompt.userChoice;
-      if (choice.outcome === 'accepted') {
-        setIsInstalled(true);
-        try {
-          localStorage.setItem('edumo_pwa_installed', 'true');
-        } catch {}
-        window.dispatchEvent(new CustomEvent('edumo-pwa-state-change'));
+      try {
+        await globalDeferredPrompt.prompt();
+        const choice = await globalDeferredPrompt.userChoice;
+        if (choice.outcome === 'accepted') {
+          globalDeferredPrompt = null;
+          setHasPrompt(false);
+          setIsStandalone(true);
+        }
+        return choice.outcome;
+      } catch (err) {
+        console.warn('PWA prompt invocation error:', err);
       }
-      globalDeferredPrompt = null;
-      setHasPrompt(false);
-      return choice.outcome;
     }
 
-    if (isIOS) {
-      return 'ios';
-    }
-
-    if (isWindows || isDesktop) {
-      return 'desktop-guide';
-    }
-
-    return 'unavailable';
+    // Fallback: show interactive platform instructions modal
+    return 'guide';
   };
 
-  // If already installed on device or running in standalone mode, canInstall is FALSE
-  const canInstall = !isInstalled && !isStandalone;
+  // If the user is currently running in standalone display mode (the PWA is already open),
+  // they don't need install prompts. If in standard browser, they can always install!
+  const canInstall = !isStandalone;
+  const isInstalled = isStandalone;
+
+  const platformLabel = isIOS
+    ? 'iPhone / iPad'
+    : isAndroid
+    ? 'Android'
+    : isWindows
+    ? 'Windows PC'
+    : 'Desktop';
 
   return {
     isStandalone,
@@ -191,9 +137,10 @@ export const usePWAInstall = () => {
     canInstall,
     hasPrompt,
     isIOS,
+    isAndroid,
     isWindows,
     isDesktop,
+    platformLabel,
     triggerInstall,
   };
 };
-

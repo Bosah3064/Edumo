@@ -22,7 +22,7 @@ export default defineConfig({
         'logo.png',
       ],
       manifest: {
-        id: '/edumo-school-management-v2',
+        id: 'edumo-pwa-app',
         name: 'Edumo — School Management',
         short_name: 'Edumo',
         description: 'Smart school management for East African schools',

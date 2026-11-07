@@ -106,7 +106,7 @@ export const Attendance: React.FC = () => {
           admissionNumber: data.admissionNumber || '',
           firstName: data.firstName || '',
           lastName: data.lastName || '',
-          currentClassId: data.currentClassId || 'Grade 4',
+          currentClassId: data.currentClassId || data.className || data.class || '',
         };
       });
       setAllStudents(studentsList);
@@ -128,9 +128,11 @@ export const Attendance: React.FC = () => {
 
   // 3. Update roster when selected class or students change
   useEffect(() => {
-    const classStudents = allStudents.filter(
-      (s) => (s.currentClassId || 'Grade 4') === selectedClass
-    );
+    const sel = (selectedClass || '').toLowerCase().trim();
+    const classStudents = allStudents.filter((s) => {
+      const sc = (s.currentClassId || '').toLowerCase().trim();
+      return sc === sel || sc.replace(/[^a-z0-9]/g, '') === sel.replace(/[^a-z0-9]/g, '');
+    });
 
     const initialRoster: StudentAttendanceEntry[] = classStudents.map((s) => ({
       studentId: s.id,
@@ -327,10 +329,10 @@ export const Attendance: React.FC = () => {
   return (
     <div className="space-y-6 max-w-7xl mx-auto animate-fade-in">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white/70 backdrop-blur-xs p-5 rounded-2xl border border-gray-200/80 shadow-2xs">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-display font-bold text-gray-900 tracking-tight">
+            <h1 className="text-2xl font-display font-black text-gray-900 tracking-tight">
               Daily Attendance Register
             </h1>
             {!isOnline && (
@@ -340,11 +342,11 @@ export const Attendance: React.FC = () => {
             )}
           </div>
           <p className="text-xs text-gray-500 mt-1">
-            Fast tap-to-mark daily attendance for {currentSchool?.name || 'Main Campus'}
+            Fast tap-to-mark daily attendance for <strong>{currentSchool?.name || 'Main Campus'}</strong>
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           <Button
             variant="secondary"
             size="sm"
@@ -352,6 +354,7 @@ export const Attendance: React.FC = () => {
             disabled={roster.length === 0}
             isLoading={exportingExcel}
             leftIcon={<Download className="w-4 h-4" />}
+            className="font-bold"
           >
             Export Register (.xlsx)
           </Button>
@@ -362,6 +365,7 @@ export const Attendance: React.FC = () => {
             onClick={() => setAllStatus('present')}
             disabled={roster.length === 0}
             leftIcon={<CheckCheck className="w-4 h-4 text-accent-700" />}
+            className="font-bold"
           >
             Mark All Present
           </Button>
@@ -373,6 +377,7 @@ export const Attendance: React.FC = () => {
             disabled={roster.length === 0}
             isLoading={saving}
             leftIcon={<Save className="w-4 h-4" />}
+            className="shadow-sm font-bold"
           >
             Save Register
           </Button>

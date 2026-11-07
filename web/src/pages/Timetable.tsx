@@ -69,7 +69,35 @@ export const Timetable: React.FC = () => {
     { number: 7, time: '14:00 - 14:45' },
   ];
 
-  // 1. Listen to staff for teacher dropdown
+  // Real-time school classes from Firestore
+  const [schoolClasses, setSchoolClasses] = useState<string[]>([]);
+
+  // 1. Listen to real-time classes for class selector
+  useEffect(() => {
+    if (!organization || !currentSchool) return;
+
+    const classesRef = collection(
+      db,
+      'organizations',
+      organization.id,
+      'schools',
+      currentSchool.id,
+      'classes'
+    );
+
+    const unsubClasses = onSnapshot(classesRef, (snap) => {
+      const list = snap.docs.map((d) => d.data().name as string).filter(Boolean);
+      list.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+      setSchoolClasses(list);
+      if (list.length > 0 && !list.includes(selectedClass)) {
+        setSelectedClass(list[0]);
+      }
+    });
+
+    return () => unsubClasses();
+  }, [organization, currentSchool]);
+
+  // 2. Listen to staff for teacher dropdown
   useEffect(() => {
     if (!organization || !currentSchool) return;
 
@@ -83,22 +111,22 @@ export const Timetable: React.FC = () => {
     );
 
     const unsubStaff = onSnapshot(staffRef, (snap) => {
-      const names = snap.docs.map((d) => d.data().name as string).filter(Boolean);
-      const defaults = [
-        'Mr. Peter Kamau',
-        'Mrs. Sarah Ochieng',
-        'Mr. James Mwangi',
-        'Ms. Amina Hassan',
-        'Mr. Emmanuel Kiprop',
-      ];
-      setStaffNames(Array.from(new Set([...names, ...defaults])));
+      const names = snap.docs
+        .map((d) => {
+          const data = d.data();
+          const fullName = `${data.firstName || ''} ${data.lastName || ''}`.trim();
+          return (data.name || fullName || data.fullName || '') as string;
+        })
+        .filter(Boolean);
+
+      setStaffNames(names);
       if (names.length > 0 && !teacherName) setTeacherName(names[0]);
     });
 
     return () => unsubStaff();
   }, [organization, currentSchool]);
 
-  // 2. Listen to real-time timetable slots
+  // 3. Listen to real-time timetable slots
   useEffect(() => {
     if (!organization || !currentSchool) return;
 
@@ -117,22 +145,7 @@ export const Timetable: React.FC = () => {
         ...(d.data() as Omit<TimetableSlot, 'id'>),
       }));
 
-      if (slots.length === 0) {
-        // Seed initial friendly schedule for demonstration
-        const seedSlots: TimetableSlot[] = [
-          { id: 'mon-1', day: 'Monday', periodNumber: 1, timeRange: '08:00 - 08:45', className: 'Grade 4', subjectName: 'Mathematics', teacherName: 'Mr. Peter Kamau', roomName: 'Room 4B' },
-          { id: 'mon-2', day: 'Monday', periodNumber: 2, timeRange: '08:45 - 09:30', className: 'Grade 4', subjectName: 'English Language', teacherName: 'Mrs. Sarah Ochieng', roomName: 'Room 4B' },
-          { id: 'mon-4', day: 'Monday', periodNumber: 4, timeRange: '10:45 - 11:30', className: 'Grade 4', subjectName: 'Integrated Science', teacherName: 'Mr. James Mwangi', roomName: 'Lab 1' },
-          { id: 'tue-1', day: 'Tuesday', periodNumber: 1, timeRange: '08:00 - 08:45', className: 'Grade 4', subjectName: 'Kiswahili', teacherName: 'Ms. Amina Hassan', roomName: 'Room 4B' },
-          { id: 'tue-2', day: 'Tuesday', periodNumber: 2, timeRange: '08:45 - 09:30', className: 'Grade 4', subjectName: 'Social Studies', teacherName: 'Mr. Emmanuel Kiprop', roomName: 'Room 4B' },
-          { id: 'wed-3', day: 'Wednesday', periodNumber: 3, timeRange: '09:30 - 10:15', className: 'Grade 4', subjectName: 'Creative Arts & Sports', teacherName: 'Mr. Peter Kamau', roomName: 'Field' },
-          { id: 'thu-2', day: 'Thursday', periodNumber: 2, timeRange: '08:45 - 09:30', className: 'Grade 4', subjectName: 'Agriculture & Nutrition', teacherName: 'Mrs. Sarah Ochieng', roomName: 'Room 4B' },
-          { id: 'fri-5', day: 'Friday', periodNumber: 5, timeRange: '11:30 - 12:15', className: 'Grade 4', subjectName: 'Christian Religious Education', teacherName: 'Ms. Amina Hassan', roomName: 'Room 4B' },
-        ];
-        setTimetableSlots(seedSlots);
-      } else {
-        setTimetableSlots(slots);
-      }
+      setTimetableSlots(slots);
       setLoading(false);
     });
 
@@ -259,14 +272,14 @@ export const Timetable: React.FC = () => {
   return (
     <div className="space-y-6 max-w-7xl mx-auto animate-fade-in pb-12">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white/70 backdrop-blur-xs p-5 rounded-2xl border border-gray-200/80 shadow-2xs">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 mb-1">
             <span className="p-2 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-sm">
               <CalendarIcon className="w-5 h-5" />
             </span>
-            <h1 className="text-2xl font-display font-extrabold text-gray-900 tracking-tight">
-              Academic Timetable &amp; Substitution
+            <h1 className="text-2xl font-display font-black text-gray-900 tracking-tight">
+              Academic Timetable &amp; Relief Substitution
             </h1>
           </div>
           <p className="text-xs text-gray-500 mt-1">
@@ -274,13 +287,13 @@ export const Timetable: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <Button
             variant="primary"
             size="sm"
             onClick={() => setIsAssignModalOpen(true)}
             leftIcon={<Plus className="w-4 h-4" />}
-            className="shadow-sm"
+            className="shadow-sm font-bold"
           >
             Assign Lesson
           </Button>
@@ -406,11 +419,15 @@ export const Timetable: React.FC = () => {
           <Select
             value={selectedClass}
             onChange={(e) => setSelectedClass(e.target.value)}
-            options={[
-              'PP1', 'PP2',
-              'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8',
-              'Form 1', 'Form 2', 'Form 3', 'Form 4',
-            ].map((c) => ({ value: c, label: c }))}
+            options={
+              schoolClasses.length > 0
+                ? schoolClasses.map((c) => ({ value: c, label: c }))
+                : [
+                    'PP1', 'PP2',
+                    'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8',
+                    'Form 1', 'Form 2', 'Form 3', 'Form 4',
+                  ].map((c) => ({ value: c, label: c }))
+            }
           />
         </div>
       </Card>

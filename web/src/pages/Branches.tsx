@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTenant } from '../contexts/TenantContext';
 import { httpsCallable } from 'firebase/functions';
-import { collection, doc, setDoc, serverTimestamp, getDocs, writeBatch } from 'firebase/firestore';
+import { collection, doc, setDoc, serverTimestamp, getDocs, writeBatch, onSnapshot } from 'firebase/firestore';
 import { functions, db } from '../firebase';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
@@ -56,6 +56,52 @@ export const Branches: React.FC = () => {
   const [replicateUnits, setReplicateUnits] = useState(true);
   const [replicateClasses, setReplicateClasses] = useState(true);
   const [sourceBranchId, setSourceBranchId] = useState(currentSchool?.id || '');
+
+  // Real-time metrics for every campus branch (zero hardcoding)
+  const [branchMetrics, setBranchMetrics] = useState<
+    Record<string, { learners: number; faculty: number; collectionRate: number; attendanceRate: number }>
+  >({});
+
+  useEffect(() => {
+    if (!organization || schools.length === 0) return;
+
+    const unsubs: Array<() => void> = [];
+
+    schools.forEach((sch) => {
+      const sRef = collection(db, 'organizations', organization.id, 'schools', sch.id, 'students');
+      const stRef = collection(db, 'organizations', organization.id, 'schools', sch.id, 'staff');
+
+      const u1 = onSnapshot(sRef, (snap) => {
+        setBranchMetrics((prev) => ({
+          ...prev,
+          [sch.id]: {
+            learners: snap.size,
+            faculty: prev[sch.id]?.faculty || 0,
+            collectionRate: prev[sch.id]?.collectionRate || 0,
+            attendanceRate: prev[sch.id]?.attendanceRate || 0,
+          },
+        }));
+      });
+
+      const u2 = onSnapshot(stRef, (snap) => {
+        setBranchMetrics((prev) => ({
+          ...prev,
+          [sch.id]: {
+            learners: prev[sch.id]?.learners || 0,
+            faculty: snap.size,
+            collectionRate: prev[sch.id]?.collectionRate || 0,
+            attendanceRate: prev[sch.id]?.attendanceRate || 0,
+          },
+        }));
+      });
+
+      unsubs.push(u1, u2);
+    });
+
+    return () => {
+      unsubs.forEach((u) => u());
+    };
+  }, [organization?.id, schools]);
 
   const handleCreateBranch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -245,51 +291,145 @@ export const Branches: React.FC = () => {
     }
   };
 
+  const totalGroupLearners = Object.values(branchMetrics).reduce((sum, m) => sum + (m.learners || 0), 0);
+  const totalGroupFaculty = Object.values(branchMetrics).reduce((sum, m) => sum + (m.faculty || 0), 0);
+
   return (
-    <div className="space-y-6 max-w-7xl mx-auto animate-fade-in">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-display font-bold text-gray-900 tracking-tight">
-            Campus Branches
+    <div className="space-y-6 max-w-7xl mx-auto animate-fade-in pb-12">
+      {/* Top Header */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white/70 backdrop-blur-xs p-5 rounded-2xl border border-slate-200/80 shadow-2xs">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <Badge variant="brand" dot>
+              Multi-Campus Network
+            </Badge>
+            <span className="text-2xs text-slate-500 font-semibold">
+              {organization?.name || 'Educational Group'} • {organization?.country || 'KE'}
+            </span>
+          </div>
+          <h1 className="text-2xl font-display font-black text-slate-900 tracking-tight">
+            Campus Branches &amp; Multi-School Management
           </h1>
-          <p className="text-xs text-gray-500 mt-1">
-            Manage multi-campus operations for {organization?.name || 'your institution'}
+          <p className="text-xs text-slate-500 mt-1">
+            Centralized campus directory, institutional switching, and curriculum replication
           </p>
         </div>
 
-        <Button
-          variant="primary"
-          size="sm"
-          onClick={() => setIsModalOpen(true)}
-          leftIcon={<Plus className="w-4 h-4" />}
-        >
-          Add New Branch
-        </Button>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => setIsModalOpen(true)}
+            leftIcon={<Plus className="w-4 h-4" />}
+            className="shadow-sm font-bold"
+          >
+            Add New Branch
+          </Button>
+        </div>
+      </div>
+
+      {/* TOP 4 VIBRANT GRADIENT METRIC CARDS */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Card 1: Campuses */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-700 p-5 text-white shadow-md">
+          <div className="flex items-center justify-between">
+            <span className="text-2xs font-extrabold uppercase tracking-wider text-blue-100">
+              Campus Branches
+            </span>
+            <div className="p-2 rounded-xl bg-white/15 backdrop-blur-xs">
+              <Building2 className="w-5 h-5 text-white" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-3xl font-black tracking-tight">{schools.length}</div>
+            <p className="text-xs text-blue-100 mt-1 font-medium truncate">
+              {schools.length === 1 ? '1 Campus branch registered' : `${schools.length} Campus branches active`}
+            </p>
+          </div>
+        </div>
+
+        {/* Card 2: Current Active */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-600 via-teal-600 to-emerald-700 p-5 text-white shadow-md">
+          <div className="flex items-center justify-between">
+            <span className="text-2xs font-extrabold uppercase tracking-wider text-emerald-100">
+              Active Workspace
+            </span>
+            <div className="p-2 rounded-xl bg-white/15 backdrop-blur-xs">
+              <CheckCircle2 className="w-5 h-5 text-white" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-2xl font-black tracking-tight truncate" title={currentSchool?.name}>
+              {currentSchool?.name || 'Main Campus'}
+            </div>
+            <p className="text-xs text-emerald-100 mt-1 font-medium truncate">
+              Code: {currentSchool?.code || 'MAIN'} • Level: {currentSchool?.type || 'Combined'}
+            </p>
+          </div>
+        </div>
+
+        {/* Card 3: Total Group Learners */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 p-5 text-white shadow-md">
+          <div className="flex items-center justify-between">
+            <span className="text-2xs font-extrabold uppercase tracking-wider text-purple-100">
+              Total Enrolled Learners
+            </span>
+            <div className="p-2 rounded-xl bg-white/15 backdrop-blur-xs">
+              <Users className="w-5 h-5 text-white" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-3xl font-black tracking-tight">{totalGroupLearners}</div>
+            <p className="text-xs text-purple-100 mt-1 font-medium truncate">
+              {totalGroupLearners === 0 ? 'No learners registered yet' : `Across ${schools.length} campuses`}
+            </p>
+          </div>
+        </div>
+
+        {/* Card 4: Curriculum Mode */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-500 via-orange-500 to-amber-600 p-5 text-white shadow-md">
+          <div className="flex items-center justify-between">
+            <span className="text-2xs font-extrabold uppercase tracking-wider text-amber-100">
+              Curriculum Standard
+            </span>
+            <div className="p-2 rounded-xl bg-white/15 backdrop-blur-xs">
+              <BookOpen className="w-5 h-5 text-white" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-2xl font-black tracking-tight truncate">
+              {currentSchool?.curriculumType || 'CBC'}
+            </div>
+            <p className="text-xs text-amber-100 mt-1 font-medium truncate">
+              Grading: {currentSchool?.gradingMode || 'Competency Based'}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* View Switcher Tabs */}
-      <div className="flex gap-2 border-b border-gray-200">
+      <div className="flex gap-2 border-b border-gray-200 overflow-x-auto pb-1 scrollbar-none">
         <button
           onClick={() => setViewMode('cards')}
-          className={`pb-3 px-4 text-xs font-bold transition flex items-center gap-2 border-b-2 ${
+          className={`pb-3 px-4 text-xs font-bold transition flex items-center gap-2 border-b-2 whitespace-nowrap ${
             viewMode === 'cards'
-              ? 'border-brand-600 text-brand-600'
+              ? 'border-brand-600 text-brand-600 font-extrabold'
               : 'border-transparent text-gray-500 hover:text-gray-900'
           }`}
         >
           <Building2 className="w-4 h-4" />
-          Campus Branches Directory ({schools.length})
+          Campus Directory ({schools.length})
         </button>
         <button
           onClick={() => setViewMode('comparison')}
-          className={`pb-3 px-4 text-xs font-bold transition flex items-center gap-2 border-b-2 ${
+          className={`pb-3 px-4 text-xs font-bold transition flex items-center gap-2 border-b-2 whitespace-nowrap ${
             viewMode === 'comparison'
-              ? 'border-brand-600 text-brand-600'
+              ? 'border-brand-600 text-brand-600 font-extrabold'
               : 'border-transparent text-gray-500 hover:text-gray-900'
           }`}
         >
           <BarChart3 className="w-4 h-4" />
-          Multi-Branch Group Comparison (No-Aggregate CBC Compliant)
+          Multi-Branch Matrix ({schools.length})
         </button>
       </div>
 
@@ -299,7 +439,7 @@ export const Branches: React.FC = () => {
           <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-200 flex items-start gap-3 text-xs text-indigo-950">
             <ShieldCheck className="w-5 h-5 text-indigo-700 shrink-0 mt-0.5" />
             <div>
-              <span className="font-bold">East African Curriculum &amp; CBC Policy Adherence:</span> In compliance with Kenya Ministry of Education CBC guidelines, this academy group dashboard does not compute inter-school mean marks or competitive league tables. Comparison is strictly focused on operational efficacy: enrollment distribution, learner-to-faculty ratios, fee reconciliation rates, and daily attendance continuity.
+              <span className="font-bold">East African Curriculum &amp; Policy Adherence:</span> In compliance with institutional governance guidelines, this multi-campus dashboard tracks resource distribution, active learner enrollment, and faculty allocations without fabricating competitive ranks.
             </div>
           </div>
 
@@ -312,18 +452,22 @@ export const Branches: React.FC = () => {
             </Card>
             <Card className="p-4 space-y-1">
               <span className="text-2xs font-bold text-gray-400 uppercase tracking-wider">Group Total Learners</span>
-              <p className="text-2xl font-bold font-mono text-gray-900">{schools.length * 280}</p>
-              <span className="text-2xs text-gray-500">Across all branches</span>
+              <p className="text-2xl font-bold font-mono text-gray-900">{totalGroupLearners}</p>
+              <span className="text-2xs text-gray-500">{totalGroupLearners === 0 ? 'Fresh database' : 'Real-time verified'}</span>
             </Card>
             <Card className="p-4 space-y-1">
-              <span className="text-2xs font-bold text-gray-400 uppercase tracking-wider">Average Fee Collection</span>
-              <p className="text-2xl font-bold font-mono text-emerald-600">89.4%</p>
-              <span className="text-2xs text-emerald-600 font-semibold">+4.2% vs previous term</span>
+              <span className="text-2xs font-bold text-gray-400 uppercase tracking-wider">Total Group Faculty</span>
+              <p className="text-2xl font-bold font-mono text-gray-900">{totalGroupFaculty}</p>
+              <span className="text-2xs text-gray-500">Active educators across campuses</span>
             </Card>
             <Card className="p-4 space-y-1">
-              <span className="text-2xs font-bold text-gray-400 uppercase tracking-wider">Daily Attendance Mean</span>
-              <p className="text-2xl font-bold font-mono text-brand-700">96.8%</p>
-              <span className="text-2xs text-gray-500">Verified via digital roll call</span>
+              <span className="text-2xs font-bold text-gray-400 uppercase tracking-wider">Group Ratio</span>
+              <p className="text-2xl font-bold font-mono text-brand-700">
+                {totalGroupLearners > 0 && totalGroupFaculty > 0
+                  ? `1:${Math.round(totalGroupLearners / totalGroupFaculty)}`
+                  : '—'}
+              </p>
+              <span className="text-2xs text-gray-500">Learner to teacher ratio</span>
             </Card>
           </div>
 
@@ -332,19 +476,17 @@ export const Branches: React.FC = () => {
             <div className="p-4 border-b border-gray-200 bg-gray-50/70 flex items-center justify-between">
               <div>
                 <h3 className="font-bold text-gray-900 text-sm">Branch-by-Branch Operational Matrix</h3>
-                <p className="text-2xs text-gray-500">Multi-campus performance &amp; resource allocation overview</p>
+                <p className="text-2xs text-gray-500">Live multi-campus performance &amp; resource allocation</p>
               </div>
               <Badge variant="brand" size="sm">Consolidated Live Data</Badge>
             </div>
             {/* Mobile Branch Comparison Cards (sm:hidden) */}
             <div className="sm:hidden divide-y divide-gray-100">
-              {schools.map((school, idx) => {
+              {schools.map((school) => {
                 const isActive = school.id === currentSchool?.id;
                 const headName = (school.settings as any)?.principalName || (school as any).headTeacher || (school as any).principalName || 'Assigned Head Teacher';
-                const sampleLearners = 180 + (idx * 95);
-                const sampleFaculty = 12 + (idx * 5);
-                const collectionRate = 85 + (idx % 3) * 5;
-                const attendanceRate = 95 + (idx % 4);
+                const learnersCount = branchMetrics[school.id]?.learners || 0;
+                const facultyCount = branchMetrics[school.id]?.faculty || 0;
 
                 return (
                   <div key={school.id} className={`p-4 space-y-3 ${isActive ? 'bg-brand-50/30' : 'bg-white'}`}>
@@ -366,22 +508,20 @@ export const Branches: React.FC = () => {
                       <span>{headName}</span>
                     </div>
 
-                    <div className="grid grid-cols-4 gap-2 p-2.5 rounded-xl bg-gray-50 text-center border border-gray-100">
+                    <div className="grid grid-cols-3 gap-2 p-2.5 rounded-xl bg-gray-50 text-center border border-gray-100">
                       <div>
                         <span className="text-[10px] text-gray-400 block font-semibold">Learners</span>
-                        <span className="text-xs font-bold text-gray-900 font-mono">{sampleLearners}</span>
+                        <span className="text-xs font-bold text-gray-900 font-mono">{learnersCount}</span>
                       </div>
                       <div>
                         <span className="text-[10px] text-gray-400 block font-semibold">Staff</span>
-                        <span className="text-xs font-bold text-gray-700 font-mono">{sampleFaculty}</span>
+                        <span className="text-xs font-bold text-gray-700 font-mono">{facultyCount}</span>
                       </div>
                       <div>
-                        <span className="text-[10px] text-gray-400 block font-semibold">Fees</span>
-                        <span className="text-xs font-bold text-emerald-600 font-mono">{collectionRate}%</span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-gray-400 block font-semibold">Attend.</span>
-                        <span className="text-xs font-bold text-brand-700 font-mono">{attendanceRate}%</span>
+                        <span className="text-[10px] text-gray-400 block font-semibold">Ratio</span>
+                        <span className="text-xs font-bold text-brand-700 font-mono">
+                          {learnersCount > 0 && facultyCount > 0 ? `1:${Math.round(learnersCount / facultyCount)}` : '—'}
+                        </span>
                       </div>
                     </div>
 
@@ -390,7 +530,7 @@ export const Branches: React.FC = () => {
                       variant={isActive ? 'ghost' : 'secondary'}
                       disabled={isActive}
                       onClick={() => switchSchool(school.id)}
-                      className="w-full text-xs h-8"
+                      className="w-full text-xs h-8 font-bold"
                     >
                       {isActive ? 'Current Active Branch' : 'Switch to this Campus'}
                     </Button>
@@ -412,20 +552,16 @@ export const Branches: React.FC = () => {
                     <th className="py-3 px-4 text-right">Learners</th>
                     <th className="py-3 px-4 text-right">Faculty</th>
                     <th className="py-3 px-4 text-center">Ratio</th>
-                    <th className="py-3 px-4 text-right">Fee Collection</th>
-                    <th className="py-3 px-4 text-right">Attendance</th>
                     <th className="py-3 px-4 text-center">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 font-medium">
-                  {schools.map((school, idx) => {
+                  {schools.map((school) => {
                     const isActive = school.id === currentSchool?.id;
                     const headName = (school.settings as any)?.principalName || (school as any).headTeacher || (school as any).principalName || 'Assigned Head Teacher';
-                    const sampleLearners = 180 + (idx * 95);
-                    const sampleFaculty = 12 + (idx * 5);
-                    const ratio = `1:${Math.round(sampleLearners / sampleFaculty)}`;
-                    const collectionRate = 85 + (idx % 3) * 5;
-                    const attendanceRate = 95 + (idx % 4);
+                    const learnersCount = branchMetrics[school.id]?.learners || 0;
+                    const facultyCount = branchMetrics[school.id]?.faculty || 0;
+                    const ratio = learnersCount > 0 && facultyCount > 0 ? `1:${Math.round(learnersCount / facultyCount)}` : '—';
 
                     return (
                       <tr key={school.id} className={`hover:bg-gray-50/80 transition ${isActive ? 'bg-brand-50/30' : ''}`}>
@@ -447,18 +583,16 @@ export const Branches: React.FC = () => {
                         <td className="py-3.5 px-4 text-center">
                           <Badge variant="accent" size="sm">{school.curriculumType || 'CBC'}</Badge>
                         </td>
-                        <td className="py-3.5 px-4 text-right font-mono font-bold text-gray-900">{sampleLearners}</td>
-                        <td className="py-3.5 px-4 text-right font-mono text-gray-700">{sampleFaculty}</td>
+                        <td className="py-3.5 px-4 text-right font-mono font-bold text-gray-900">{learnersCount}</td>
+                        <td className="py-3.5 px-4 text-right font-mono text-gray-700">{facultyCount}</td>
                         <td className="py-3.5 px-4 text-center font-mono text-2xs text-gray-600">{ratio}</td>
-                        <td className="py-3.5 px-4 text-right font-mono font-bold text-emerald-600">{collectionRate}%</td>
-                        <td className="py-3.5 px-4 text-right font-mono font-bold text-brand-700">{attendanceRate}%</td>
                         <td className="py-3.5 px-4 text-center">
                           <Button
                             size="sm"
                             variant={isActive ? 'ghost' : 'secondary'}
                             disabled={isActive}
                             onClick={() => switchSchool(school.id)}
-                            className="text-2xs h-7 py-0"
+                            className="text-2xs h-7 py-0 font-bold"
                           >
                             {isActive ? 'Current' : 'Switch'}
                           </Button>
@@ -540,6 +674,22 @@ export const Branches: React.FC = () => {
                     <Badge variant="accent" size="sm">
                       {school.curriculumType || 'CBC'}
                     </Badge>
+                  </div>
+
+                  {/* Live Enrollment & Faculty Summary */}
+                  <div className="grid grid-cols-2 gap-2 mt-3 p-2 rounded-xl bg-slate-50 border border-slate-100 text-center">
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-semibold block uppercase">Enrolled</span>
+                      <span className="text-xs font-bold text-slate-900 font-mono">
+                        {branchMetrics[school.id]?.learners || 0} Learners
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-semibold block uppercase">Faculty</span>
+                      <span className="text-xs font-bold text-slate-700 font-mono">
+                        {branchMetrics[school.id]?.faculty || 0} Staff
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
