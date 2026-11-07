@@ -846,18 +846,23 @@ export const Assignments: React.FC = () => {
 
   // Filtered Assignments
   const filteredAssignments = useMemo(() => {
+    const q = (searchQuery || '').toLowerCase().trim();
+    const cFilter = (classFilter || '').toLowerCase();
+    const pillFilter = (subjectPillFilter || '').toLowerCase();
+
     return assignments.filter((a) => {
       const matchesSearch =
-        a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (a.subject || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-        a.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        a.className.toLowerCase().includes(searchQuery.toLowerCase());
+        !q ||
+        (a.title || '').toLowerCase().includes(q) ||
+        (a.subject || '').toLowerCase().includes(q) ||
+        (a.description || '').toLowerCase().includes(q) ||
+        (a.className || '').toLowerCase().includes(q);
 
-      const matchesClass = classFilter === 'all' || a.className.toLowerCase().includes(classFilter.toLowerCase());
+      const matchesClass = classFilter === 'all' || (a.className || '').toLowerCase().includes(cFilter);
 
       const matchesSubjectPill =
         subjectPillFilter === 'all' ||
-        (a.subject || '').toLowerCase().includes(subjectPillFilter.toLowerCase());
+        (a.subject || '').toLowerCase().includes(pillFilter);
 
       const dueInfo = getDueInfo(a.expiresAt);
       const matchesStatus =
@@ -872,11 +877,13 @@ export const Assignments: React.FC = () => {
 
   // Filtered resources
   const filteredResources = resources.filter((r) => {
+    const rq = (resourceSearch || '').toLowerCase().trim();
     const matchesCategory = resourceCategoryFilter === 'all' || r.category === resourceCategoryFilter;
     const matchesSearch =
-      r.title.toLowerCase().includes(resourceSearch.toLowerCase()) ||
-      r.subject.toLowerCase().includes(resourceSearch.toLowerCase()) ||
-      r.topic.toLowerCase().includes(resourceSearch.toLowerCase());
+      !rq ||
+      (r.title || '').toLowerCase().includes(rq) ||
+      (r.subject || '').toLowerCase().includes(rq) ||
+      (r.topic || '').toLowerCase().includes(rq);
     return matchesCategory && matchesSearch;
   });
 

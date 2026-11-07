@@ -23,6 +23,8 @@ import { Admissions } from './pages/Admissions';
 import { Operations } from './pages/Operations';
 import { Messaging } from './pages/Messaging';
 import { ExtendedModules } from './pages/ExtendedModules';
+import { Library } from './pages/Library';
+import { Hostels } from './pages/Hostels';
 import { PlatformConsole } from './pages/PlatformConsole';
 import { Profile } from './pages/Profile';
 import { EducatorPortal } from './pages/EducatorPortal';
@@ -118,6 +120,14 @@ export const router = createBrowserRouter([
       {
         path: '/extended',
         element: <ExtendedModules />,
+      },
+      {
+        path: '/library',
+        element: <Library />,
+      },
+      {
+        path: '/hostels',
+        element: <Hostels />,
       },
       {
         path: '/educator-portal',

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTenant } from '../contexts/TenantContext';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -84,6 +85,7 @@ export interface ClubItem {
 }
 
 export const ExtendedModules: React.FC = () => {
+  const navigate = useNavigate();
   const { organization, currentSchool } = useTenant();
   const { currentUser } = useAuth();
 
@@ -284,6 +286,27 @@ export const ExtendedModules: React.FC = () => {
       {/* TAB 1: LIBRARY & BOOK LOANS */}
       {activeTab === 'library' && (
         <div className="space-y-6">
+          {/* Quick Jump Banner to Dedicated Sidebar Page */}
+          <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-700 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+            <div>
+              <h4 className="font-extrabold text-sm flex items-center gap-2">
+                <BookOpen className="w-4 h-4" />
+                Dedicated Library &amp; Book Catalogue Portal Now in Sidebar
+              </h4>
+              <p className="text-2xs text-blue-100 mt-0.5">
+                Manage multiple book volumes, issue student loans, and track returns with live Firestore synchronization.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => navigate('/library')}
+              className="bg-white text-blue-900 hover:bg-blue-50 font-bold shrink-0"
+            >
+              Open Full Library Portal →
+            </Button>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card className="p-0 overflow-hidden border border-gray-200">
               <div className="p-4 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
@@ -396,6 +419,27 @@ export const ExtendedModules: React.FC = () => {
       {/* TAB 3: HOSTEL & BOARDING */}
       {activeTab === 'boarding' && (
         <div className="space-y-4">
+          {/* Quick Jump Banner to Dedicated Sidebar Page */}
+          <div className="p-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-700 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+            <div>
+              <h4 className="font-extrabold text-sm flex items-center gap-2">
+                <Home className="w-4 h-4" />
+                Dedicated Hostels &amp; Boarding Wing Portal Now in Sidebar
+              </h4>
+              <p className="text-2xs text-purple-100 mt-0.5">
+                Register campus dormitories, assign room &amp; bed allocations, and conduct daily night roll call inspections.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => navigate('/hostels')}
+              className="bg-white text-indigo-900 hover:bg-purple-50 font-bold shrink-0"
+            >
+              Open Full Hostels Portal →
+            </Button>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {dorms.map((drm) => (
               <Card key={drm.id} className="p-5 space-y-4 border border-gray-200">

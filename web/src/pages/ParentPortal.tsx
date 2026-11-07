@@ -199,13 +199,14 @@ export const ParentPortal: React.FC = () => {
         let unitList: UnitDetail[] = [];
         if (!snap.empty) {
           const allDocs = snap.docs.map((d) => ({ id: d.id, data: d.data() }));
+          const safeChildClass = (childClass || '').toLowerCase();
           // Filter by applicableClasses for this specific learner's class stream
           const filteredDocs = allDocs.filter(({ data }) => {
             if (!data.applicableClasses || !Array.isArray(data.applicableClasses) || data.applicableClasses.length === 0) {
               return true;
             }
             if (data.applicableClasses.includes('all')) return true;
-            return data.applicableClasses.some((ac: string) => childClass.includes(ac.toLowerCase()));
+            return data.applicableClasses.some((ac: any) => typeof ac === 'string' && safeChildClass.includes(ac.toLowerCase()));
           });
 
           unitList = (filteredDocs.length > 0 ? filteredDocs : allDocs).map(({ id, data }) => {

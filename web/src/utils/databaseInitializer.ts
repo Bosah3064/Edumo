@@ -367,6 +367,39 @@ export async function initializeSchoolTables(
     created.push('assignments');
   }
 
+  // 11. Library Books Table
+  const libraryRef = collection(db, schoolBase, 'library_books');
+  const librarySnap = await getDocs(libraryRef);
+  if (librarySnap.empty) {
+    const defaultBooks = [
+      { id: 'bk-1', title: 'Things Fall Apart', author: 'Chinua Achebe', isbn: '978-0385474542', category: 'African Literature', shelfLocation: 'Section Lit-A', totalCopies: 25, availableCopies: 22, createdAt: serverTimestamp() },
+      { id: 'bk-2', title: 'The River and the Source', author: 'Margaret Ogola', isbn: '978-9966882059', category: 'Secondary Set Books', shelfLocation: 'Section Set-B', totalCopies: 40, availableCopies: 35, createdAt: serverTimestamp() },
+      { id: 'bk-3', title: 'Integrated Science for CBC Grade 7', author: 'KICD Kenya', isbn: '978-9966221087', category: 'CBC Curriculum', shelfLocation: 'Section CBC-7', totalCopies: 50, availableCopies: 48, createdAt: serverTimestamp() },
+      { id: 'bk-4', title: 'Kidagaa Kimemwozea', author: 'Ken Walibora', isbn: '978-9966100573', category: 'Fasihi ya Kiswahili', shelfLocation: 'Section Swa-1', totalCopies: 30, availableCopies: 27, createdAt: serverTimestamp() },
+      { id: 'bk-5', title: 'A Doll\'s House', author: 'Henrik Ibsen', isbn: '978-0486270623', category: 'Literature in English', shelfLocation: 'Section Drama-3', totalCopies: 35, availableCopies: 31, createdAt: serverTimestamp() },
+    ];
+    for (const b of defaultBooks) {
+      await setDoc(doc(db, schoolBase, 'library_books', b.id), b);
+    }
+    created.push('library_books');
+  }
+
+  // 12. Hostels & Boarding Dormitories Table
+  const hostelsRef = collection(db, schoolBase, 'hostels');
+  const hostelsSnap = await getDocs(hostelsRef);
+  if (hostelsSnap.empty) {
+    const defaultHostels = [
+      { id: 'drm-1', name: 'Kilimanjaro House', gender: 'boys', housemaster: 'Mr. David Mutua', capacity: 64, occupied: 58, roomCount: 8, rollCallStatusToday: 'completed', lastRollCallDate: todayStr, prefectName: 'Victor Kiprono', createdAt: serverTimestamp() },
+      { id: 'drm-2', name: 'Serengeti House', gender: 'girls', housemaster: 'Mrs. Florence Otieno', capacity: 64, occupied: 61, roomCount: 8, rollCallStatusToday: 'completed', lastRollCallDate: todayStr, prefectName: 'Amina Kariuki', createdAt: serverTimestamp() },
+      { id: 'drm-3', name: 'Ruwenzori House', gender: 'boys', housemaster: 'Mr. Peter Kiprop', capacity: 48, occupied: 42, roomCount: 6, rollCallStatusToday: 'pending', prefectName: 'Brian Wambua', createdAt: serverTimestamp() },
+      { id: 'drm-4', name: 'Aberdare Wing', gender: 'girls', housemaster: 'Ms. Beatrice Wairimu', capacity: 48, occupied: 39, roomCount: 6, rollCallStatusToday: 'pending', prefectName: 'Grace Muthoni', createdAt: serverTimestamp() },
+    ];
+    for (const h of defaultHostels) {
+      await setDoc(doc(db, schoolBase, 'hostels', h.id), h);
+    }
+    created.push('hostels');
+  }
+
   return { success: true, tablesCreated: created };
 }
 

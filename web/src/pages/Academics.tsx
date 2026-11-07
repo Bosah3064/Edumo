@@ -273,7 +273,7 @@ export const Academics: React.FC = () => {
       }
 
       if (selectedStream !== 'all') {
-        classStudents = classStudents.filter((s) => s.stream.toLowerCase() === selectedStream.toLowerCase());
+        classStudents = classStudents.filter((s) => (s.stream || '').toLowerCase() === (selectedStream || '').toLowerCase());
       }
 
       // Fetch saved marks document
@@ -700,8 +700,18 @@ export const Academics: React.FC = () => {
     })
     .filter((r) => r.isAtRisk);
 
+  // Performance computations for Top Vibrant Cards
+  const enteredScores = roster
+    .map((r) => r.score)
+    .filter((s) => s !== '' && !isNaN(Number(s)))
+    .map(Number);
+  const classMeanScore = enteredScores.length > 0 ? enteredScores.reduce((a, b) => a + b, 0) / enteredScores.length : 0;
+  const classMeanPct = maxScore > 0 ? Math.round((classMeanScore / maxScore) * 100) : 0;
+  const passingScoresCount = enteredScores.filter((s) => (s / maxScore) * 100 >= 50).length;
+  const classPassRate = enteredScores.length > 0 ? Math.round((passingScoresCount / enteredScores.length) * 100) : 0;
+
   return (
-    <div className="space-y-6 max-w-7xl mx-auto animate-fade-in">
+    <div className="space-y-6 max-w-7xl mx-auto animate-fade-in pb-12">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -713,11 +723,11 @@ export const Academics: React.FC = () => {
               {currentSchool?.name || 'Main Campus'} • Academic Year 2026
             </span>
           </div>
-          <h1 className="text-2xl font-display font-bold text-gray-900 tracking-tight">
-            Edumo Academic Analytics &amp; Examination Engine
+          <h1 className="text-2xl font-display font-extrabold text-gray-900 tracking-tight">
+            Academics &amp; Assessment Engine
           </h1>
           <p className="text-xs text-gray-500 mt-1">
-            Longitudinal trend tracking, stream diagnostics, at-risk early intervention, and direction-aware CBC report cards
+            Real marks entry, stream performance diagnostics, at-risk early detection, and CBC report cards
           </p>
         </div>
 
@@ -775,6 +785,85 @@ export const Academics: React.FC = () => {
               New Exam Series
             </Button>
           )}
+        </div>
+      </div>
+
+      {/* TOP 4 VIBRANT GRADIENT METRIC CARDS */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Card 1: Class Roster */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-700 p-5 text-white shadow-md">
+          <div className="flex items-center justify-between">
+            <span className="text-2xs font-extrabold uppercase tracking-wider text-blue-100">
+              Class Roster
+            </span>
+            <div className="p-2 rounded-xl bg-white/15 backdrop-blur-xs">
+              <Users className="w-5 h-5 text-white" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-3xl font-black tracking-tight">{roster.length}</div>
+            <p className="text-xs text-blue-100 mt-1 font-medium">
+              Learners in {selectedClass} • {selectedStream === 'all' ? 'All Streams' : `${selectedStream.toUpperCase()} Stream`}
+            </p>
+          </div>
+        </div>
+
+        {/* Card 2: Mean Mastery */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-600 via-teal-600 to-emerald-700 p-5 text-white shadow-md">
+          <div className="flex items-center justify-between">
+            <span className="text-2xs font-extrabold uppercase tracking-wider text-emerald-100">
+              Class Mastery Average
+            </span>
+            <div className="p-2 rounded-xl bg-white/15 backdrop-blur-xs">
+              <TrendingUp className="w-5 h-5 text-white" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-3xl font-black tracking-tight">
+              {enteredScores.length > 0 ? `${classMeanPct}%` : 'N/A'}
+            </div>
+            <p className="text-xs text-emerald-100 mt-1 font-medium">
+              Pass Rate: {classPassRate}% ({enteredScores.length}/{roster.length} recorded)
+            </p>
+          </div>
+        </div>
+
+        {/* Card 3: Active Assessment Series */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 p-5 text-white shadow-md">
+          <div className="flex items-center justify-between">
+            <span className="text-2xs font-extrabold uppercase tracking-wider text-purple-100">
+              Active Assessment
+            </span>
+            <div className="p-2 rounded-xl bg-white/15 backdrop-blur-xs">
+              <Award className="w-5 h-5 text-white" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-2xl font-black tracking-tight truncate" title={assessmentTitle}>
+              {assessmentTitle}
+            </div>
+            <p className="text-xs text-purple-100 mt-1 font-medium">
+              Max: {maxScore} pts • {examSeriesList.length} Exam Series
+            </p>
+          </div>
+        </div>
+
+        {/* Card 4: Early Support / At-Risk */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-rose-500 via-pink-600 to-rose-700 p-5 text-white shadow-md">
+          <div className="flex items-center justify-between">
+            <span className="text-2xs font-extrabold uppercase tracking-wider text-rose-100">
+              Early Intervention
+            </span>
+            <div className="p-2 rounded-xl bg-white/15 backdrop-blur-xs">
+              <AlertTriangle className="w-5 h-5 text-white" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-3xl font-black tracking-tight">{atRiskLearners.length}</div>
+            <p className="text-xs text-rose-100 mt-1 font-medium">
+              {atRiskLearners.length === 0 ? 'All learners progressing well' : 'Learners requiring remedial focus'}
+            </p>
+          </div>
         </div>
       </div>
 

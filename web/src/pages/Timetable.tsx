@@ -249,22 +249,28 @@ export const Timetable: React.FC = () => {
     }
   };
 
+  // Metrics
+  const classSlots = timetableSlots.filter((s) => s.className === selectedClass);
+  const totalWeeklyPeriods = 35; // 7 periods * 5 days
+  const scheduledCount = classSlots.length;
+  const coveragePercent = Math.round((scheduledCount / totalWeeklyPeriods) * 100);
+  const uniqueTeachersCount = new Set(classSlots.map((s) => s.teacherName).filter(Boolean)).size;
+
   return (
-    <div className="space-y-6 max-w-7xl mx-auto animate-fade-in">
+    <div className="space-y-6 max-w-7xl mx-auto animate-fade-in pb-12">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <Badge variant="brand" dot>
-              Master Schedule
-            </Badge>
-            <span className="text-2xs text-gray-500">{currentSchool?.name || 'Main Campus'}</span>
+            <span className="p-2 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-sm">
+              <CalendarIcon className="w-5 h-5" />
+            </span>
+            <h1 className="text-2xl font-display font-extrabold text-gray-900 tracking-tight">
+              Academic Timetable &amp; Substitution
+            </h1>
           </div>
-          <h1 className="text-2xl font-display font-bold text-gray-900 tracking-tight">
-            Academic Timetable &amp; Substitution
-          </h1>
           <p className="text-xs text-gray-500 mt-1">
-            Automated clash detection, room mapping, and teacher relief substitution
+            Automated clash detection, room mapping, and teacher relief substitution for <strong>{currentSchool?.name || 'Main Campus'}</strong>
           </p>
         </div>
 
@@ -274,9 +280,93 @@ export const Timetable: React.FC = () => {
             size="sm"
             onClick={() => setIsAssignModalOpen(true)}
             leftIcon={<Plus className="w-4 h-4" />}
+            className="shadow-sm"
           >
             Assign Lesson
           </Button>
+        </div>
+      </div>
+
+      {/* TOP 4 VIBRANT GRADIENT METRIC CARDS */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Card 1: Scheduled Lessons */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-700 p-5 text-white shadow-md">
+          <div className="flex items-center justify-between">
+            <span className="text-2xs font-extrabold uppercase tracking-wider text-blue-100">
+              Scheduled Lessons
+            </span>
+            <div className="p-2 rounded-xl bg-white/15 backdrop-blur-xs">
+              <CalendarIcon className="w-5 h-5 text-white" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-3xl font-black tracking-tight">{scheduledCount}</div>
+            <p className="text-xs text-blue-100 mt-1 font-medium">
+              Active periods for {selectedClass}
+            </p>
+          </div>
+        </div>
+
+        {/* Card 2: Weekly Coverage */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-600 via-teal-600 to-emerald-700 p-5 text-white shadow-md">
+          <div className="flex items-center justify-between">
+            <span className="text-2xs font-extrabold uppercase tracking-wider text-emerald-100">
+              Weekly Timetable Fill
+            </span>
+            <div className="p-2 rounded-xl bg-white/15 backdrop-blur-xs">
+              <Clock className="w-5 h-5 text-white" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-3xl font-black tracking-tight">{coveragePercent}%</div>
+            <p className="text-xs text-emerald-100 mt-1 font-medium">
+              {scheduledCount} of {totalWeeklyPeriods} weekly periods assigned
+            </p>
+          </div>
+        </div>
+
+        {/* Card 3: Teaching Staff */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 p-5 text-white shadow-md">
+          <div className="flex items-center justify-between">
+            <span className="text-2xs font-extrabold uppercase tracking-wider text-purple-100">
+              Faculty Deployed
+            </span>
+            <div className="p-2 rounded-xl bg-white/15 backdrop-blur-xs">
+              <UserCheck className="w-5 h-5 text-white" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-3xl font-black tracking-tight">{uniqueTeachersCount}</div>
+            <p className="text-xs text-purple-100 mt-1 font-medium">
+              Instructors teaching {selectedClass}
+            </p>
+          </div>
+        </div>
+
+        {/* Card 4: Clash Status */}
+        <div
+          className={`relative overflow-hidden rounded-2xl p-5 text-white shadow-md ${
+            activeClashes.length > 0
+              ? 'bg-gradient-to-br from-rose-500 via-pink-600 to-rose-700'
+              : 'bg-gradient-to-br from-amber-500 via-orange-500 to-amber-600'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-2xs font-extrabold uppercase tracking-wider text-white/80">
+              Schedule Health
+            </span>
+            <div className="p-2 rounded-xl bg-white/15 backdrop-blur-xs">
+              <AlertTriangle className="w-5 h-5 text-white" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-3xl font-black tracking-tight">
+              {activeClashes.length === 0 ? '0 Clashes' : `${activeClashes.length} Conflict(s)`}
+            </div>
+            <p className="text-xs text-white/90 mt-1 font-medium">
+              {activeClashes.length === 0 ? 'Optimal collision-free grid' : 'Action required: overlapping slots'}
+            </p>
+          </div>
         </div>
       </div>
 

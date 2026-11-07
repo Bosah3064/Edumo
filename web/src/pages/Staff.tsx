@@ -238,7 +238,7 @@ export const Staff: React.FC = () => {
     const levelDef = LEVEL_LEARNING_AREAS[targetKey];
     const standardUnits = levelDef ? levelDef.units : [];
     const matchingSchoolUnits = schoolUnits
-      .filter((u) => standardUnits.some((su) => su.toLowerCase() === u.name.toLowerCase()))
+      .filter((u) => standardUnits.some((su) => (su || '').toLowerCase() === (u.name || '').toLowerCase()))
       .map((u) => u.name);
 
     return Array.from(new Set([...matchingSchoolUnits, ...standardUnits]));

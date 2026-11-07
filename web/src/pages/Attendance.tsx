@@ -24,6 +24,8 @@ import {
   CheckCheck,
   Users,
   Download,
+  XCircle,
+  Calendar,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { exportAttendanceRegister } from '../utils/excelExport';
@@ -377,16 +379,91 @@ export const Attendance: React.FC = () => {
         </div>
       </div>
 
-      {/* Class and Date Selectors + Stats bar */}
-      <Card className="grid grid-cols-1 md:grid-cols-4 gap-4 !p-4">
+      {/* TOP 4 VIBRANT GRADIENT METRIC CARDS */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {/* Card 1: Present */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-600 via-teal-600 to-emerald-700 p-5 text-white shadow-md">
+          <div className="flex items-center justify-between">
+            <span className="text-2xs font-extrabold uppercase tracking-wider text-emerald-100">
+              Present Today
+            </span>
+            <div className="p-2 rounded-xl bg-white/15 backdrop-blur-xs">
+              <CheckCheck className="w-5 h-5 text-white" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-3xl font-black tracking-tight">{counts.present}</div>
+            <p className="text-xs text-emerald-100 mt-1 font-medium">
+              {roster.length > 0 ? `${Math.round((counts.present / roster.length) * 100)}% attendance rate` : 'Class attendance'}
+            </p>
+          </div>
+        </div>
+
+        {/* Card 2: Absent */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-rose-500 via-pink-600 to-rose-700 p-5 text-white shadow-md">
+          <div className="flex items-center justify-between">
+            <span className="text-2xs font-extrabold uppercase tracking-wider text-rose-100">
+              Absent
+            </span>
+            <div className="p-2 rounded-xl bg-white/15 backdrop-blur-xs">
+              <XCircle className="w-5 h-5 text-white" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-3xl font-black tracking-tight">{counts.absent}</div>
+            <p className="text-xs text-rose-100 mt-1 font-medium">
+              Unexcused learner absence
+            </p>
+          </div>
+        </div>
+
+        {/* Card 3: Late */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-500 via-orange-500 to-amber-600 p-5 text-white shadow-md">
+          <div className="flex items-center justify-between">
+            <span className="text-2xs font-extrabold uppercase tracking-wider text-amber-100">
+              Late Arrivals
+            </span>
+            <div className="p-2 rounded-xl bg-white/15 backdrop-blur-xs">
+              <Clock className="w-5 h-5 text-white" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-3xl font-black tracking-tight">{counts.late}</div>
+            <p className="text-xs text-amber-100 mt-1 font-medium">
+              Tardy check-ins recorded
+            </p>
+          </div>
+        </div>
+
+        {/* Card 4: Excused */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-700 p-5 text-white shadow-md">
+          <div className="flex items-center justify-between">
+            <span className="text-2xs font-extrabold uppercase tracking-wider text-blue-100">
+              Excused / Medical
+            </span>
+            <div className="p-2 rounded-xl bg-white/15 backdrop-blur-xs">
+              <Calendar className="w-5 h-5 text-white" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-3xl font-black tracking-tight">{counts.excused}</div>
+            <p className="text-xs text-blue-100 mt-1 font-medium">
+              Official parent permission
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Class and Date Selectors */}
+      <Card className="grid grid-cols-1 sm:grid-cols-2 gap-4 !p-4 bg-white/90">
         <div>
-          <label className="block text-2xs font-semibold uppercase text-gray-500 mb-1">
+          <label className="block text-2xs font-bold uppercase text-gray-500 mb-1">
             Class Stream
           </label>
           <select
             value={selectedClass}
             onChange={(e) => setSelectedClass(e.target.value)}
-            className="w-full bg-white border border-surface-700 rounded-xl px-3 py-2 text-xs text-gray-900"
+            className="w-full bg-white border border-surface-700 rounded-xl px-3 py-2 text-xs font-semibold text-gray-900"
           >
             {classOptions.map((cls) => (
               <option key={cls} value={cls}>
@@ -397,37 +474,15 @@ export const Attendance: React.FC = () => {
         </div>
 
         <div>
-          <label className="block text-2xs font-semibold uppercase text-gray-500 mb-1">
+          <label className="block text-2xs font-bold uppercase text-gray-500 mb-1">
             Register Date
           </label>
           <input
             type="date"
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
-            className="w-full bg-white border border-surface-700 rounded-xl px-3 py-2 text-xs text-gray-900"
+            className="w-full bg-white border border-surface-700 rounded-xl px-3 py-2 text-xs font-semibold text-gray-900"
           />
-        </div>
-
-        <div className="md:col-span-2 flex items-center justify-around p-2 rounded-xl bg-white/60 border border-surface-800 text-center">
-          <div>
-            <span className="text-2xs text-accent-700 font-semibold block">Present</span>
-            <span className="text-lg font-bold text-gray-900">{counts.present}</span>
-          </div>
-          <div className="w-px h-8 bg-gray-100" />
-          <div>
-            <span className="text-2xs text-danger-700 font-semibold block">Absent</span>
-            <span className="text-lg font-bold text-gray-900">{counts.absent}</span>
-          </div>
-          <div className="w-px h-8 bg-gray-100" />
-          <div>
-            <span className="text-2xs text-warning-800 font-semibold block">Late</span>
-            <span className="text-lg font-bold text-gray-900">{counts.late}</span>
-          </div>
-          <div className="w-px h-8 bg-gray-100" />
-          <div>
-            <span className="text-2xs text-brand-700 font-semibold block">Excused</span>
-            <span className="text-lg font-bold text-gray-900">{counts.excused}</span>
-          </div>
         </div>
       </Card>
 

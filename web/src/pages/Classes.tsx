@@ -22,6 +22,12 @@ import {
   Tag,
   FolderTree,
   Pencil,
+  X,
+  UserCheck,
+  ChevronRight,
+  TrendingUp,
+  School,
+  Settings2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
@@ -37,16 +43,43 @@ import {
 import { db } from '../firebase';
 import type { Subject } from '@edumo/shared';
 
-interface ClassItem {
+export interface StreamDetail {
+  id: string;
+  name: string;
+  classTeacher?: string;
+  capacity?: number;
+  enrolled?: number;
+}
+
+export interface ClassItem {
   id: string;
   name: string;
   level: string;
   streams: string[];
+  streamDetails?: StreamDetail[];
   classTeacher: string;
   capacity: number;
   enrolled: number;
   learningAreas: string[];
 }
+
+interface StaffOption {
+  id: string;
+  name: string;
+  roleTitle?: string;
+}
+
+const LEVEL_COLORS: Record<string, { badge: string; border: string; bg: string }> = {
+  'Early Years': { badge: 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200', border: 'border-fuchsia-200', bg: 'bg-fuchsia-50/20' },
+  'Pre-Primary': { badge: 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200', border: 'border-fuchsia-200', bg: 'bg-fuchsia-50/20' },
+  'Lower Primary': { badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', border: 'border-emerald-200', bg: 'bg-emerald-50/20' },
+  'Upper Primary': { badge: 'bg-sky-50 text-sky-700 border-sky-200', border: 'border-sky-200', bg: 'bg-sky-50/20' },
+  'Junior School': { badge: 'bg-indigo-50 text-indigo-700 border-indigo-200', border: 'border-indigo-200', bg: 'bg-indigo-50/20' },
+  'Junior Secondary': { badge: 'bg-indigo-50 text-indigo-700 border-indigo-200', border: 'border-indigo-200', bg: 'bg-indigo-50/20' },
+  'Senior School': { badge: 'bg-amber-50 text-amber-700 border-amber-200', border: 'border-amber-200', bg: 'bg-amber-50/20' },
+  'Secondary': { badge: 'bg-amber-50 text-amber-700 border-amber-200', border: 'border-amber-200', bg: 'bg-amber-50/20' },
+  'Cambridge Stage': { badge: 'bg-purple-50 text-purple-700 border-purple-200', border: 'border-purple-200', bg: 'bg-purple-50/20' },
+};
 
 export const Classes: React.FC = () => {
   const { organization, currentSchool } = useTenant();
@@ -58,13 +91,34 @@ export const Classes: React.FC = () => {
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [loadingClasses, setLoadingClasses] = useState(true);
   const [studentCountsByClass, setStudentCountsByClass] = useState<Record<string, number>>({});
+  const [studentCountsByStream, setStudentCountsByStream] = useState<Record<string, number>>({});
 
+  // Real Staff State for teacher assignments
+  const [staffOptions, setStaffOptions] = useState<StaffOption[]>([]);
+
+  // Add Class Modal State
   const [isAddClassModalOpen, setIsAddClassModalOpen] = useState(false);
   const [newClassName, setNewClassName] = useState('');
-  const [newLevel, setNewLevel] = useState('Upper Primary (CBC)');
-  const [streamName, setStreamName] = useState('East');
+  const [newLevel, setNewLevel] = useState('Lower Primary');
+  const [streamList, setStreamList] = useState<string[]>(['East', 'West']);
+  const [singleStreamInput, setSingleStreamInput] = useState('');
   const [capacity, setCapacity] = useState('40');
+  const [assignedClassTeacher, setAssignedClassTeacher] = useState('Unassigned');
   const [savingClass, setSavingClass] = useState(false);
+
+  // Edit Class Modal State
+  const [editingClass, setEditingClass] = useState<ClassItem | null>(null);
+  const [editClassName, setEditClassName] = useState('');
+  const [editLevel, setEditLevel] = useState('');
+  const [editCapacity, setEditCapacity] = useState('40');
+  const [editClassTeacher, setEditClassTeacher] = useState('Unassigned');
+  const [savingEditClass, setSavingEditClass] = useState(false);
+
+  // Manage Streams Modal State
+  const [managingStreamsClass, setManagingStreamsClass] = useState<ClassItem | null>(null);
+  const [streamDetailDrafts, setStreamDetailDrafts] = useState<StreamDetail[]>([]);
+  const [newStreamDraftName, setNewStreamDraftName] = useState('');
+  const [savingStreams, setSavingStreams] = useState(false);
 
   // Units / Subjects State
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -79,7 +133,7 @@ export const Classes: React.FC = () => {
   const [unitDepartment, setUnitDepartment] = useState('Sciences & Tech');
   const [unitIsMandatory, setUnitIsMandatory] = useState<boolean>(true);
   const [unitWeeklyPeriods, setUnitWeeklyPeriods] = useState('5');
-  const [unitTeacher, setUnitTeacher] = useState('');
+  const [unitTeacher, setUnitTeacher] = useState('Departmental Staff');
   const [savingUnit, setSavingUnit] = useState(false);
   const [seedingCurriculum, setSeedingCurriculum] = useState(false);
   const [newUnitClasses, setNewUnitClasses] = useState<string[]>(['all']);
@@ -98,11 +152,49 @@ export const Classes: React.FC = () => {
   const [editUnitDepartment, setEditUnitDepartment] = useState('Sciences & Tech');
   const [editUnitIsMandatory, setEditUnitIsMandatory] = useState(true);
   const [editUnitWeeklyPeriods, setEditUnitWeeklyPeriods] = useState('4');
-  const [editUnitTeacher, setEditUnitTeacher] = useState('');
+  const [editUnitTeacher, setEditUnitTeacher] = useState('Departmental Staff');
   const [editUnitClasses, setEditUnitClasses] = useState<string[]>(['all']);
   const [savingEditUnit, setSavingEditUnit] = useState(false);
 
-  // 1. Listen to students to compute enrollment per class
+  // Search filter for classes
+  const [classSearch, setClassSearch] = useState('');
+  const [levelFilter, setLevelFilter] = useState('all');
+
+  // 1. Listen to real-time staff in Firestore for real teacher assignment
+  useEffect(() => {
+    if (!organization || !currentSchool) return;
+
+    const staffRef = collection(
+      db,
+      'organizations',
+      organization.id,
+      'schools',
+      currentSchool.id,
+      'staff'
+    );
+
+    const unsubStaff = onSnapshot(
+      staffRef,
+      (snap) => {
+        const staffList: StaffOption[] = snap.docs.map((d) => {
+          const data = d.data();
+          return {
+            id: d.id,
+            name: data.name || data.fullName || 'Staff Member',
+            roleTitle: data.roleTitle || data.role || 'Teacher',
+          };
+        });
+        setStaffOptions(staffList);
+      },
+      (err) => {
+        console.warn('Error fetching staff for class assignment:', err);
+      }
+    );
+
+    return () => unsubStaff();
+  }, [organization, currentSchool]);
+
+  // 2. Listen to real students to compute enrollment per class AND per stream
   useEffect(() => {
     if (!organization || !currentSchool) return;
 
@@ -115,21 +207,42 @@ export const Classes: React.FC = () => {
       'students'
     );
 
-    const unsubStudents = onSnapshot(studentsRef, (snap) => {
-      const counts: Record<string, number> = {};
-      snap.docs.forEach((d) => {
-        const classId = d.data().currentClassId;
-        if (classId) {
-          counts[classId] = (counts[classId] || 0) + 1;
-        }
-      });
-      setStudentCountsByClass(counts);
-    });
+    const unsubStudents = onSnapshot(
+      studentsRef,
+      (snap) => {
+        const classCounts: Record<string, number> = {};
+        const streamCounts: Record<string, number> = {};
+
+        snap.docs.forEach((d) => {
+          const data = d.data();
+          const cName = (data.currentClassId || data.className || data.class || '').toString().trim();
+          const sName = (data.stream || data.currentStreamId || data.streamName || '').toString().trim();
+
+          if (cName) {
+            classCounts[cName] = (classCounts[cName] || 0) + 1;
+            classCounts[cName.toLowerCase()] = (classCounts[cName.toLowerCase()] || 0) + 1;
+
+            if (sName) {
+              const streamKey = `${cName}_${sName}`;
+              const streamKeyLower = `${cName.toLowerCase()}_${sName.toLowerCase()}`;
+              streamCounts[streamKey] = (streamCounts[streamKey] || 0) + 1;
+              streamCounts[streamKeyLower] = (streamCounts[streamKeyLower] || 0) + 1;
+            }
+          }
+        });
+
+        setStudentCountsByClass(classCounts);
+        setStudentCountsByStream(streamCounts);
+      },
+      (err) => {
+        console.warn('Error computing student enrollment:', err);
+      }
+    );
 
     return () => unsubStudents();
   }, [organization, currentSchool]);
 
-  // 2. Listen to real-time classes in Firestore
+  // 3. Listen to real-time classes in Firestore
   useEffect(() => {
     if (!organization || !currentSchool) return;
 
@@ -147,17 +260,45 @@ export const Classes: React.FC = () => {
       (snap) => {
         const list: ClassItem[] = snap.docs.map((d) => {
           const data = d.data();
+          const rawStreams: string[] = Array.isArray(data.streams) && data.streams.length > 0 ? data.streams : ['East'];
+          const rawStreamDetails: any[] = Array.isArray(data.streamDetails) ? data.streamDetails : [];
+
+          // Map and hydrate stream details with live student counts
+          const streamDetails: StreamDetail[] = rawStreams.map((strName: string, idx: number) => {
+            const existing = rawStreamDetails.find((item) => item && (item.name === strName || item.id === strName));
+            const streamKey = `${data.name || d.id}_${strName}`;
+            const streamKeyLower = `${(data.name || d.id).toLowerCase()}_${strName.toLowerCase()}`;
+
+            return {
+              id: existing?.id || `str-${idx}-${strName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+              name: strName,
+              classTeacher: existing?.classTeacher || data.classTeacher || 'Unassigned',
+              capacity: Number(existing?.capacity) || Math.round((Number(data.capacity) || 40) / Math.max(1, rawStreams.length)),
+              enrolled: studentCountsByStream[streamKey] || studentCountsByStream[streamKeyLower] || 0,
+            };
+          });
+
+          const enrolled =
+            studentCountsByClass[data.name] ||
+            studentCountsByClass[d.id] ||
+            studentCountsByClass[(data.name || '').toLowerCase()] ||
+            0;
+
           return {
             id: d.id,
             name: data.name || 'Unnamed Class',
-            level: data.level || 'Primary',
-            streams: data.streams || ['East'],
+            level: data.level || 'Lower Primary',
+            streams: rawStreams,
+            streamDetails,
             classTeacher: data.classTeacher || 'Unassigned',
             capacity: Number(data.capacity) || 40,
-            enrolled: studentCountsByClass[data.name] || studentCountsByClass[d.id] || 0,
-            learningAreas: data.learningAreas || ['Core Subjects'],
+            enrolled,
+            learningAreas: Array.isArray(data.learningAreas) ? data.learningAreas : ['Core Learning Areas'],
           };
         });
+
+        // Sort by natural academic level progression
+        list.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
 
         setClasses(list);
         setLoadingClasses(false);
@@ -169,9 +310,9 @@ export const Classes: React.FC = () => {
     );
 
     return () => unsubClasses();
-  }, [organization, currentSchool, studentCountsByClass]);
+  }, [organization, currentSchool, studentCountsByClass, studentCountsByStream]);
 
-  // 3. Listen to real-time curriculum units/subjects in Firestore
+  // 4. Listen to real-time curriculum units/subjects in Firestore
   useEffect(() => {
     if (!organization || !currentSchool) return;
 
@@ -216,20 +357,48 @@ export const Classes: React.FC = () => {
     return () => unsubSubjects();
   }, [organization, currentSchool]);
 
+  // Stream Management Helpers in Add Class Modal
+  const handleAddStreamToNewClass = () => {
+    const trimmed = singleStreamInput.trim();
+    if (!trimmed) return;
+    if (streamList.includes(trimmed)) {
+      toast.error(`Stream "${trimmed}" already added`);
+      return;
+    }
+    setStreamList([...streamList, trimmed]);
+    setSingleStreamInput('');
+  };
+
+  const handleRemoveStreamFromNewClass = (str: string) => {
+    if (streamList.length <= 1) {
+      toast.error('A class must have at least one stream');
+      return;
+    }
+    setStreamList(streamList.filter((s) => s !== str));
+  };
+
+  const handleApplyPresetStreams = (preset: string[]) => {
+    setStreamList(preset);
+  };
+
   // Handle Create Class
   const handleAddClass = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newClassName.trim()) {
-      toast.error('Class name is required');
+      toast.error('Class title is required (e.g. Grade 1)');
+      return;
+    }
+    if (streamList.length === 0) {
+      toast.error('Please configure at least one stream');
       return;
     }
     if (!organization || !currentSchool) {
-      toast.error('No active school branch selected.');
+      toast.error('No active school selected.');
       return;
     }
 
     setSavingClass(true);
-    const toastId = toast.loading('Creating class stream...');
+    const toastId = toast.loading(`Creating ${newClassName.trim()} with ${streamList.length} stream(s)...`);
 
     try {
       const classId = newClassName.toLowerCase().replace(/[^a-z0-9]/g, '-');
@@ -243,24 +412,266 @@ export const Classes: React.FC = () => {
         classId
       );
 
+      const parsedCapacity = parseInt(capacity) || 40;
+      const initialStreamDetails: StreamDetail[] = streamList.map((str, idx) => ({
+        id: `str-${idx}-${str.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+        name: str,
+        classTeacher: assignedClassTeacher,
+        capacity: Math.round(parsedCapacity / streamList.length),
+        enrolled: 0,
+      }));
+
       await setDoc(docRef, {
         name: newClassName.trim(),
         level: newLevel,
-        streams: streamName.trim() ? [streamName.trim()] : ['East'],
-        classTeacher: 'Unassigned',
-        capacity: parseInt(capacity) || 40,
-        learningAreas: ['Core Subjects', 'Literacy', 'Mathematics'],
+        streams: streamList,
+        streamDetails: initialStreamDetails,
+        classTeacher: assignedClassTeacher,
+        capacity: parsedCapacity,
+        learningAreas: ['Core CBC Learning Areas'],
         createdAt: serverTimestamp(),
       });
 
-      toast.success(`${newClassName} added to academic structure!`, { id: toastId });
+      toast.success(`${newClassName.trim()} with ${streamList.length} stream(s) established!`, { id: toastId });
       setIsAddClassModalOpen(false);
       setNewClassName('');
+      setStreamList(['East', 'West']);
+      setAssignedClassTeacher('Unassigned');
     } catch (err) {
       console.error('Error adding class:', err);
       toast.error('Failed to create class', { id: toastId });
     } finally {
       setSavingClass(false);
+    }
+  };
+
+  // Open Edit Class Modal
+  const handleOpenEditClass = (cls: ClassItem) => {
+    setEditingClass(cls);
+    setEditClassName(cls.name);
+    setEditLevel(cls.level);
+    setEditCapacity(String(cls.capacity));
+    setEditClassTeacher(cls.classTeacher || 'Unassigned');
+  };
+
+  const handleSaveEditClass = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!organization || !currentSchool || !editingClass) return;
+
+    setSavingEditClass(true);
+    const toastId = toast.loading(`Updating ${editClassName}...`);
+
+    try {
+      const docRef = doc(
+        db,
+        'organizations',
+        organization.id,
+        'schools',
+        currentSchool.id,
+        'classes',
+        editingClass.id
+      );
+
+      await updateDoc(docRef, {
+        name: editClassName.trim(),
+        level: editLevel,
+        capacity: parseInt(editCapacity) || 40,
+        classTeacher: editClassTeacher,
+        updatedAt: serverTimestamp(),
+      });
+
+      toast.success(`${editClassName} updated successfully!`, { id: toastId });
+      setEditingClass(null);
+    } catch (err) {
+      console.error('Error updating class:', err);
+      toast.error('Failed to update class', { id: toastId });
+    } finally {
+      setSavingEditClass(false);
+    }
+  };
+
+  // Delete Class
+  const handleDeleteClass = async (cls: ClassItem) => {
+    if (!organization || !currentSchool) return;
+    if (!window.confirm(`Are you sure you want to delete "${cls.name}" and all its streams? This cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const docRef = doc(
+        db,
+        'organizations',
+        organization.id,
+        'schools',
+        currentSchool.id,
+        'classes',
+        cls.id
+      );
+      await deleteDoc(docRef);
+      toast.success(`Class "${cls.name}" removed from school structure`);
+    } catch (err) {
+      console.error('Error deleting class:', err);
+      toast.error('Failed to delete class');
+    }
+  };
+
+  // Open Manage Streams Modal
+  const handleOpenManageStreams = (cls: ClassItem) => {
+    setManagingStreamsClass(cls);
+    setStreamDetailDrafts(
+      cls.streamDetails && cls.streamDetails.length > 0
+        ? cls.streamDetails
+        : cls.streams.map((str, idx) => ({
+            id: `str-${idx}-${str.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+            name: str,
+            classTeacher: cls.classTeacher || 'Unassigned',
+            capacity: Math.round(cls.capacity / Math.max(1, cls.streams.length)),
+            enrolled: 0,
+          }))
+    );
+    setNewStreamDraftName('');
+  };
+
+  const handleAddStreamToDrafts = () => {
+    const trimmed = newStreamDraftName.trim();
+    if (!trimmed) return;
+    if (streamDetailDrafts.some((s) => s.name.toLowerCase() === trimmed.toLowerCase())) {
+      toast.error(`Stream "${trimmed}" already exists`);
+      return;
+    }
+
+    const newDetail: StreamDetail = {
+      id: `str-${Date.now()}-${trimmed.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+      name: trimmed,
+      classTeacher: managingStreamsClass?.classTeacher || 'Unassigned',
+      capacity: 40,
+      enrolled: 0,
+    };
+
+    setStreamDetailDrafts([...streamDetailDrafts, newDetail]);
+    setNewStreamDraftName('');
+  };
+
+  const handleRemoveStreamFromDrafts = (idOrName: string) => {
+    if (streamDetailDrafts.length <= 1) {
+      toast.error('A class must have at least one stream');
+      return;
+    }
+    setStreamDetailDrafts(streamDetailDrafts.filter((s) => s.id !== idOrName && s.name !== idOrName));
+  };
+
+  const handleUpdateStreamDraftField = (
+    id: string,
+    field: 'name' | 'classTeacher' | 'capacity',
+    value: any
+  ) => {
+    setStreamDetailDrafts(
+      streamDetailDrafts.map((s) => {
+        if (s.id === id) {
+          return { ...s, [field]: value };
+        }
+        return s;
+      })
+    );
+  };
+
+  const handleSaveManageStreams = async () => {
+    if (!organization || !currentSchool || !managingStreamsClass) return;
+    if (streamDetailDrafts.length === 0) {
+      toast.error('Class must have at least one stream');
+      return;
+    }
+
+    setSavingStreams(true);
+    const toastId = toast.loading(`Saving streams for ${managingStreamsClass.name}...`);
+
+    try {
+      const docRef = doc(
+        db,
+        'organizations',
+        organization.id,
+        'schools',
+        currentSchool.id,
+        'classes',
+        managingStreamsClass.id
+      );
+
+      const streamNames = streamDetailDrafts.map((s) => s.name.trim());
+      const totalStreamCapacity = streamDetailDrafts.reduce((sum, s) => sum + (Number(s.capacity) || 40), 0);
+
+      await updateDoc(docRef, {
+        streams: streamNames,
+        streamDetails: streamDetailDrafts,
+        capacity: totalStreamCapacity,
+        updatedAt: serverTimestamp(),
+      });
+
+      toast.success(`Updated ${streamNames.length} stream(s) for ${managingStreamsClass.name}!`, { id: toastId });
+      setManagingStreamsClass(null);
+    } catch (err) {
+      console.error('Error saving streams:', err);
+      toast.error('Failed to update streams', { id: toastId });
+    } finally {
+      setSavingStreams(false);
+    }
+  };
+
+  // 1-Click Auto Setup Complete Standard School Structure
+  const handleSeedStandardClasses = async () => {
+    if (!organization || !currentSchool) return;
+    if (!window.confirm('This will establish standard CBC grade levels (PP1 through Grade 9) with dual streams (East & West). Continue?')) {
+      return;
+    }
+
+    const toastId = toast.loading('Establishing full CBC academic structure...');
+    try {
+      const standardClasses = [
+        { id: 'pp1', name: 'PP1', level: 'Pre-Primary', capacity: 35, streams: ['East', 'West'] },
+        { id: 'pp2', name: 'PP2', level: 'Pre-Primary', capacity: 35, streams: ['East', 'West'] },
+        { id: 'grade-1', name: 'Grade 1', level: 'Lower Primary', capacity: 40, streams: ['East', 'West'] },
+        { id: 'grade-2', name: 'Grade 2', level: 'Lower Primary', capacity: 40, streams: ['East', 'West'] },
+        { id: 'grade-3', name: 'Grade 3', level: 'Lower Primary', capacity: 40, streams: ['East', 'West'] },
+        { id: 'grade-4', name: 'Grade 4', level: 'Upper Primary', capacity: 45, streams: ['East', 'West'] },
+        { id: 'grade-5', name: 'Grade 5', level: 'Upper Primary', capacity: 45, streams: ['East', 'West'] },
+        { id: 'grade-6', name: 'Grade 6', level: 'Upper Primary', capacity: 45, streams: ['East', 'West'] },
+        { id: 'grade-7', name: 'Grade 7', level: 'Junior Secondary', capacity: 50, streams: ['East', 'West'] },
+        { id: 'grade-8', name: 'Grade 8', level: 'Junior Secondary', capacity: 50, streams: ['East', 'West'] },
+        { id: 'grade-9', name: 'Grade 9', level: 'Junior Secondary', capacity: 50, streams: ['East', 'West'] },
+      ];
+
+      const batch = writeBatch(db);
+      standardClasses.forEach((c) => {
+        const docRef = doc(
+          db,
+          'organizations',
+          organization.id,
+          'schools',
+          currentSchool.id,
+          'classes',
+          c.id
+        );
+        const streamDetails: StreamDetail[] = c.streams.map((str, idx) => ({
+          id: `str-${idx}-${str.toLowerCase()}`,
+          name: str,
+          classTeacher: 'Unassigned',
+          capacity: Math.round(c.capacity / 2),
+          enrolled: 0,
+        }));
+
+        batch.set(docRef, {
+          ...c,
+          streamDetails,
+          classTeacher: 'Unassigned',
+          learningAreas: ['Core CBC Learning Areas'],
+          createdAt: serverTimestamp(),
+        });
+      });
+
+      await batch.commit();
+      toast.success('Complete CBC Academic Structure initialized!', { id: toastId });
+    } catch (err) {
+      console.error('Error seeding classes:', err);
+      toast.error('Failed to setup standard classes', { id: toastId });
     }
   };
 
@@ -307,7 +718,7 @@ export const Classes: React.FC = () => {
       setIsAddUnitModalOpen(false);
       setUnitName('');
       setUnitCode('');
-      setUnitTeacher('');
+      setUnitTeacher('Departmental Staff');
       setNewUnitClasses(['all']);
     } catch (err) {
       console.error('Error creating unit:', err);
@@ -371,7 +782,6 @@ export const Classes: React.FC = () => {
 
         if (currentApplicable.length === 0 || currentApplicable.includes('all')) {
           if (!isSelected) {
-            // Unit was for all classes, but now unselected for this class
             const otherClasses = allClassNames.filter((n) => n !== managingUnitsForClass.name);
             batch.update(subDocRef, {
               applicableClasses: otherClasses,
@@ -405,42 +815,6 @@ export const Classes: React.FC = () => {
     }
   };
 
-  const handleAddUnitForClassSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!organization || !currentSchool || !managingUnitsForClass) return;
-    if (!unitName.trim() || !unitCode.trim()) {
-      toast.error('Unit name and code are required');
-      return;
-    }
-
-    const toastId = toast.loading(`Adding ${unitName} to ${managingUnitsForClass.name}...`);
-    try {
-      const unitId = unitCode.toLowerCase().replace(/[^a-z0-9]/g, '-');
-      const docRef = doc(db, 'organizations', organization.id, 'schools', currentSchool.id, 'subjects', unitId);
-      await setDoc(docRef, {
-        name: unitName.trim(),
-        code: unitCode.trim().toUpperCase(),
-        isMandatory: unitIsMandatory,
-        type: unitIsMandatory ? 'core' : 'elective',
-        department: unitDepartment,
-        weeklyPeriods: parseInt(unitWeeklyPeriods) || 4,
-        teacherName: unitTeacher.trim() || 'Assigned Instructor',
-        applicableClasses: [managingUnitsForClass.name],
-        createdAt: serverTimestamp(),
-      });
-
-      setClassUnitsSelection((prev) => [...prev, unitId]);
-      toast.success(`Unit ${unitCode.toUpperCase()} created and assigned to ${managingUnitsForClass.name}!`, { id: toastId });
-      setIsAddUnitForClassOpen(false);
-      setUnitName('');
-      setUnitCode('');
-      setUnitTeacher('');
-    } catch (err) {
-      console.error('Error adding unit for class:', err);
-      toast.error('Failed to add unit for class', { id: toastId });
-    }
-  };
-
   // Edit Unit
   const handleOpenEditUnit = (sub: Subject) => {
     setEditingUnit(sub);
@@ -449,7 +823,7 @@ export const Classes: React.FC = () => {
     setEditUnitDepartment(sub.department || 'Sciences & Tech');
     setEditUnitIsMandatory(sub.isMandatory !== false);
     setEditUnitWeeklyPeriods(String(sub.weeklyPeriods || 4));
-    setEditUnitTeacher(sub.teacherName || '');
+    setEditUnitTeacher(sub.teacherName || 'Departmental Staff');
     setEditUnitClasses(sub.applicableClasses && sub.applicableClasses.length > 0 ? sub.applicableClasses : ['all']);
   };
 
@@ -549,57 +923,19 @@ export const Classes: React.FC = () => {
     const toastId = toast.loading('Seeding standard national curriculum units...');
 
     try {
-      const country = currentSchool.country || organization.country || 'KE';
-      const curriculum = currentSchool.curriculumType || 'CBC';
-
-      let presetUnits: Array<{
-        name: string;
-        code: string;
-        isMandatory: boolean;
-        department: string;
-        weeklyPeriods: number;
-      }> = [];
-
-      if (curriculum.includes('CBC') || country === 'KE') {
-        presetUnits = [
-          { name: 'Mathematics', code: 'MATH-101', isMandatory: true, department: 'Sciences & Tech', weeklyPeriods: 5 },
-          { name: 'English Language & Literacy', code: 'ENG-102', isMandatory: true, department: 'Languages', weeklyPeriods: 5 },
-          { name: 'Kiswahili & Fasihi', code: 'KISW-103', isMandatory: true, department: 'Languages', weeklyPeriods: 4 },
-          { name: 'Integrated Science', code: 'SCI-201', isMandatory: true, department: 'Sciences & Tech', weeklyPeriods: 4 },
-          { name: 'Social Studies & Citizenship', code: 'SST-202', isMandatory: true, department: 'Humanities', weeklyPeriods: 3 },
-          { name: 'Agriculture & Nutrition', code: 'AGRI-301', isMandatory: true, department: 'Applied Sciences', weeklyPeriods: 3 },
-          { name: 'Creative Arts & Sports', code: 'ARTS-302', isMandatory: true, department: 'Creative Arts', weeklyPeriods: 3 },
-          { name: 'Christian Religious Education (CRE)', code: 'CRE-104', isMandatory: false, department: 'Religious Studies', weeklyPeriods: 2 },
-          { name: 'Islamic Religious Education (IRE)', code: 'IRE-105', isMandatory: false, department: 'Religious Studies', weeklyPeriods: 2 },
-          { name: 'French Language', code: 'FRE-205', isMandatory: false, department: 'Languages', weeklyPeriods: 2 },
-          { name: 'Computer Science & Digital Literacy', code: 'ICT-401', isMandatory: false, department: 'Sciences & Tech', weeklyPeriods: 3 },
-        ];
-      } else if (curriculum.includes('UNEB') || country === 'UG') {
-        presetUnits = [
-          { name: 'Mathematics', code: 'MTH-U1', isMandatory: true, department: 'Sciences', weeklyPeriods: 5 },
-          { name: 'English Language', code: 'ENG-U1', isMandatory: true, department: 'Languages', weeklyPeriods: 5 },
-          { name: 'Biology', code: 'BIO-U1', isMandatory: true, department: 'Sciences', weeklyPeriods: 4 },
-          { name: 'Chemistry', code: 'CHM-U1', isMandatory: true, department: 'Sciences', weeklyPeriods: 4 },
-          { name: 'Physics', code: 'PHY-U1', isMandatory: true, department: 'Sciences', weeklyPeriods: 4 },
-          { name: 'Geography', code: 'GEO-U1', isMandatory: true, department: 'Humanities', weeklyPeriods: 3 },
-          { name: 'History & Political Education', code: 'HIS-U1', isMandatory: true, department: 'Humanities', weeklyPeriods: 3 },
-          { name: 'Entrepreneurship Education', code: 'ENT-U2', isMandatory: false, department: 'Business', weeklyPeriods: 3 },
-          { name: 'Information & Communications Tech', code: 'ICT-U2', isMandatory: false, department: 'Technical', weeklyPeriods: 2 },
-          { name: 'Literature in English', code: 'LIT-U2', isMandatory: false, department: 'Languages', weeklyPeriods: 2 },
-        ];
-      } else {
-        // Cambridge / International Standard
-        presetUnits = [
-          { name: 'Pure Mathematics', code: 'CAM-M01', isMandatory: true, department: 'Mathematics', weeklyPeriods: 5 },
-          { name: 'First Language English', code: 'CAM-E01', isMandatory: true, department: 'Languages', weeklyPeriods: 5 },
-          { name: 'Combined Sciences', code: 'CAM-S01', isMandatory: true, department: 'Natural Sciences', weeklyPeriods: 5 },
-          { name: 'Global Perspectives', code: 'CAM-G01', isMandatory: true, department: 'Humanities', weeklyPeriods: 3 },
-          { name: 'Computer Science', code: 'CAM-CS1', isMandatory: false, department: 'Applied Tech', weeklyPeriods: 4 },
-          { name: 'Economics & Business Studies', code: 'CAM-B01', isMandatory: false, department: 'Commerce', weeklyPeriods: 3 },
-          { name: 'Art & Design', code: 'CAM-A01', isMandatory: false, department: 'Creative Arts', weeklyPeriods: 3 },
-          { name: 'World Literature', code: 'CAM-L01', isMandatory: false, department: 'Languages', weeklyPeriods: 2 },
-        ];
-      }
+      const presetUnits = [
+        { name: 'Mathematics', code: 'MATH-101', isMandatory: true, department: 'Sciences & Tech', weeklyPeriods: 5 },
+        { name: 'English Language & Literacy', code: 'ENG-102', isMandatory: true, department: 'Languages', weeklyPeriods: 5 },
+        { name: 'Kiswahili & Fasihi', code: 'KISW-103', isMandatory: true, department: 'Languages', weeklyPeriods: 4 },
+        { name: 'Integrated Science', code: 'SCI-201', isMandatory: true, department: 'Sciences & Tech', weeklyPeriods: 4 },
+        { name: 'Social Studies & Citizenship', code: 'SST-202', isMandatory: true, department: 'Humanities', weeklyPeriods: 3 },
+        { name: 'Agriculture & Nutrition', code: 'AGRI-301', isMandatory: true, department: 'Applied Sciences', weeklyPeriods: 3 },
+        { name: 'Creative Arts & Sports', code: 'ARTS-302', isMandatory: true, department: 'Creative Arts', weeklyPeriods: 3 },
+        { name: 'Christian Religious Education (CRE)', code: 'CRE-104', isMandatory: false, department: 'Religious Studies', weeklyPeriods: 2 },
+        { name: 'Islamic Religious Education (IRE)', code: 'IRE-105', isMandatory: false, department: 'Religious Studies', weeklyPeriods: 2 },
+        { name: 'French Language', code: 'FRE-205', isMandatory: false, department: 'Languages', weeklyPeriods: 2 },
+        { name: 'Computer Science & Digital Literacy', code: 'ICT-401', isMandatory: false, department: 'Sciences & Tech', weeklyPeriods: 3 },
+      ];
 
       const batch = writeBatch(db);
       presetUnits.forEach((u) => {
@@ -620,7 +956,7 @@ export const Classes: React.FC = () => {
       });
 
       await batch.commit();
-      toast.success(`Loaded ${presetUnits.length} official curriculum units for ${currentSchool.name}!`, { id: toastId });
+      toast.success(`Loaded ${presetUnits.length} official curriculum units!`, { id: toastId });
     } catch (err) {
       console.error('Error seeding units:', err);
       toast.error('Failed to load standard units', { id: toastId });
@@ -629,6 +965,29 @@ export const Classes: React.FC = () => {
     }
   };
 
+  // Metrics Calculations
+  const totalClassesCount = classes.length;
+  const totalStreamsCount = classes.reduce((acc, c) => acc + (c.streams ? c.streams.length : 1), 0);
+  const totalLearnersEnrolled = classes.reduce((acc, c) => acc + (c.enrolled || 0), 0);
+  const totalCapacity = classes.reduce((acc, c) => acc + (c.capacity || 0), 0);
+  const coreUnitsCount = subjects.filter((s) => s.isMandatory).length;
+  const electiveUnitsCount = subjects.filter((s) => !s.isMandatory).length;
+
+  // Filtered Classes
+  const filteredClasses = classes.filter((cls) => {
+    const q = (classSearch || '').toLowerCase().trim();
+    const matchesSearch =
+      !q ||
+      (cls.name || '').toLowerCase().includes(q) ||
+      (cls.level || '').toLowerCase().includes(q) ||
+      ((cls.classTeacher || '').toLowerCase().includes(q)) ||
+      (cls.streams || []).some((s) => (s || '').toLowerCase().includes(q));
+
+    const matchesLevel = levelFilter === 'all' || (cls.level || '').toLowerCase().includes((levelFilter || '').toLowerCase());
+
+    return matchesSearch && matchesLevel;
+  });
+
   // Filtered Units
   const filteredUnits = subjects.filter((u) => {
     const q = (unitSearch || '').toLowerCase().trim();
@@ -636,7 +995,7 @@ export const Classes: React.FC = () => {
       !q ||
       (u.name || '').toLowerCase().includes(q) ||
       (u.code || '').toLowerCase().includes(q) ||
-      (u.department && u.department.toLowerCase().includes(q));
+      ((u.department || '').toLowerCase().includes(q));
 
     const matchesType =
       unitTypeFilter === 'all' ||
@@ -651,26 +1010,44 @@ export const Classes: React.FC = () => {
   const departments = Array.from(new Set(subjects.map((s) => s.department).filter(Boolean))) as string[];
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto animate-fade-in">
+    <div className="space-y-6 max-w-7xl mx-auto animate-fade-in pb-12">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-display font-bold text-slate-900 tracking-tight">
-            Academic Structure &amp; Curriculum Units
-          </h1>
+          <div className="flex items-center gap-2">
+            <span className="p-2 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-sm">
+              <Layers className="w-5 h-5" />
+            </span>
+            <h1 className="text-2xl font-display font-extrabold text-slate-900 tracking-tight">
+              Classes &amp; Stream Management
+            </h1>
+          </div>
           <p className="text-xs text-slate-500 mt-1">
-            Institutional curriculum management for <strong>{currentSchool?.name || 'School'}</strong> •{' '}
+            Real academic structure for <strong>{currentSchool?.name || 'School'}</strong> •{' '}
             Curriculum: <span className="font-semibold text-slate-700">{currentSchool?.curriculumType || 'CBC / National'}</span>
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2.5">
+          {classes.length === 0 && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleSeedStandardClasses}
+              leftIcon={<Sparkles className="w-4 h-4 text-brand-600" />}
+              className="border-blue-200 text-blue-700 hover:bg-blue-50"
+            >
+              Setup Standard Classes
+            </Button>
+          )}
+
           {activeTab === 'classes' ? (
             <Button
               variant="primary"
               size="sm"
               onClick={() => setIsAddClassModalOpen(true)}
               leftIcon={<Plus className="w-4 h-4" />}
+              className="shadow-sm"
             >
               Add New Class
             </Button>
@@ -690,11 +1067,87 @@ export const Classes: React.FC = () => {
                 size="sm"
                 onClick={() => setIsAddUnitModalOpen(true)}
                 leftIcon={<Plus className="w-4 h-4" />}
+                className="shadow-sm"
               >
                 Add Unit / Subject
               </Button>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* TOP 4 VIBRANT GRADIENT METRIC CARDS */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Card 1: Total Classes */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-700 p-5 text-white shadow-md">
+          <div className="flex items-center justify-between">
+            <span className="text-2xs font-extrabold uppercase tracking-wider text-blue-100">
+              Classes &amp; Grades
+            </span>
+            <div className="p-2 rounded-xl bg-white/15 backdrop-blur-xs">
+              <Layers className="w-5 h-5 text-white" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-3xl font-black tracking-tight">{totalClassesCount}</div>
+            <p className="text-xs text-blue-100 mt-1 font-medium">
+              Grade levels configured
+            </p>
+          </div>
+        </div>
+
+        {/* Card 2: Active Streams */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-600 via-teal-600 to-emerald-700 p-5 text-white shadow-md">
+          <div className="flex items-center justify-between">
+            <span className="text-2xs font-extrabold uppercase tracking-wider text-emerald-100">
+              Active Streams
+            </span>
+            <div className="p-2 rounded-xl bg-white/15 backdrop-blur-xs">
+              <FolderTree className="w-5 h-5 text-white" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-3xl font-black tracking-tight">{totalStreamsCount}</div>
+            <p className="text-xs text-emerald-100 mt-1 font-medium">
+              Class sections across school
+            </p>
+          </div>
+        </div>
+
+        {/* Card 3: Enrolled Learners */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 p-5 text-white shadow-md">
+          <div className="flex items-center justify-between">
+            <span className="text-2xs font-extrabold uppercase tracking-wider text-purple-100">
+              Total Enrolled
+            </span>
+            <div className="p-2 rounded-xl bg-white/15 backdrop-blur-xs">
+              <Users className="w-5 h-5 text-white" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-3xl font-black tracking-tight">{totalLearnersEnrolled}</div>
+            <p className="text-xs text-purple-100 mt-1 font-medium">
+              Capacity: {totalCapacity} learners ({totalCapacity > 0 ? Math.round((totalLearnersEnrolled / totalCapacity) * 100) : 0}% full)
+            </p>
+          </div>
+        </div>
+
+        {/* Card 4: Curriculum Units */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-500 via-orange-500 to-amber-600 p-5 text-white shadow-md">
+          <div className="flex items-center justify-between">
+            <span className="text-2xs font-extrabold uppercase tracking-wider text-amber-100">
+              Curriculum Units
+            </span>
+            <div className="p-2 rounded-xl bg-white/15 backdrop-blur-xs">
+              <BookOpen className="w-5 h-5 text-white" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-3xl font-black tracking-tight">{subjects.length}</div>
+            <p className="text-xs text-amber-100 mt-1 font-medium">
+              {coreUnitsCount} Core • {electiveUnitsCount} Elective
+            </p>
+          </div>
         </div>
       </div>
 
@@ -728,29 +1181,84 @@ export const Classes: React.FC = () => {
       {/* TAB 1: CLASSES & STREAMS                                     */}
       {/* ============================================================ */}
       {activeTab === 'classes' && (
-        <div>
-          {classes.length === 0 ? (
-            <Card className="text-center py-12 text-slate-500">
+        <div className="space-y-5">
+          {/* Filter Bar */}
+          <Card className="p-4 bg-white/80 backdrop-blur-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="relative flex-1 max-w-md">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={classSearch}
+                  onChange={(e) => setClassSearch(e.target.value)}
+                  placeholder="Search classes, streams or assigned teachers..."
+                  className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#1d5f99]/20"
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-2xs font-bold text-slate-400 uppercase">Level:</span>
+                <select
+                  value={levelFilter}
+                  onChange={(e) => setLevelFilter(e.target.value)}
+                  className="text-xs py-1.5 px-3 rounded-lg border border-slate-300 bg-white font-medium text-slate-700"
+                >
+                  <option value="all">All Levels</option>
+                  <option value="pre-primary">Pre-Primary (PP1 - PP2)</option>
+                  <option value="lower primary">Lower Primary (Grade 1 - 3)</option>
+                  <option value="upper primary">Upper Primary (Grade 4 - 6)</option>
+                  <option value="junior">Junior Secondary (Grade 7 - 9)</option>
+                  <option value="secondary">Senior Secondary (Form 1 - 4)</option>
+                </select>
+              </div>
+            </div>
+          </Card>
+
+          {loadingClasses ? (
+            <div className="py-16 text-center text-slate-400">
+              <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-3" />
+              <p className="text-xs font-semibold">Loading real classes &amp; stream structures...</p>
+            </div>
+          ) : classes.length === 0 ? (
+            <Card className="text-center py-14 text-slate-500 border-dashed border-2">
               <Layers className="w-12 h-12 mx-auto mb-3 text-slate-400" />
-              <h3 className="text-base font-semibold text-slate-900">No classes configured yet</h3>
-              <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-                Set up your grade levels, streams, and curriculum structure for {currentSchool?.name}.
+              <h3 className="text-base font-extrabold text-slate-900">No classes configured yet</h3>
+              <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+                Set up your grade levels and streams for {currentSchool?.name || 'this school'}. You can quickly establish standard CBC classes or add custom classes.
               </p>
-              <div className="mt-4">
+              <div className="mt-5 flex items-center justify-center gap-3">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={handleSeedStandardClasses}
+                  leftIcon={<Sparkles className="w-4 h-4 text-brand-600" />}
+                >
+                  Setup Standard CBC Structure
+                </Button>
                 <Button
                   size="sm"
                   variant="primary"
                   onClick={() => setIsAddClassModalOpen(true)}
                   leftIcon={<Plus className="w-4 h-4" />}
                 >
-                  Add First Class
+                  Add Custom Class
                 </Button>
               </div>
             </Card>
+          ) : filteredClasses.length === 0 ? (
+            <Card className="text-center py-10 text-slate-500">
+              <p className="text-xs font-semibold">No classes match your filter "{classSearch || levelFilter}"</p>
+            </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {classes.map((cls) => {
-                const percentFull = Math.round((cls.enrolled / cls.capacity) * 100);
+              {filteredClasses.map((cls) => {
+                const percentFull = cls.capacity > 0 ? Math.round((cls.enrolled / cls.capacity) * 100) : 0;
+                const levelConfig = LEVEL_COLORS[cls.level] || {
+                  badge: 'bg-blue-50 text-blue-700 border-blue-200',
+                  border: 'border-blue-100',
+                  bg: 'bg-white',
+                };
+
                 const classUnits = subjects.filter(
                   (u) =>
                     !u.applicableClasses ||
@@ -758,54 +1266,125 @@ export const Classes: React.FC = () => {
                     u.applicableClasses.includes('all') ||
                     u.applicableClasses.includes(cls.name)
                 );
+                const coreCount = classUnits.filter((u) => u.isMandatory).length;
+                const electiveCount = classUnits.filter((u) => !u.isMandatory).length;
+
                 return (
-                  <Card key={cls.id} className="p-5 flex flex-col justify-between hover:shadow-md transition-shadow">
-                    <div className="space-y-3">
-                      <div className="flex items-start justify-between">
+                  <Card
+                    key={cls.id}
+                    className="p-5 flex flex-col justify-between hover:shadow-md transition-all border border-slate-200/80 hover:border-blue-300 relative group"
+                  >
+                    <div className="space-y-3.5">
+                      {/* Card Top: Class Name, Level, Edit/Delete */}
+                      <div className="flex items-start justify-between gap-2">
                         <div>
-                          <h3 className="font-extrabold text-slate-900 text-base">{cls.name}</h3>
-                          <span className="text-2xs font-semibold text-slate-500 block mt-0.5">{cls.level}</span>
-                        </div>
-                        <Badge variant="brand">{cls.streams.length} Stream(s)</Badge>
-                      </div>
-
-                      {/* Streams list */}
-                      <div className="flex flex-wrap gap-1.5 pt-1">
-                        {cls.streams.map((str, idx) => (
-                          <span
-                            key={idx}
-                            className="px-2 py-0.5 rounded-md text-2xs font-bold bg-slate-100 text-slate-700 border border-slate-200"
-                          >
-                            Stream: {str}
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-black text-slate-900 text-lg tracking-tight">{cls.name}</h3>
+                            <span
+                              className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border ${levelConfig.badge}`}
+                            >
+                              {cls.level}
+                            </span>
+                          </div>
+                          <span className="text-2xs font-semibold text-slate-500 block mt-1 flex items-center gap-1.5">
+                            <Users className="w-3.5 h-3.5 text-slate-400" />
+                            Lead Teacher: <strong className="text-slate-800">{cls.classTeacher}</strong>
                           </span>
-                        ))}
+                        </div>
+
+                        {/* Top quick actions */}
+                        <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => handleOpenEditClass(cls)}
+                            className="p-1 rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                            title="Edit Class Information"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteClass(cls)}
+                            className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                            title="Delete Class"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
 
-                      {/* Assigned Curriculum Units */}
-                      <div className="pt-2 border-t border-slate-100 space-y-2">
+                      {/* Stream Breakdown Section */}
+                      <div className="rounded-xl bg-slate-50/80 p-3 border border-slate-100 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-2xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                            <FolderTree className="w-3 h-3 text-[#1d5f99]" />
+                            Streams ({cls.streams.length})
+                          </span>
+                          <button
+                            onClick={() => handleOpenManageStreams(cls)}
+                            className="text-[10.5px] font-bold text-[#1d5f99] hover:underline flex items-center gap-0.5"
+                          >
+                            Manage Streams <ChevronRight className="w-3 h-3" />
+                          </button>
+                        </div>
+
+                        {/* Stream pills with real data */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                          {cls.streamDetails && cls.streamDetails.length > 0 ? (
+                            cls.streamDetails.map((stream) => (
+                              <div
+                                key={stream.id || stream.name}
+                                className="p-2 rounded-lg bg-white border border-slate-200/90 shadow-2xs text-2xs space-y-0.5"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="font-black text-slate-900 truncate">
+                                    Stream {stream.name}
+                                  </span>
+                                  <span className="font-bold text-[10px] text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-100">
+                                    {stream.enrolled || 0} learners
+                                  </span>
+                                </div>
+                                <div className="text-[10px] text-slate-500 truncate">
+                                  Tr: <span className="font-medium text-slate-700">{stream.classTeacher || cls.classTeacher}</span>
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            cls.streams.map((str, idx) => (
+                              <div
+                                key={idx}
+                                className="p-2 rounded-lg bg-white border border-slate-200 text-2xs font-bold text-slate-800"
+                              >
+                                Stream {str}
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Assigned Curriculum Units Info */}
+                      <div className="p-2.5 rounded-xl bg-blue-50/30 border border-blue-100/60 space-y-1.5">
                         <div className="flex items-center justify-between">
                           <span className="text-2xs font-bold text-slate-700 flex items-center gap-1">
                             <BookOpen className="w-3.5 h-3.5 text-[#1d5f99]" />
-                            Curriculum Units:
+                            Curriculum Units
                           </span>
-                          <span className="text-2xs font-extrabold px-2 py-0.5 rounded-full bg-blue-50 text-[#1d5f99] border border-blue-200">
-                            {classUnits.length} Assigned
+                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-blue-100/60 text-[#1d5f99]">
+                            {classUnits.length} Assigned ({coreCount} Core, {electiveCount} Elective)
                           </span>
                         </div>
 
                         <div className="flex flex-wrap gap-1">
-                          {classUnits.slice(0, 3).map((u) => (
+                          {classUnits.slice(0, 4).map((u) => (
                             <span
                               key={u.id || u.code}
-                              className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 truncate max-w-[120px]"
+                              className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-white text-slate-700 border border-slate-200/80 truncate max-w-[130px]"
                               title={u.name}
                             >
                               {u.name}
                             </span>
                           ))}
-                          {classUnits.length > 3 && (
-                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-200 text-slate-600">
-                              +{classUnits.length - 3} more
+                          {classUnits.length > 4 && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-slate-200/80 text-slate-700">
+                              +{classUnits.length - 4} more
                             </span>
                           )}
                           {classUnits.length === 0 && (
@@ -815,17 +1394,19 @@ export const Classes: React.FC = () => {
                       </div>
 
                       {/* Enrollment status bar */}
-                      <div className="space-y-1.5 pt-2">
+                      <div className="space-y-1.5 pt-1">
                         <div className="flex justify-between text-2xs">
-                          <span className="text-slate-500 font-medium">Enrolled Capacity</span>
-                          <span className="font-bold text-slate-800">
+                          <span className="text-slate-500 font-semibold">Total Class Enrollment</span>
+                          <span className="font-extrabold text-slate-800">
                             {cls.enrolled} / {cls.capacity} Learners ({percentFull}%)
                           </span>
                         </div>
-                        <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                        <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
                           <div
                             className={`h-full rounded-full transition-all duration-300 ${
-                              percentFull > 90 ? 'bg-amber-500' : 'bg-[#1d5f99]'
+                              percentFull > 90
+                                ? 'bg-amber-500'
+                                : 'bg-gradient-to-r from-blue-600 to-indigo-600'
                             }`}
                             style={{ width: `${Math.min(percentFull, 100)}%` }}
                           />
@@ -833,21 +1414,28 @@ export const Classes: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="pt-4 border-t border-slate-100 mt-4 flex items-center justify-between text-2xs text-slate-500 gap-2">
-                      <span className="flex items-center gap-1 truncate max-w-[120px]">
-                        <Users className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        <span className="truncate">{cls.classTeacher}</span>
-                      </span>
+                    {/* Card Actions Footer */}
+                    <div className="pt-3 border-t border-slate-100 mt-4 flex items-center justify-between gap-2">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleOpenManageStreams(cls)}
+                        leftIcon={<FolderTree className="w-3.5 h-3.5 text-emerald-600" />}
+                        className="text-2xs py-1 h-7 font-bold flex-1"
+                      >
+                        Streams ({cls.streams.length})
+                      </Button>
 
                       <Button
                         type="button"
                         variant="secondary"
                         size="sm"
                         onClick={() => handleOpenManageClassUnits(cls)}
-                        leftIcon={<FolderTree className="w-3.5 h-3.5 text-[#1d5f99]" />}
-                        className="text-2xs py-1 h-7 font-bold"
+                        leftIcon={<BookOpen className="w-3.5 h-3.5 text-[#1d5f99]" />}
+                        className="text-2xs py-1 h-7 font-bold flex-1"
                       >
-                        Manage Class Units
+                        Units ({classUnits.length})
                       </Button>
                     </div>
                   </Card>
@@ -864,10 +1452,10 @@ export const Classes: React.FC = () => {
       {activeTab === 'units' && (
         <div className="space-y-5">
           {/* Filter & Search Bar */}
-          <Card className="p-4">
+          <Card className="p-4 bg-white/80 backdrop-blur-xs">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-3 flex-1">
-                <div className="relative flex-1 max-w-sm">
+              <div className="flex flex-wrap items-center gap-3 flex-1">
+                <div className="relative flex-1 min-w-[200px] max-w-sm">
                   <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
@@ -1028,8 +1616,8 @@ export const Classes: React.FC = () => {
                   </div>
 
                   <div className="pt-3 border-t border-slate-100 mt-3 flex items-center justify-between text-2xs">
-                    <span className="text-slate-600 truncate max-w-[120px]">
-                      Teacher: <strong className="text-slate-800">{sub.teacherName || 'Departmental Staff'}</strong>
+                    <span className="text-slate-600 truncate max-w-[140px]">
+                      Lead: <strong className="text-slate-800">{sub.teacherName || 'Departmental Staff'}</strong>
                     </span>
 
                     <div className="flex items-center gap-1">
@@ -1057,18 +1645,18 @@ export const Classes: React.FC = () => {
       )}
 
       {/* ============================================================ */}
-      {/* MODAL: ADD NEW CLASS                                         */}
+      {/* MODAL: ADD NEW CLASS (WITH MULTI-STREAM CONFIG)              */}
       {/* ============================================================ */}
       <Modal
         isOpen={isAddClassModalOpen}
         onClose={() => setIsAddClassModalOpen(false)}
-        title="Add Academic Class Stream"
-        description="Establish a new grade level, section, or stream in the school structure."
+        title="Create Academic Class &amp; Streams"
+        description="Establish a new grade level and configure all sections or streams."
       >
         <form onSubmit={handleAddClass} className="space-y-4">
           <Input
             label="Class Title / Name"
-            placeholder="e.g. Grade 5, Form 2, Nursery Blue"
+            placeholder="e.g. Grade 1, Grade 7, Form 2"
             value={newClassName}
             onChange={(e) => setNewClassName(e.target.value)}
             required
@@ -1080,42 +1668,339 @@ export const Classes: React.FC = () => {
               value={newLevel}
               onChange={(e) => setNewLevel(e.target.value)}
               options={[
-                { label: 'Early Years (Pre-Primary / PP1 - PP2)', value: 'Early Years' },
+                { label: 'Pre-Primary (PP1 - PP2)', value: 'Pre-Primary' },
                 { label: 'Lower Primary (Grade 1 - 3)', value: 'Lower Primary' },
                 { label: 'Upper Primary (Grade 4 - 6)', value: 'Upper Primary' },
-                { label: 'Junior School (Grade 7 - 9)', value: 'Junior School' },
-                { label: 'Senior School / Secondary', value: 'Senior School' },
-                { label: 'IGCSE / Cambridge Stage', value: 'Cambridge Stage' },
+                { label: 'Junior Secondary (Grade 7 - 9)', value: 'Junior Secondary' },
+                { label: 'Senior Secondary (Form 1 - 4)', value: 'Senior Secondary' },
+                { label: 'Cambridge / IGCSE Stage', value: 'Cambridge Stage' },
               ]}
             />
             <Input
-              label="Stream Name"
-              placeholder="e.g. North, Blue, Sapphire"
-              value={streamName}
-              onChange={(e) => setStreamName(e.target.value)}
+              label="Total Enrolment Target"
+              type="number"
+              value={capacity}
+              onChange={(e) => setCapacity(e.target.value)}
+              min="10"
+              max="250"
+              required
             />
           </div>
 
-          <Input
-            label="Target Class Capacity"
-            type="number"
-            value={capacity}
-            onChange={(e) => setCapacity(e.target.value)}
-            min="10"
-            max="120"
-            required
-          />
+          {/* Lead Class Teacher from real staff */}
+          <div>
+            <label className="block text-xs font-bold text-slate-800 mb-1">
+              Lead Class Teacher / Coordinator
+            </label>
+            <select
+              value={assignedClassTeacher}
+              onChange={(e) => setAssignedClassTeacher(e.target.value)}
+              className="w-full text-xs py-2 px-3 rounded-lg border border-slate-300 bg-white font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            >
+              <option value="Unassigned">Unassigned (Assign Later)</option>
+              {staffOptions.map((staff) => (
+                <option key={staff.id} value={staff.name}>
+                  {staff.name} ({staff.roleTitle || 'Faculty'})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* MULTI-STREAM CONFIGURATION */}
+          <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-bold text-slate-800">
+                Configure Streams for this Class ({streamList.length})
+              </label>
+              <span className="text-[10px] text-slate-500 font-semibold">
+                Click preset or add custom
+              </span>
+            </div>
+
+            {/* Stream Presets */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[10px] font-bold text-slate-400 mr-1">Presets:</span>
+              <button
+                type="button"
+                onClick={() => handleApplyPresetStreams(['East', 'West'])}
+                className="text-[10.5px] px-2 py-0.5 rounded font-bold bg-white text-slate-700 border border-slate-200 hover:bg-slate-100 transition"
+              >
+                East / West
+              </button>
+              <button
+                type="button"
+                onClick={() => handleApplyPresetStreams(['North', 'South', 'East', 'West'])}
+                className="text-[10.5px] px-2 py-0.5 rounded font-bold bg-white text-slate-700 border border-slate-200 hover:bg-slate-100 transition"
+              >
+                4 Cardinals (N, S, E, W)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleApplyPresetStreams(['Blue', 'Green', 'Red', 'Yellow'])}
+                className="text-[10.5px] px-2 py-0.5 rounded font-bold bg-white text-slate-700 border border-slate-200 hover:bg-slate-100 transition"
+              >
+                Colors (Blue, Green, Red)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleApplyPresetStreams(['Stream A', 'Stream B', 'Stream C'])}
+                className="text-[10.5px] px-2 py-0.5 rounded font-bold bg-white text-slate-700 border border-slate-200 hover:bg-slate-100 transition"
+              >
+                A / B / C
+              </button>
+            </div>
+
+            {/* Current Active Streams Chips */}
+            <div className="flex flex-wrap gap-2 pt-1">
+              {streamList.map((str) => (
+                <span
+                  key={str}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-white border border-slate-300 text-slate-800 shadow-2xs"
+                >
+                  Stream: {str}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveStreamFromNewClass(str)}
+                    className="text-slate-400 hover:text-rose-600 transition"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </span>
+              ))}
+            </div>
+
+            {/* Add Custom Stream Input */}
+            <div className="flex items-center gap-2 pt-1">
+              <input
+                type="text"
+                placeholder="Add custom stream (e.g. Sapphire, Gold, Kilimanjaro)..."
+                value={singleStreamInput}
+                onChange={(e) => setSingleStreamInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddStreamToNewClass();
+                  }
+                }}
+                className="flex-1 text-xs px-3 py-1.5 rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={handleAddStreamToNewClass}
+                className="text-2xs py-1.5 h-8 font-bold"
+              >
+                + Add Stream
+              </Button>
+            </div>
+          </div>
 
           <div className="flex justify-end gap-3 pt-3 border-t">
             <Button type="button" variant="ghost" onClick={() => setIsAddClassModalOpen(false)}>
               Cancel
             </Button>
             <Button type="submit" variant="primary" isLoading={savingClass}>
-              Create Class Stream
+              Create Class &amp; Streams
             </Button>
           </div>
         </form>
       </Modal>
+
+      {/* ============================================================ */}
+      {/* MODAL: EDIT CLASS                                            */}
+      {/* ============================================================ */}
+      {editingClass && (
+        <Modal
+          isOpen={editingClass !== null}
+          onClose={() => setEditingClass(null)}
+          title={`Edit Class — ${editingClass.name}`}
+          description="Update class title, academic level, target capacity, and assigned coordinator."
+        >
+          <form onSubmit={handleSaveEditClass} className="space-y-4">
+            <Input
+              label="Class Name"
+              value={editClassName}
+              onChange={(e) => setEditClassName(e.target.value)}
+              required
+            />
+
+            <div className="grid grid-cols-2 gap-4">
+              <Select
+                label="Curriculum Level"
+                value={editLevel}
+                onChange={(e) => setEditLevel(e.target.value)}
+                options={[
+                  { label: 'Pre-Primary (PP1 - PP2)', value: 'Pre-Primary' },
+                  { label: 'Lower Primary (Grade 1 - 3)', value: 'Lower Primary' },
+                  { label: 'Upper Primary (Grade 4 - 6)', value: 'Upper Primary' },
+                  { label: 'Junior Secondary (Grade 7 - 9)', value: 'Junior Secondary' },
+                  { label: 'Senior Secondary (Form 1 - 4)', value: 'Senior Secondary' },
+                  { label: 'Cambridge / IGCSE Stage', value: 'Cambridge Stage' },
+                ]}
+              />
+              <Input
+                label="Target Capacity"
+                type="number"
+                value={editCapacity}
+                onChange={(e) => setEditCapacity(e.target.value)}
+                min="10"
+                max="250"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-800 mb-1">
+                Lead Class Teacher
+              </label>
+              <select
+                value={editClassTeacher}
+                onChange={(e) => setEditClassTeacher(e.target.value)}
+                className="w-full text-xs py-2 px-3 rounded-lg border border-slate-300 bg-white font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              >
+                <option value="Unassigned">Unassigned</option>
+                {staffOptions.map((staff) => (
+                  <option key={staff.id} value={staff.name}>
+                    {staff.name} ({staff.roleTitle || 'Faculty'})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-3 border-t">
+              <Button type="button" variant="ghost" onClick={() => setEditingClass(null)}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="primary" isLoading={savingEditClass}>
+                Save Class Changes
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* ============================================================ */}
+      {/* MODAL: MANAGE STREAMS FOR A CLASS                            */}
+      {/* ============================================================ */}
+      {managingStreamsClass && (
+        <Modal
+          isOpen={managingStreamsClass !== null}
+          onClose={() => setManagingStreamsClass(null)}
+          title={`Manage Streams — ${managingStreamsClass.name}`}
+          description={`Add, edit, or adjust stream teachers and capacities for ${managingStreamsClass.name}.`}
+          maxWidth="2xl"
+        >
+          <div className="space-y-4">
+            {/* Quick Stream Adder */}
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center gap-2">
+              <input
+                type="text"
+                placeholder="Add new stream (e.g. North, Blue, Sapphire)..."
+                value={newStreamDraftName}
+                onChange={(e) => setNewStreamDraftName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddStreamToDrafts();
+                  }
+                }}
+                className="flex-1 text-xs px-3 py-1.5 rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              />
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                onClick={handleAddStreamToDrafts}
+                leftIcon={<Plus className="w-3.5 h-3.5" />}
+                className="text-2xs py-1.5 h-8 font-bold"
+              >
+                Add Stream
+              </Button>
+            </div>
+
+            {/* List of Streams with Teacher and Capacity fields */}
+            <div className="space-y-2.5 max-h-80 overflow-y-auto pr-1">
+              {streamDetailDrafts.map((stream, idx) => (
+                <div
+                  key={stream.id || idx}
+                  className="p-3 rounded-xl bg-white border border-slate-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                >
+                  <div className="flex items-center gap-2.5 flex-1">
+                    <span className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 font-black text-xs flex items-center justify-center border border-emerald-200">
+                      #{idx + 1}
+                    </span>
+                    <div className="flex-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase block">Stream Name</label>
+                      <input
+                        type="text"
+                        value={stream.name}
+                        onChange={(e) => handleUpdateStreamDraftField(stream.id, 'name', e.target.value)}
+                        className="text-xs font-bold text-slate-900 border-b border-slate-200 focus:border-blue-500 bg-transparent py-0.5 focus:outline-none w-full"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Teacher Selector from real staff */}
+                  <div className="w-full sm:w-44">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase block">Stream Teacher</label>
+                    <select
+                      value={stream.classTeacher || 'Unassigned'}
+                      onChange={(e) => handleUpdateStreamDraftField(stream.id, 'classTeacher', e.target.value)}
+                      className="w-full text-2xs py-1 px-2 rounded border border-slate-300 bg-white font-medium text-slate-800"
+                    >
+                      <option value="Unassigned">Unassigned</option>
+                      {staffOptions.map((staff) => (
+                        <option key={staff.id} value={staff.name}>
+                          {staff.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Capacity */}
+                  <div className="w-20">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase block">Capacity</label>
+                    <input
+                      type="number"
+                      value={stream.capacity || 40}
+                      onChange={(e) => handleUpdateStreamDraftField(stream.id, 'capacity', parseInt(e.target.value) || 40)}
+                      className="w-full text-xs font-semibold text-slate-800 py-1 px-2 rounded border border-slate-300 bg-white"
+                      min="5"
+                      max="100"
+                    />
+                  </div>
+
+                  {/* Delete Stream */}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveStreamFromDrafts(stream.id)}
+                    className="p-1.5 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                    title="Remove this stream"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-end gap-3 pt-3 border-t">
+              <Button type="button" variant="ghost" onClick={() => setManagingStreamsClass(null)}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                onClick={handleSaveManageStreams}
+                isLoading={savingStreams}
+                leftIcon={<Check className="w-4 h-4" />}
+              >
+                Save All Streams ({streamDetailDrafts.length})
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {/* ============================================================ */}
       {/* MODAL: ADD CURRICULUM UNIT / SUBJECT                         */}
@@ -1170,12 +2055,24 @@ export const Classes: React.FC = () => {
             />
           </div>
 
-          <Input
-            label="Assigned Lead Teacher"
-            placeholder="e.g. Mr. Peter Kamau, Mrs. Joyce Otieno"
-            value={unitTeacher}
-            onChange={(e) => setUnitTeacher(e.target.value)}
-          />
+          {/* Lead Teacher from real staff */}
+          <div>
+            <label className="block text-xs font-bold text-slate-800 mb-1">
+              Assigned Lead Instructor
+            </label>
+            <select
+              value={unitTeacher}
+              onChange={(e) => setUnitTeacher(e.target.value)}
+              className="w-full text-xs py-2 px-3 rounded-lg border border-slate-300 bg-white font-medium text-slate-800"
+            >
+              <option value="Departmental Staff">Departmental Staff (Default)</option>
+              {staffOptions.map((staff) => (
+                <option key={staff.id} value={staff.name}>
+                  {staff.name} ({staff.roleTitle || 'Faculty'})
+                </option>
+              ))}
+            </select>
+          </div>
 
           {/* Mandatory vs Optional Toggle */}
           <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
@@ -1216,7 +2113,7 @@ export const Classes: React.FC = () => {
               </label>
             </div>
             <p className="text-2xs text-slate-500">
-              Mandatory units are auto-assigned to all learners in the designated level. Optional units allow individual student selection.
+              Mandatory units are auto-assigned to all learners in designated levels. Optional units allow individual student selection.
             </p>
           </div>
 
@@ -1294,7 +2191,7 @@ export const Classes: React.FC = () => {
           isOpen={managingUnitsForClass !== null}
           onClose={() => setManagingUnitsForClass(null)}
           title={`Manage Curriculum Units — ${managingUnitsForClass.name}`}
-          description={`Configure which learning areas are active for ${managingUnitsForClass.name}. Students in this class will only be evaluated on these units in marks entry and report cards.`}
+          description={`Configure which learning areas are active for ${managingUnitsForClass.name}. Students in this class will only be evaluated on these units.`}
           maxWidth="2xl"
         >
           <div className="space-y-4">
@@ -1304,32 +2201,19 @@ export const Classes: React.FC = () => {
                 <span className="text-xs font-bold text-slate-800">
                   Quick Actions ({classUnitsSelection.length} of {subjects.length} units active):
                 </span>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => setIsAddUnitForClassOpen(true)}
-                  leftIcon={<Plus className="w-3.5 h-3.5 text-[#1d5f99]" />}
-                  className="text-2xs py-1 h-7"
-                >
-                  Add Custom Unit For This Class
-                </Button>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={handleSelectAllUnitsForClass}
                   className="text-2xs px-2.5 py-1 rounded-md font-bold bg-white text-slate-700 border border-slate-300 hover:bg-slate-100 transition"
                 >
-                  Select All Units ({subjects.length})
+                  Select All
                 </button>
                 <button
                   type="button"
                   onClick={handleSelectCoreUnitsForClass}
                   className="text-2xs px-2.5 py-1 rounded-md font-bold bg-blue-50 text-[#1d5f99] border border-blue-200 hover:bg-blue-100 transition"
                 >
-                  Core / Mandatory Only ({subjects.filter((s) => s.isMandatory).length})
+                  Core Only ({subjects.filter((s) => s.isMandatory).length})
                 </button>
                 <button
                   type="button"
@@ -1427,79 +2311,6 @@ export const Classes: React.FC = () => {
       )}
 
       {/* ============================================================ */}
-      {/* MODAL: ADD CUSTOM UNIT SPECIFICALLY FOR CLASS                */}
-      {/* ============================================================ */}
-      {isAddUnitForClassOpen && managingUnitsForClass && (
-        <Modal
-          isOpen={isAddUnitForClassOpen}
-          onClose={() => setIsAddUnitForClassOpen(false)}
-          title={`Add Unit Specifically for ${managingUnitsForClass.name}`}
-          description={`Create a specialized subject (e.g. French, Coding, Art) tailored specifically to ${managingUnitsForClass.name}.`}
-        >
-          <form onSubmit={handleAddUnitForClassSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <Input
-                label="Unit Name"
-                placeholder="e.g. Aviation Studies, German"
-                value={unitName}
-                onChange={(e) => setUnitName(e.target.value)}
-                required
-              />
-              <Input
-                label="Unit Code"
-                placeholder="e.g. AVI-301, GER-101"
-                value={unitCode}
-                onChange={(e) => setUnitCode(e.target.value.toUpperCase())}
-                required
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <Select
-                label="Department"
-                value={unitDepartment}
-                onChange={(e) => setUnitDepartment(e.target.value)}
-                options={[
-                  { label: 'Sciences & Technology', value: 'Sciences & Tech' },
-                  { label: 'Languages & Literature', value: 'Languages' },
-                  { label: 'Humanities & Social Studies', value: 'Humanities' },
-                  { label: 'Creative Arts & Physical Education', value: 'Creative Arts' },
-                  { label: 'Applied Sciences & Agriculture', value: 'Applied Sciences' },
-                  { label: 'Religious & Moral Education', value: 'Religious Studies' },
-                  { label: 'Commerce & Business', value: 'Business Studies' },
-                ]}
-              />
-              <Input
-                label="Weekly Periods"
-                type="number"
-                value={unitWeeklyPeriods}
-                onChange={(e) => setUnitWeeklyPeriods(e.target.value)}
-                min="1"
-                max="15"
-                required
-              />
-            </div>
-
-            <Input
-              label="Assigned Lead Teacher"
-              placeholder="e.g. Mr. Peter Kamau"
-              value={unitTeacher}
-              onChange={(e) => setUnitTeacher(e.target.value)}
-            />
-
-            <div className="flex justify-end gap-3 pt-3 border-t">
-              <Button type="button" variant="ghost" onClick={() => setIsAddUnitForClassOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" variant="primary" leftIcon={<Plus className="w-4 h-4" />}>
-                Create &amp; Assign to {managingUnitsForClass.name}
-              </Button>
-            </div>
-          </form>
-        </Modal>
-      )}
-
-      {/* ============================================================ */}
       {/* MODAL: EDIT CURRICULUM UNIT                                  */}
       {/* ============================================================ */}
       {editingUnit && (
@@ -1551,11 +2362,23 @@ export const Classes: React.FC = () => {
               />
             </div>
 
-            <Input
-              label="Assigned Lead Teacher"
-              value={editUnitTeacher}
-              onChange={(e) => setEditUnitTeacher(e.target.value)}
-            />
+            <div>
+              <label className="block text-xs font-bold text-slate-800 mb-1">
+                Assigned Lead Teacher
+              </label>
+              <select
+                value={editUnitTeacher}
+                onChange={(e) => setEditUnitTeacher(e.target.value)}
+                className="w-full text-xs py-2 px-3 rounded-lg border border-slate-300 bg-white font-medium text-slate-800"
+              >
+                <option value="Departmental Staff">Departmental Staff</option>
+                {staffOptions.map((staff) => (
+                  <option key={staff.id} value={staff.name}>
+                    {staff.name} ({staff.roleTitle || 'Faculty'})
+                  </option>
+                ))}
+              </select>
+            </div>
 
             {/* Mandatory vs Optional Toggle */}
             <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 space-y-2">

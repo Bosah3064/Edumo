@@ -13,6 +13,12 @@ import {
   Send,
   AlertTriangle,
   Radio,
+  Search,
+  Filter,
+  Users,
+  Trash2,
+  Calendar,
+  CheckCircle2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
@@ -20,6 +26,7 @@ import {
   onSnapshot,
   doc,
   setDoc,
+  deleteDoc,
   serverTimestamp,
   query,
   orderBy,
@@ -43,6 +50,8 @@ export const Announcements: React.FC = () => {
 
   const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [audienceFilter, setAudienceFilter] = useState<string>('all');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [title, setTitle] = useState('');
@@ -154,15 +163,66 @@ export const Announcements: React.FC = () => {
     }
   };
 
+  const handleDeleteAnnouncement = async (id: string, annTitle: string) => {
+    if (!organization || !currentSchool) return;
+    if (!window.confirm(`Delete announcement "${annTitle}"?`)) return;
+
+    try {
+      const docRef = doc(
+        db,
+        'organizations',
+        organization.id,
+        'schools',
+        currentSchool.id,
+        'announcements',
+        id
+      );
+      await deleteDoc(docRef);
+      toast.success('Announcement removed from circular stream');
+    } catch (err) {
+      console.error('Error deleting announcement:', err);
+      toast.error('Failed to delete announcement');
+    }
+  };
+
+  // Metrics
+  const totalBroadcasts = announcements.length;
+  const urgentCount = announcements.filter((a) => a.priority === 'urgent').length;
+  const parentReachCount = announcements.filter((a) => a.audience === 'parents' || a.audience === 'all').length;
+  const smsChannelCount = announcements.filter((a) => (a.channels || []).some((c) => (c || '').toLowerCase().includes('sms'))).length;
+
+  // Filtered
+  const filteredAnnouncements = announcements.filter((a) => {
+    const q = (searchQuery || '').toLowerCase().trim();
+    const matchesSearch =
+      !q ||
+      (a.title || '').toLowerCase().includes(q) ||
+      (a.body || '').toLowerCase().includes(q) ||
+      (a.senderName || '').toLowerCase().includes(q);
+
+    const matchesAudience =
+      audienceFilter === 'all' ||
+      (audienceFilter === 'urgent' && a.priority === 'urgent') ||
+      a.audience === audienceFilter;
+
+    return matchesSearch && matchesAudience;
+  });
+
   return (
-    <div className="space-y-6 max-w-7xl mx-auto animate-fade-in">
+    <div className="space-y-6 max-w-7xl mx-auto animate-fade-in pb-12">
+      {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-display font-bold text-gray-900 tracking-tight">
-            Announcements & Parent Alerts
-          </h1>
+          <div className="flex items-center gap-2">
+            <span className="p-2 rounded-xl bg-gradient-to-br from-indigo-600 to-blue-700 text-white shadow-sm">
+              <Megaphone className="w-5 h-5" />
+            </span>
+            <h1 className="text-2xl font-display font-extrabold text-gray-900 tracking-tight">
+              Announcements &amp; Parent Broadcasts
+            </h1>
+          </div>
           <p className="text-xs text-gray-500 mt-1">
-            Broadcast emergency alerts and circulars for {currentSchool?.name || 'Main Campus'}
+            Broadcast school circulars, event alerts, and emergency SMS to guardians of <strong>{currentSchool?.name || 'Main Campus'}</strong>
           </p>
         </div>
 
@@ -171,20 +231,160 @@ export const Announcements: React.FC = () => {
           size="sm"
           onClick={() => setIsModalOpen(true)}
           leftIcon={<Plus className="w-4 h-4" />}
+          className="shadow-sm"
         >
           New Announcement
         </Button>
       </div>
 
+      {/* TOP 4 VIBRANT GRADIENT METRIC CARDS */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Card 1: Total Broadcasts */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-700 p-5 text-white shadow-md">
+          <div className="flex items-center justify-between">
+            <span className="text-2xs font-extrabold uppercase tracking-wider text-blue-100">
+              Total Circulars
+            </span>
+            <div className="p-2 rounded-xl bg-white/15 backdrop-blur-xs">
+              <Megaphone className="w-5 h-5 text-white" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-3xl font-black tracking-tight">{totalBroadcasts}</div>
+            <p className="text-xs text-blue-100 mt-1 font-medium">
+              School circulars published
+            </p>
+          </div>
+        </div>
+
+        {/* Card 2: Urgent Alerts */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-rose-500 via-pink-600 to-rose-700 p-5 text-white shadow-md">
+          <div className="flex items-center justify-between">
+            <span className="text-2xs font-extrabold uppercase tracking-wider text-rose-100">
+              Urgent Notices
+            </span>
+            <div className="p-2 rounded-xl bg-white/15 backdrop-blur-xs">
+              <AlertTriangle className="w-5 h-5 text-white" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-3xl font-black tracking-tight">{urgentCount}</div>
+            <p className="text-xs text-rose-100 mt-1 font-medium">
+              High-priority broadcast alerts
+            </p>
+          </div>
+        </div>
+
+        {/* Card 3: Parent Reach */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 p-5 text-white shadow-md">
+          <div className="flex items-center justify-between">
+            <span className="text-2xs font-extrabold uppercase tracking-wider text-purple-100">
+              Parent Broadcasts
+            </span>
+            <div className="p-2 rounded-xl bg-white/15 backdrop-blur-xs">
+              <Users className="w-5 h-5 text-white" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-3xl font-black tracking-tight">{parentReachCount}</div>
+            <p className="text-xs text-purple-100 mt-1 font-medium">
+              Circulars sent to guardian portal
+            </p>
+          </div>
+        </div>
+
+        {/* Card 4: Multi-Channel SMS & Push */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-600 via-teal-600 to-emerald-700 p-5 text-white shadow-md">
+          <div className="flex items-center justify-between">
+            <span className="text-2xs font-extrabold uppercase tracking-wider text-emerald-100">
+              Multi-Channel Dispatch
+            </span>
+            <div className="p-2 rounded-xl bg-white/15 backdrop-blur-xs">
+              <Radio className="w-5 h-5 text-white" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-3xl font-black tracking-tight">{smsChannelCount}</div>
+            <p className="text-xs text-emerald-100 mt-1 font-medium">
+              Broadcasts via SMS &amp; Push
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Filter and Search Bar */}
+      <Card className="p-4 bg-white/80 backdrop-blur-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="relative flex-1 max-w-md">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search announcements by title, content or sender..."
+              className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              onClick={() => setAudienceFilter('all')}
+              className={`px-3 py-1.5 rounded-lg text-2xs font-bold transition-colors ${
+                audienceFilter === 'all'
+                  ? 'bg-blue-600 text-white shadow-2xs'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              All ({announcements.length})
+            </button>
+            <button
+              onClick={() => setAudienceFilter('parents')}
+              className={`px-3 py-1.5 rounded-lg text-2xs font-bold transition-colors ${
+                audienceFilter === 'parents'
+                  ? 'bg-indigo-600 text-white shadow-2xs'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              Parents
+            </button>
+            <button
+              onClick={() => setAudienceFilter('staff')}
+              className={`px-3 py-1.5 rounded-lg text-2xs font-bold transition-colors ${
+                audienceFilter === 'staff'
+                  ? 'bg-emerald-600 text-white shadow-2xs'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              Faculty
+            </button>
+            <button
+              onClick={() => setAudienceFilter('urgent')}
+              className={`px-3 py-1.5 rounded-lg text-2xs font-bold transition-colors ${
+                audienceFilter === 'urgent'
+                  ? 'bg-rose-600 text-white shadow-2xs'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              Urgent ({urgentCount})
+            </button>
+          </div>
+        </div>
+      </Card>
+
       {/* Announcements Feed */}
-      {announcements.length === 0 ? (
-        <Card className="text-center py-12 text-gray-500">
-          <Megaphone className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-          <h3 className="text-base font-semibold text-gray-900">No announcements yet</h3>
-          <p className="text-xs text-gray-500 mt-1 max-w-sm mx-auto">
-            Send school circulars, event reminders, or urgent SMS alerts to parents and faculty.
+      {loading ? (
+        <div className="py-16 text-center text-slate-400">
+          <div className="animate-spin w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full mx-auto mb-3" />
+          <p className="text-xs font-semibold">Loading announcements...</p>
+        </div>
+      ) : announcements.length === 0 ? (
+        <Card className="text-center py-14 text-slate-500 border-dashed border-2">
+          <Megaphone className="w-12 h-12 mx-auto mb-3 text-slate-400" />
+          <h3 className="text-base font-extrabold text-slate-900">No announcements broadcasted yet</h3>
+          <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+            Send school circulars, event reminders, or urgent SMS alerts to parents and faculty members.
           </p>
-          <div className="mt-4">
+          <div className="mt-5">
             <Button
               size="sm"
               variant="primary"
@@ -195,60 +395,86 @@ export const Announcements: React.FC = () => {
             </Button>
           </div>
         </Card>
+      ) : filteredAnnouncements.length === 0 ? (
+        <Card className="text-center py-10 text-slate-500">
+          <p className="text-xs font-semibold">No announcements matched "{searchQuery}"</p>
+        </Card>
       ) : (
         <div className="space-y-4">
-          {announcements.map((ann) => (
-            <Card key={ann.id} className="relative overflow-hidden">
+          {filteredAnnouncements.map((ann) => (
+            <Card
+              key={ann.id}
+              className={`relative overflow-hidden p-5 transition-all hover:shadow-md border ${
+                ann.priority === 'urgent'
+                  ? 'border-rose-200 bg-rose-50/10'
+                  : 'border-slate-200 bg-white'
+              }`}
+            >
               {ann.priority === 'urgent' && (
-                <div className="absolute top-0 left-0 right-0 h-1 bg-danger-500" />
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-rose-500 to-pink-600" />
               )}
 
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
-                <div className="flex items-center gap-2.5">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-3">
+                <div className="flex items-start gap-3">
                   <div
-                    className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
                       ann.priority === 'urgent'
-                        ? 'bg-danger-500/15 text-danger-700 border border-danger-500/30'
-                        : 'bg-brand-500/15 text-brand-700 border border-brand-500/30'
+                        ? 'bg-rose-100 text-rose-700 border border-rose-200'
+                        : 'bg-indigo-50 text-indigo-700 border border-indigo-200'
                     }`}
                   >
                     {ann.priority === 'urgent' ? (
-                      <AlertTriangle className="w-4 h-4" />
+                      <AlertTriangle className="w-5 h-5 text-rose-600" />
                     ) : (
-                      <Megaphone className="w-4 h-4" />
+                      <Megaphone className="w-5 h-5 text-indigo-600" />
                     )}
                   </div>
                   <div>
-                    <h3 className="text-base font-semibold text-gray-900">{ann.title}</h3>
-                    <p className="text-2xs text-gray-500">
-                      By {ann.senderName} • {ann.createdAt}
+                    <h3 className="text-base font-extrabold text-slate-900">{ann.title}</h3>
+                    <p className="text-2xs font-semibold text-slate-500 mt-0.5 flex items-center gap-1.5">
+                      <span>By <strong>{ann.senderName}</strong></span>
+                      <span>•</span>
+                      <span>{ann.createdAt}</span>
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <Badge
-                    variant={ann.priority === 'urgent' ? 'danger' : 'brand'}
-                    size="sm"
+                  <span
+                    className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border ${
+                      ann.priority === 'urgent'
+                        ? 'bg-rose-50 text-rose-700 border-rose-200'
+                        : 'bg-blue-50 text-blue-700 border-blue-200'
+                    }`}
                   >
                     {ann.priority.toUpperCase()}
-                  </Badge>
-                  <Badge variant="neutral" size="sm">
-                    Audience: {ann.audience.toUpperCase()}
-                  </Badge>
+                  </span>
+                  <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 uppercase">
+                    {ann.audience}
+                  </span>
+                  <button
+                    onClick={() => handleDeleteAnnouncement(ann.id, ann.title)}
+                    className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                    title="Delete notice"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
 
-              <p className="text-xs text-gray-700 leading-relaxed pl-11 mb-4">
+              <p className="text-xs text-slate-700 leading-relaxed pl-13 mb-4 whitespace-pre-wrap">
                 {ann.body}
               </p>
 
-              <div className="pl-11 pt-3 border-t border-surface-800/80 flex flex-wrap items-center justify-between gap-2 text-2xs text-gray-600">
+              <div className="pl-13 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-2xs text-slate-500">
                 <div className="flex items-center gap-2">
-                  <Radio className="w-3.5 h-3.5 text-accent-700" />
-                  <span>Channels: {ann.channels.join(' • ')}</span>
+                  <Radio className="w-3.5 h-3.5 text-emerald-600" />
+                  <span className="font-semibold">Channels: {ann.channels.join(' • ')}</span>
                 </div>
-                <span className="text-accent-700 font-medium">Delivered to Recipients</span>
+                <span className="text-emerald-700 font-extrabold flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  Broadcast Live
+                </span>
               </div>
             </Card>
           ))}

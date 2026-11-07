@@ -33,6 +33,8 @@ import {
   Monitor,
   Sparkles,
   X,
+  Library as LibraryIcon,
+  Home,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -103,9 +105,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
     ...(hasPermission('transport.manage') || isSchoolAdminOrOwner
       ? [{ to: '/operations', label: sidebarLanguage === 'sw' ? 'Uendeshaji wa Shule' : 'Operations & Fleet', icon: Bus }]
       : []),
+    { to: '/library', label: sidebarLanguage === 'sw' ? 'Maktaba ya Shule' : 'Library & Books', icon: LibraryIcon },
+    { to: '/hostels', label: sidebarLanguage === 'sw' ? 'Bweni na Hosteli' : 'Hostels & Boarding', icon: Home },
     { to: '/messaging', label: sidebarLanguage === 'sw' ? 'Ujumbe na Wazazi' : 'Messages & Alerts', icon: MessageSquare },
     ...(hasPermission('library.manage') || isSchoolAdminOrOwner
-      ? [{ to: '/extended', label: sidebarLanguage === 'sw' ? 'Maktaba na Hosteli' : 'Extended Modules', icon: Layers }]
+      ? [{ to: '/extended', label: sidebarLanguage === 'sw' ? 'Duka & Ghala' : 'Inventory & Store', icon: Layers }]
       : []),
     ...(isSuperOrPlatformAdmin
       ? [{ to: '/platform-console', label: sidebarLanguage === 'sw' ? 'Jopo la Usimamizi' : 'Platform Console', icon: ShieldCheck }]

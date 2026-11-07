@@ -242,14 +242,19 @@ export const ExcelImport: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto animate-fade-in">
+    <div className="space-y-6 max-w-7xl mx-auto animate-fade-in pb-12">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-display font-bold text-gray-900 tracking-tight">
-            Excel Bulk Import & Rollback
-          </h1>
+          <div className="flex items-center gap-2">
+            <span className="p-2 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white shadow-sm">
+              <FileSpreadsheet className="w-5 h-5" />
+            </span>
+            <h1 className="text-2xl font-display font-extrabold text-gray-900 tracking-tight">
+              Excel Bulk Ingestion &amp; Rollback
+            </h1>
+          </div>
           <p className="text-xs text-gray-500 mt-1">
-            Safe spreadsheet ingestion for {currentSchool?.name || 'Main Campus'}
+            Safe spreadsheet ingestion with live formula sanitization for <strong>{currentSchool?.name || 'Main Campus'}</strong>
           </p>
         </div>
 
@@ -257,10 +262,92 @@ export const ExcelImport: React.FC = () => {
           variant="secondary"
           size="sm"
           onClick={downloadTemplate}
-          leftIcon={<Download className="w-4 h-4 text-brand-700" />}
+          leftIcon={<Download className="w-4 h-4 text-emerald-700" />}
+          className="border-emerald-200 text-emerald-800 hover:bg-emerald-50"
         >
-          Download Official Template (.xlsx)
+          Download Template ({entityType === 'students' ? 'Learners' : 'Staff'} .xlsx)
         </Button>
+      </div>
+
+      {/* TOP 4 VIBRANT GRADIENT METRIC CARDS */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Card 1: Target Entity */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-700 p-5 text-white shadow-md">
+          <div className="flex items-center justify-between">
+            <span className="text-2xs font-extrabold uppercase tracking-wider text-blue-100">
+              Target Entity
+            </span>
+            <div className="p-2 rounded-xl bg-white/15 backdrop-blur-xs">
+              <FileSpreadsheet className="w-5 h-5 text-white" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-2xl font-black tracking-tight capitalize">
+              {entityType === 'students' ? 'Learners Master' : 'Faculty & Staff'}
+            </div>
+            <p className="text-xs text-blue-100 mt-1 font-medium">
+              Multi-field bulk ingestion pipeline
+            </p>
+          </div>
+        </div>
+
+        {/* Card 2: Formula Sanitizer */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-600 via-teal-600 to-emerald-700 p-5 text-white shadow-md">
+          <div className="flex items-center justify-between">
+            <span className="text-2xs font-extrabold uppercase tracking-wider text-emerald-100">
+              Formula Sanitizer
+            </span>
+            <div className="p-2 rounded-xl bg-white/15 backdrop-blur-xs">
+              <ShieldCheck className="w-5 h-5 text-white" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-2xl font-black tracking-tight">Active Shield</div>
+            <p className="text-xs text-emerald-100 mt-1 font-medium">
+              Neutralizes =, +, -, @ CSV/DDE injections
+            </p>
+          </div>
+        </div>
+
+        {/* Card 3: Dry-Run Verification */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 p-5 text-white shadow-md">
+          <div className="flex items-center justify-between">
+            <span className="text-2xs font-extrabold uppercase tracking-wider text-purple-100">
+              Audit Status
+            </span>
+            <div className="p-2 rounded-xl bg-white/15 backdrop-blur-xs">
+              <FileCheck className="w-5 h-5 text-white" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-2xl font-black tracking-tight">
+              {isDryRunComplete ? `${dryRunRows.filter((r) => r.isValid).length} Valid` : 'Pending File'}
+            </div>
+            <p className="text-xs text-purple-100 mt-1 font-medium">
+              {isDryRunComplete ? `${dryRunRows.length} total rows verified` : 'Upload sheet to audit rows'}
+            </p>
+          </div>
+        </div>
+
+        {/* Card 4: Rollback Engine */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-500 via-orange-500 to-amber-600 p-5 text-white shadow-md">
+          <div className="flex items-center justify-between">
+            <span className="text-2xs font-extrabold uppercase tracking-wider text-amber-100">
+              Batch Rollback
+            </span>
+            <div className="p-2 rounded-xl bg-white/15 backdrop-blur-xs">
+              <RotateCcw className="w-5 h-5 text-white" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-2xl font-black tracking-tight">
+              {recentBatchId ? 'Batch Ready' : 'Standby'}
+            </div>
+            <p className="text-xs text-amber-100 mt-1 font-medium truncate" title={recentBatchId || 'No active batch'}>
+              {recentBatchId ? recentBatchId : '1-click instant atomic undo'}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Security Banner: Formula Injection Defense */}
