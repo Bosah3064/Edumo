@@ -59,11 +59,6 @@ export const Login: React.FC = () => {
     }
   };
 
-  const handleQuickLogin = (presetEmail: string) => {
-    setEmail(presetEmail);
-    setPassword('DemoPass123!');
-  };
-
   return (
     <div className="min-h-screen w-full flex flex-col lg:flex-row bg-[#0f172a] text-slate-100 font-sans">
       {/* LEFT HERO COLUMN (Optimized for laptops and large 4K displays) */}
@@ -208,63 +203,6 @@ export const Login: React.FC = () => {
               Sign In to School Portal
             </Button>
           </form>
-
-          {/* Quick-test Presets for Local Emulators / Demo */}
-          <div className="pt-4 border-t border-slate-200">
-            <div className="flex items-center gap-1.5 text-xs text-slate-700 font-bold uppercase tracking-wider mb-3">
-              <ShieldCheck className="w-4 h-4 text-[#1d5f99]" />
-              <span>Instant Demo Accounts (Click to Fill)</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2.5 text-xs">
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('owner@edumo-academy.org')}
-                className="p-3 rounded-xl bg-slate-50 hover:bg-blue-50 text-slate-900 border border-slate-200 text-left transition-all hover:border-blue-300 hover:shadow-xs group cursor-pointer"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-[#1d5f99] block group-hover:underline">Org Owner</span>
-                  <span className="w-2 h-2 rounded-full bg-blue-500" />
-                </div>
-                <span className="text-slate-600 text-2xs block mt-0.5">Multi-school admin</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('principal@nairobi-campus.org')}
-                className="p-3 rounded-xl bg-slate-50 hover:bg-purple-50 text-slate-900 border border-slate-200 text-left transition-all hover:border-purple-300 hover:shadow-xs group cursor-pointer"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-[#683669] block group-hover:underline">Principal</span>
-                  <span className="w-2 h-2 rounded-full bg-purple-500" />
-                </div>
-                <span className="text-slate-600 text-2xs block mt-0.5">Branch head</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('teacher@nairobi-campus.org')}
-                className="p-3 rounded-xl bg-slate-50 hover:bg-emerald-50 text-slate-900 border border-slate-200 text-left transition-all hover:border-emerald-300 hover:shadow-xs group cursor-pointer"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-emerald-700 block group-hover:underline">Teacher</span>
-                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                </div>
-                <span className="text-slate-600 text-2xs block mt-0.5">Marks &amp; Roll Call</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('parent@family.org')}
-                className="p-3 rounded-xl bg-slate-50 hover:bg-amber-50 text-slate-900 border border-slate-200 text-left transition-all hover:border-amber-300 hover:shadow-xs group cursor-pointer"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-amber-800 block group-hover:underline">Parent</span>
-                  <span className="w-2 h-2 rounded-full bg-amber-500" />
-                </div>
-                <span className="text-slate-600 text-2xs block mt-0.5">Student Fees &amp; Card</span>
-              </button>
-            </div>
-          </div>
 
           {/* Registration Redirects */}
           <div className="pt-3 text-center text-xs text-slate-700 space-y-2 border-t border-slate-100">

@@ -32,12 +32,20 @@ interface TimetableSlot {
 }
 
 export const Timetable: React.FC = () => {
-  const { organization, currentSchool } = useTenant();
+  const { organization, currentSchool, currentRole, isStudent, studentProfile } = useTenant();
+  const isStudentUser = isStudent || currentRole === 'student' || (currentRole as string) === 'learner';
 
   const [selectedClass, setSelectedClass] = useState('Grade 4');
   const [timetableSlots, setTimetableSlots] = useState<TimetableSlot[]>([]);
   const [staffNames, setStaffNames] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Lock selected class for student to their enrolled class
+  useEffect(() => {
+    if (isStudentUser && studentProfile?.currentClassId) {
+      setSelectedClass(studentProfile.currentClassId);
+    }
+  }, [isStudentUser, studentProfile?.currentClassId]);
 
   // Assign Lesson Modal
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
@@ -287,17 +295,19 @@ export const Timetable: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => setIsAssignModalOpen(true)}
-            leftIcon={<Plus className="w-4 h-4" />}
-            className="shadow-sm font-bold"
-          >
-            Assign Lesson
-          </Button>
-        </div>
+        {!isStudentUser && (
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setIsAssignModalOpen(true)}
+              leftIcon={<Plus className="w-4 h-4" />}
+              className="shadow-sm font-bold"
+            >
+              Assign Lesson
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* TOP 4 VIBRANT GRADIENT METRIC CARDS */}
@@ -356,35 +366,49 @@ export const Timetable: React.FC = () => {
           </div>
         </div>
 
-        {/* Card 4: Clash Status */}
+        {/* Card 4: Clash Status / Student Stream */}
         <div
           className={`relative overflow-hidden rounded-2xl p-5 text-white shadow-md ${
-            activeClashes.length > 0
+            isStudentUser
+              ? 'bg-gradient-to-br from-amber-500 via-orange-500 to-amber-600'
+              : activeClashes.length > 0
               ? 'bg-gradient-to-br from-rose-500 via-pink-600 to-rose-700'
               : 'bg-gradient-to-br from-amber-500 via-orange-500 to-amber-600'
           }`}
         >
           <div className="flex items-center justify-between">
             <span className="text-2xs font-extrabold uppercase tracking-wider text-white/80">
-              Schedule Health
+              {isStudentUser ? 'Class & Stream' : 'Schedule Health'}
             </span>
             <div className="p-2 rounded-xl bg-white/15 backdrop-blur-xs">
-              <AlertTriangle className="w-5 h-5 text-white" />
+              {isStudentUser ? (
+                <UserCheck className="w-5 h-5 text-white" />
+              ) : (
+                <AlertTriangle className="w-5 h-5 text-white" />
+              )}
             </div>
           </div>
           <div className="mt-3">
             <div className="text-3xl font-black tracking-tight">
-              {activeClashes.length === 0 ? '0 Clashes' : `${activeClashes.length} Conflict(s)`}
+              {isStudentUser
+                ? studentProfile?.currentStreamId || 'East'
+                : activeClashes.length === 0
+                ? '0 Clashes'
+                : `${activeClashes.length} Conflict(s)`}
             </div>
             <p className="text-xs text-white/90 mt-1 font-medium">
-              {activeClashes.length === 0 ? 'Optimal collision-free grid' : 'Action required: overlapping slots'}
+              {isStudentUser
+                ? `Enrolled in ${selectedClass}`
+                : activeClashes.length === 0
+                ? 'Optimal collision-free grid'
+                : 'Action required: overlapping slots'}
             </p>
           </div>
         </div>
       </div>
 
       {/* Clash Alert Banner */}
-      {activeClashes.length > 0 && (
+      {!isStudentUser && activeClashes.length > 0 && (
         <div className="p-4 rounded-2xl bg-amber-50 border border-amber-300 text-xs text-amber-900 space-y-2">
           <div className="flex items-center gap-2 font-bold text-sm text-amber-800">
             <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
@@ -411,25 +435,32 @@ export const Timetable: React.FC = () => {
         <div className="flex items-center gap-3">
           <CalendarIcon className="w-5 h-5 text-brand-600 shrink-0" />
           <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-            Viewing Timetable for:
+            {isStudentUser ? 'Class Timetable:' : 'Viewing Timetable for:'}
           </span>
+          {isStudentUser && (
+            <Badge variant="brand" size="md" className="font-bold">
+              {selectedClass}
+            </Badge>
+          )}
         </div>
 
-        <div className="w-full sm:w-64">
-          <Select
-            value={selectedClass}
-            onChange={(e) => setSelectedClass(e.target.value)}
-            options={
-              schoolClasses.length > 0
-                ? schoolClasses.map((c) => ({ value: c, label: c }))
-                : [
-                    'PP1', 'PP2',
-                    'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8',
-                    'Form 1', 'Form 2', 'Form 3', 'Form 4',
-                  ].map((c) => ({ value: c, label: c }))
-            }
-          />
-        </div>
+        {!isStudentUser && (
+          <div className="w-full sm:w-64">
+            <Select
+              value={selectedClass}
+              onChange={(e) => setSelectedClass(e.target.value)}
+              options={
+                schoolClasses.length > 0
+                  ? schoolClasses.map((c) => ({ value: c, label: c }))
+                  : [
+                      'PP1', 'PP2',
+                      'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8',
+                      'Form 1', 'Form 2', 'Form 3', 'Form 4',
+                    ].map((c) => ({ value: c, label: c }))
+              }
+            />
+          </div>
+        )}
       </Card>
 
       {/* Weekly Grid */}
@@ -478,29 +509,37 @@ export const Timetable: React.FC = () => {
                             </span>
                           </div>
 
-                          <div className="pt-1 border-t border-blue-100 flex justify-end">
-                            <button
-                              onClick={() => {
-                                setSubstituteSlot(slot);
-                                setSubstituteTeacher('');
-                              }}
-                              className="text-[10px] text-brand-700 hover:text-brand-900 font-semibold"
-                            >
-                              Substitute
-                            </button>
-                          </div>
+                          {!isStudentUser && (
+                            <div className="pt-1 border-t border-blue-100 flex justify-end">
+                              <button
+                                onClick={() => {
+                                  setSubstituteSlot(slot);
+                                  setSubstituteTeacher('');
+                                }}
+                                className="text-[10px] text-brand-700 hover:text-brand-900 font-semibold"
+                              >
+                                Substitute
+                              </button>
+                            </div>
+                          )}
                         </div>
                       ) : (
-                        <div
-                          onClick={() => {
-                            setDay(d);
-                            setPeriodNumber(p.number);
-                            setIsAssignModalOpen(true);
-                          }}
-                          className="h-full border border-dashed border-gray-200 rounded-xl flex items-center justify-center text-gray-300 hover:border-brand-400 hover:text-brand-600 cursor-pointer transition text-2xs font-medium"
-                        >
-                          + Assign
-                        </div>
+                        isStudentUser ? (
+                          <div className="h-full border border-dashed border-gray-100 rounded-xl flex items-center justify-center text-gray-300 text-2xs select-none">
+                            Free Period
+                          </div>
+                        ) : (
+                          <div
+                            onClick={() => {
+                              setDay(d);
+                              setPeriodNumber(p.number);
+                              setIsAssignModalOpen(true);
+                            }}
+                            className="h-full border border-dashed border-gray-200 rounded-xl flex items-center justify-center text-gray-300 hover:border-brand-400 hover:text-brand-600 cursor-pointer transition text-2xs font-medium"
+                          >
+                            + Assign
+                          </div>
+                        )
                       )}
                     </td>
                   );

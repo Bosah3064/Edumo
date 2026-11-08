@@ -316,10 +316,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
         >
           <div className="flex items-center gap-1.5 min-w-0">
             <ShieldCheck className="w-3.5 h-3.5 text-[#1d5f99] shrink-0" />
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              Role:
-            </span>
-            <span className="text-[10px] font-black uppercase text-[#1d5f99] truncate">
+            <span className="text-[10px] font-black uppercase text-[#1d5f99] tracking-wider truncate">
               {roleLabel}
             </span>
           </div>

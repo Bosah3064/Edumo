@@ -68,6 +68,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                   setUserProfileOrgId(fetchedOrgId);
                   setUserProfileRole('orgOwner');
                   localStorage.setItem('edumo_active_org_id', fetchedOrgId);
+                } else {
+                  // Fallback: fetch active live organization from Firestore database
+                  const anyOrgQuery = query(collection(db, 'organizations'), limit(1));
+                  const anyOrgSnap = await getDocs(anyOrgQuery);
+                  if (!anyOrgSnap.empty) {
+                    const fetchedOrgId = anyOrgSnap.docs[0].id;
+                    setUserProfileOrgId(fetchedOrgId);
+                    localStorage.setItem('edumo_active_org_id', fetchedOrgId);
+                  }
                 }
               }
             } catch (fsErr) {
@@ -125,7 +134,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const activeOrgId = useMemo(() => {
     if (!currentUser) return null;
-    return claims?.orgId || userProfileOrgId || localStorage.getItem('edumo_active_org_id') || 'demo-org-edumo';
+    return claims?.orgId || userProfileOrgId || localStorage.getItem('edumo_active_org_id') || null;
   }, [currentUser, claims, userProfileOrgId]);
 
   return (

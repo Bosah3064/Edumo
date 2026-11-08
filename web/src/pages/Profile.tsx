@@ -37,8 +37,8 @@ import { Link } from 'react-router-dom';
 import { usePINLock } from '../hooks/usePINLock';
 
 export const Profile: React.FC = () => {
-  const { currentUser, claims, signOut } = useAuth();
-  const { organization, currentSchool } = useTenant();
+  const { currentUser, claims, userProfileRole, signOut } = useAuth();
+  const { organization, currentSchool, currentRole } = useTenant();
 
   // Profile Form State
   const [displayName, setDisplayName] = useState(currentUser?.displayName || '');
@@ -227,17 +227,24 @@ export const Profile: React.FC = () => {
     }
   };
 
-  // Derive roles
-  const activeRoles: string[] = [];
-  if (claims?.platformAdmin) activeRoles.push('Platform Superadmin');
-  if (claims?.orgRole === 'orgOwner') activeRoles.push('School Organization Owner');
-  if (claims?.schoolRoles && currentSchool?.id && claims.schoolRoles[currentSchool.id]) {
-    activeRoles.push(claims.schoolRoles[currentSchool.id]);
-  } else if (claims?.orgRole) {
-    activeRoles.push(claims.orgRole);
-  } else {
-    activeRoles.push('School Administrator');
-  }
+  // Derive authentic real role from auth token claims, school profile and tenant RBAC
+  const realRoleLabel = (() => {
+    if (claims?.platformAdmin) return 'Platform Superadmin';
+    if (claims?.orgRole === 'orgOwner' || (organization?.ownerId && currentUser?.uid && organization.ownerId === currentUser.uid)) {
+      return 'Director / Organization Owner';
+    }
+    const r = ((currentRole as any) || (userProfileRole as any) || (claims?.schoolRoles && currentSchool?.id ? (claims.schoolRoles as any)[currentSchool.id] : '') || (claims as any)?.orgRole || '') as string;
+    if (r === 'principal' || r === 'schoolAdmin' || r === 'admin') return 'Principal / Head of Institution';
+    if (r === 'deputy') return 'Deputy Principal (Academics)';
+    if (r === 'it_admin' || r === 'it') return 'IT Administrator';
+    if (r === 'exam_officer' || r === 'exams') return 'Examinations Officer';
+    if (r === 'bursar' || r === 'accountant') return 'Bursar / Accounts Officer';
+    if (r === 'guardian' || r === 'parent') return 'Parent / Guardian';
+    if (r === 'student' || r === 'learner') return 'Student / Learner';
+    if (r === 'teacher' || r === 'educator') return 'Teacher / Educator';
+    if (r) return r.charAt(0).toUpperCase() + r.slice(1);
+    return 'Faculty Member';
+  })();
 
   const permissionsList = claims?.permissions || [
     'academics.read',
@@ -287,14 +294,15 @@ export const Profile: React.FC = () => {
               </p>
 
               <div className="flex flex-wrap gap-1.5 pt-1">
-                {activeRoles.map((r, idx) => (
-                  <span
-                    key={idx}
-                    className="px-2.5 py-0.5 rounded-md text-2xs font-extrabold uppercase bg-white/10 text-white border border-white/20"
-                  >
-                    {r}
+                <span className="px-3 py-1 rounded-lg text-xs font-black uppercase tracking-wider bg-white/20 text-white border border-white/30 shadow-xs flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-300" />
+                  {realRoleLabel}
+                </span>
+                {claims?.platformAdmin && (
+                  <span className="px-2.5 py-1 rounded-lg text-2xs font-extrabold uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                    Platform Superadmin
                   </span>
-                ))}
+                )}
               </div>
             </div>
           </div>

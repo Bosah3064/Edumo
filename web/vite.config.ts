@@ -102,7 +102,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        cacheId: 'edumo-v2-2-live',
+        cacheId: 'edumo-v2-3-live',
         skipWaiting: true,
         clientsClaim: true,
         cleanupOutdatedCaches: true,

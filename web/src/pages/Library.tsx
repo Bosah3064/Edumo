@@ -38,6 +38,11 @@ import {
   Library as LibraryIcon,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import {
+  isSampleBook,
+  purgeMockSchoolData,
+  wipeAllSchoolBooks,
+} from '../utils/databaseInitializer';
 
 export interface BookItem {
   id: string;
@@ -71,8 +76,10 @@ interface StudentOption {
 }
 
 export const Library: React.FC = () => {
-  const { organization, currentSchool } = useTenant();
+  const { organization, currentSchool, currentRole, isStudent, studentProfile } = useTenant();
   const { currentUser } = useAuth();
+
+  const isStudentUser = isStudent || currentRole === 'student' || (currentRole as string) === 'learner';
 
   // Active view: 'catalog' | 'loans'
   const [activeTab, setActiveTab] = useState<'catalog' | 'loans'>('catalog');
@@ -113,6 +120,11 @@ export const Library: React.FC = () => {
     return d.toISOString().split('T')[0];
   });
   const [savingLoan, setSavingLoan] = useState(false);
+  const [isPurging, setIsPurging] = useState(false);
+  const [bookToDelete, setBookToDelete] = useState<BookItem | null>(null);
+  const [isDeleteBookModalOpen, setIsDeleteBookModalOpen] = useState(false);
+  const [isWipeAllBooksModalOpen, setIsWipeAllBooksModalOpen] = useState(false);
+  const [isWipingAllBooks, setIsWipingAllBooks] = useState(false);
 
   // 1. Listen to real library books in Firestore
   useEffect(() => {
@@ -425,6 +437,63 @@ export const Library: React.FC = () => {
     }
   };
 
+  const hasSampleBooks = books.some(isSampleBook);
+
+  const handlePurgeSampleBooks = async () => {
+    if (!organization?.id || !currentSchool?.id) return;
+    setIsPurging(true);
+    const toastId = toast.loading('Purging sample demonstration library books...');
+    try {
+      const res = await purgeMockSchoolData(db, organization.id, currentSchool.id);
+      toast.success(`Wiped ${res.booksPurged} sample books and demo records!`, { id: toastId });
+    } catch (err) {
+      console.error('Failed to purge sample books:', err);
+      toast.error('Failed to purge sample books', { id: toastId });
+    } finally {
+      setIsPurging(false);
+    }
+  };
+
+  const handleDeleteBook = async () => {
+    if (!organization?.id || !currentSchool?.id || !bookToDelete) return;
+    const toastId = toast.loading(`Deleting "${bookToDelete.title}"...`);
+    try {
+      await deleteDoc(
+        doc(
+          db,
+          'organizations',
+          organization.id,
+          'schools',
+          currentSchool.id,
+          'library_books',
+          bookToDelete.id
+        )
+      );
+      toast.success(`"${bookToDelete.title}" deleted from library catalog.`, { id: toastId });
+      setIsDeleteBookModalOpen(false);
+      setBookToDelete(null);
+    } catch (err) {
+      console.error('Error deleting book:', err);
+      toast.error('Failed to delete book', { id: toastId });
+    }
+  };
+
+  const handleWipeAllBooks = async () => {
+    if (!organization?.id || !currentSchool?.id) return;
+    setIsWipingAllBooks(true);
+    const toastId = toast.loading('Wiping all library books and records...');
+    try {
+      const res = await wipeAllSchoolBooks(db, organization.id, currentSchool.id);
+      toast.success(`Wiped all ${res.deletedCount} books. Clean stack ready!`, { id: toastId });
+      setIsWipeAllBooksModalOpen(false);
+    } catch (err) {
+      console.error('Error wiping books:', err);
+      toast.error('Failed to wipe books', { id: toastId });
+    } finally {
+      setIsWipingAllBooks(false);
+    }
+  };
+
   // Metrics
   const totalVolumes = books.reduce((sum, b) => sum + b.totalCopies, 0);
   const availableVolumes = books.reduce((sum, b) => sum + b.availableCopies, 0);
@@ -448,6 +517,15 @@ export const Library: React.FC = () => {
 
   // Filtered Loans
   const filteredLoans = loans.filter((l) => {
+    // Student role isolation: students only see their own borrowed book records
+    if (isStudentUser && studentProfile) {
+      const matchesStudent =
+        (studentProfile.admissionNumber && l.admissionNo?.toLowerCase().trim() === studentProfile.admissionNumber.toLowerCase().trim()) ||
+        (studentProfile.id && (l as any).studentId === studentProfile.id) ||
+        (studentProfile.firstName && l.studentName?.toLowerCase().includes(studentProfile.firstName.toLowerCase()));
+      if (!matchesStudent) return false;
+    }
+
     const q = (loanSearch || '').toLowerCase().trim();
     const matchesSearch =
       !q ||
@@ -482,27 +560,71 @@ export const Library: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setIsIssueModalOpen(true)}
-            leftIcon={<RotateCcw className="w-4 h-4 text-emerald-600" />}
-            className="border-emerald-200 text-emerald-800 hover:bg-emerald-50"
-          >
-            Issue Book Loan
-          </Button>
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => setIsAddBookModalOpen(true)}
-            leftIcon={<Plus className="w-4 h-4" />}
-            className="shadow-sm"
-          >
-            Register New Book
-          </Button>
-        </div>
+        {!isStudentUser && (
+          <div className="flex items-center gap-2.5">
+            {books.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsWipeAllBooksModalOpen(true)}
+                leftIcon={<Trash2 className="w-4 h-4 text-rose-500" />}
+                className="font-bold text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200"
+              >
+                Wipe All Books
+              </Button>
+            )}
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setIsIssueModalOpen(true)}
+              leftIcon={<RotateCcw className="w-4 h-4 text-emerald-600" />}
+              className="border-emerald-200 text-emerald-800 hover:bg-emerald-50"
+            >
+              Issue Book Loan
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setIsAddBookModalOpen(true)}
+              leftIcon={<Plus className="w-4 h-4" />}
+              className="shadow-sm"
+            >
+              Register New Book
+            </Button>
+          </div>
+        )}
       </div>
+
+      {/* Sample demonstration books detection banner with 1-click purge */}
+      {hasSampleBooks && !isStudentUser && (
+        <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-amber-900 animate-fade-in">
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-xl bg-amber-200/80 text-amber-900 shrink-0 mt-0.5">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="font-black text-sm text-amber-950">
+                Sample Demonstration Library Books Detected
+              </p>
+              <p className="text-xs text-amber-800 mt-0.5">
+                Demonstration volumes (e.g. Things Fall Apart, The River and the Source) are in this school database. Click to wipe all sample library data.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={handlePurgeSampleBooks}
+              isLoading={isPurging}
+              leftIcon={<Trash2 className="w-4 h-4" />}
+              className="font-bold whitespace-nowrap shadow-xs"
+            >
+              Wipe Sample Books
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* TOP 4 VIBRANT GRADIENT METRIC CARDS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -601,7 +723,7 @@ export const Library: React.FC = () => {
           }`}
         >
           <RotateCcw className="w-4 h-4" />
-          <span>Active &amp; Overdue Loans ({loans.length})</span>
+          <span>{isStudentUser ? 'My Borrowed Books' : 'Active & Overdue Loans'} ({filteredLoans.length})</span>
         </button>
       </div>
 
@@ -710,19 +832,36 @@ export const Library: React.FC = () => {
                       <span className="text-2xs text-slate-400">
                         {book.totalCopies - book.availableCopies} currently loaned out
                       </span>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        disabled={book.availableCopies === 0}
-                        onClick={() => {
-                          setSelectedBookId(book.id);
-                          setIsIssueModalOpen(true);
-                        }}
-                        className="text-2xs py-1 h-7 font-bold"
-                      >
-                        Issue Copy
-                      </Button>
+                      <div className="flex items-center gap-1.5">
+                        {!isStudentUser && (
+                          <>
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              disabled={book.availableCopies === 0}
+                              onClick={() => {
+                                setSelectedBookId(book.id);
+                                setIsIssueModalOpen(true);
+                              }}
+                              className="text-2xs py-1 h-7 font-bold"
+                            >
+                              Issue Copy
+                            </Button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setBookToDelete(book);
+                                setIsDeleteBookModalOpen(true);
+                              }}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                              title="Delete Book from Catalog"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </Card>
                 );
@@ -845,7 +984,7 @@ export const Library: React.FC = () => {
                         )}
                       </td>
                       <td className="py-3 px-4 text-right">
-                        {loan.status !== 'returned' && (
+                        {!isStudentUser && loan.status !== 'returned' && (
                           <Button
                             type="button"
                             variant="secondary"
@@ -1018,6 +1157,83 @@ export const Library: React.FC = () => {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Delete Book Confirmation Modal */}
+      <Modal
+        isOpen={isDeleteBookModalOpen}
+        onClose={() => {
+          setIsDeleteBookModalOpen(false);
+          setBookToDelete(null);
+        }}
+        title="Delete Book Volume"
+        description="Permanently remove this book from the school catalog"
+        maxWidth="md"
+      >
+        <div className="space-y-4 pt-2">
+          <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs">
+            <p className="font-bold">Are you sure you want to delete this book?</p>
+            <p className="mt-1 font-semibold text-rose-800">
+              "{bookToDelete?.title}" by {bookToDelete?.author}
+            </p>
+            <p className="mt-1 text-slate-500">
+              This action cannot be undone. All catalog entries and shelf location data for this volume will be removed.
+            </p>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setIsDeleteBookModalOpen(false);
+                setBookToDelete(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleDeleteBook}
+              leftIcon={<Trash2 className="w-4 h-4" />}
+            >
+              Confirm Delete
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Wipe All Books Modal */}
+      <Modal
+        isOpen={isWipeAllBooksModalOpen}
+        onClose={() => setIsWipeAllBooksModalOpen(false)}
+        title="Wipe All Library Books"
+        description="Clear all cataloged volumes to start with a clean library stack"
+        maxWidth="md"
+      >
+        <div className="space-y-4 pt-2">
+          <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs">
+            <p className="font-black text-rose-950">⚠️ WARNING: Irreversible Operation</p>
+            <p className="mt-1 text-slate-700">
+              This will permanently delete <strong>all {books.length} book titles</strong> and active loan records in{' '}
+              <strong>{currentSchool?.name || 'this school branch'}</strong>.
+            </p>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              variant="secondary"
+              onClick={() => setIsWipeAllBooksModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleWipeAllBooks}
+              isLoading={isWipingAllBooks}
+              leftIcon={<Trash2 className="w-4 h-4" />}
+            >
+              Wipe All {books.length} Books
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

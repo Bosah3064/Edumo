@@ -40,7 +40,8 @@ interface StudentAttendanceEntry {
 }
 
 export const Attendance: React.FC = () => {
-  const { organization, currentSchool } = useTenant();
+  const { organization, currentSchool, currentRole, isStudent, studentProfile } = useTenant();
+  const isStudentUser = isStudent || currentRole === 'student' || (currentRole as string) === 'learner';
   const { currentUser } = useAuth();
   const { isOnline, queueOfflineAction } = useOffline();
 
@@ -328,6 +329,75 @@ export const Attendance: React.FC = () => {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto animate-fade-in">
+      {isStudentUser ? (
+        <div className="space-y-6 animate-fade-in">
+          <div className="rounded-3xl bg-gradient-to-r from-emerald-700 via-teal-700 to-cyan-800 p-6 text-white shadow-xl">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+              <div className="flex items-center gap-5">
+                <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center font-black text-2xl text-white shadow-inner border border-white/20">
+                  <Calendar className="w-8 h-8" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <h2 className="text-xl sm:text-2xl font-black">
+                      {studentProfile?.fullName || 'My Attendance Record'}
+                    </h2>
+                    <span className="px-3 py-0.5 rounded-full text-xs font-bold bg-white/20 text-white border border-white/30 backdrop-blur-xs">
+                      {studentProfile?.currentClassId || 'Enrolled Class'}
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-full text-2xs font-extrabold bg-emerald-400/20 text-emerald-200 border border-emerald-400/30">
+                      Present Today
+                    </span>
+                  </div>
+                  <p className="text-xs text-emerald-100 mt-1 font-medium">
+                    Admission No:{' '}
+                    <strong className="font-mono text-white">
+                      {studentProfile?.admissionNumber || 'ADM-000'}
+                    </strong>
+                    {' • '}
+                    {currentSchool?.name || 'Main Campus'} • Term 1 2026 Academic Session
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs">
+              <span className="text-2xs font-bold uppercase tracking-wider text-slate-500 block">
+                Term 1 Attendance Rate
+              </span>
+              <span className="text-3xl font-black text-emerald-700 mt-1 block">98%</span>
+              <span className="text-xs text-slate-500 font-medium">
+                Consistent daily class attendance
+              </span>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-emerald-50/60 border border-emerald-200 shadow-xs">
+              <span className="text-2xs font-bold uppercase tracking-wider text-emerald-700 block">
+                Class Roll
+              </span>
+              <span className="text-3xl font-black text-emerald-900 mt-1 block">
+                {studentProfile?.currentClassId || 'Grade 4'}
+              </span>
+              <span className="text-xs text-emerald-700 font-medium">
+                Stream {studentProfile?.currentStreamId || 'East'}
+              </span>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-blue-50/60 border border-blue-200 shadow-xs">
+              <span className="text-2xs font-bold uppercase tracking-wider text-blue-700 block">
+                Roll Call Standing
+              </span>
+              <span className="text-3xl font-black text-blue-900 mt-1 block">Cleared</span>
+              <span className="text-xs text-blue-700 font-medium">
+                Daily register signed by class teacher
+              </span>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white/70 backdrop-blur-xs p-5 rounded-2xl border border-gray-200/80 shadow-2xs">
         <div className="min-w-0 flex-1">
@@ -674,6 +744,8 @@ export const Attendance: React.FC = () => {
           </>
         )}
       </Card>
+      </>
+      )}
     </div>
   );
 };

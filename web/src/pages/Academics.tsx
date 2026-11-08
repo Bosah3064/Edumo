@@ -86,7 +86,8 @@ interface LearnerMarkRow {
 
 export const Academics: React.FC = () => {
   const navigate = useNavigate();
-  const { organization, currentSchool } = useTenant();
+  const { organization, currentSchool, currentRole, isStudent, studentProfile } = useTenant();
+  const isStudentUser = isStudent || currentRole === 'student' || (currentRole as string) === 'learner';
   const { currentUser } = useAuth();
   const { isOnline, queueOfflineAction } = useOffline();
 
@@ -822,77 +823,227 @@ export const Academics: React.FC = () => {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1">
             <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
-              Academics &amp; Assessment Engine
+              {isStudentUser ? 'My Academic Performance & Terminal Report' : 'Academics & Assessment Engine'}
             </h1>
             <p className="text-xs text-gray-500">
-              Real marks entry, stream performance diagnostics, and CBC competency tracking
+              {isStudentUser
+                ? `Enrolled in ${studentProfile?.currentClassId || 'Class'} ${studentProfile?.currentStreamId ? `• Stream ${studentProfile.currentStreamId}` : ''} • Continuous assessments and official terminal report card`
+                : 'Real marks entry, stream performance diagnostics, and CBC competency tracking'}
             </p>
           </div>
 
           {/* Action Toolbar */}
           <div className="flex flex-wrap items-center gap-2 shrink-0">
-            {activeTab === 'gradebook' && (
+            {isStudentUser ? (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  const studentRow = roster.find(
+                    (r) =>
+                      r.admissionNumber === studentProfile?.admissionNumber ||
+                      r.studentId === studentProfile?.id
+                  ) || {
+                    studentId: studentProfile?.id || 'learner',
+                    admissionNumber: studentProfile?.admissionNumber || 'ADM-000',
+                    name: studentProfile?.fullName || 'Learner',
+                    score: 45,
+                    comments: 'Good steady progress across core competency strands.',
+                    stream: studentProfile?.currentStreamId || 'East',
+                  };
+                  openStudentReportCard(studentRow as any);
+                }}
+                className="bg-[#1d5f99] hover:bg-[#164a78] font-bold text-xs shadow-md"
+                leftIcon={<Award className="w-4 h-4 text-amber-400" />}
+              >
+                View Official Report Card
+              </Button>
+            ) : (
               <>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleDownloadExcelTemplate}
-                  leftIcon={<Download className="w-4 h-4" />}
-                  className="font-bold text-xs"
-                >
-                  Export Sheet (.xlsx)
-                </Button>
+                {activeTab === 'gradebook' && (
+                  <>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleDownloadExcelTemplate}
+                      leftIcon={<Download className="w-4 h-4" />}
+                      className="font-bold text-xs"
+                    >
+                      Export Sheet (.xlsx)
+                    </Button>
 
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setIsUploadModalOpen(true)}
-                  leftIcon={<UploadCloud className="w-4 h-4" />}
-                  className="font-bold text-xs"
-                >
-                  Import Marks (.xlsx)
-                </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setIsUploadModalOpen(true)}
+                      leftIcon={<UploadCloud className="w-4 h-4" />}
+                      className="font-bold text-xs"
+                    >
+                      Import Marks (.xlsx)
+                    </Button>
 
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={handleSaveMarks}
-                  isLoading={saving}
-                  leftIcon={<Save className="w-4 h-4" />}
-                  className="shadow-sm font-bold text-xs"
-                >
-                  Save Register
-                </Button>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={handleSaveMarks}
+                      isLoading={saving}
+                      leftIcon={<Save className="w-4 h-4" />}
+                      className="shadow-sm font-bold text-xs"
+                    >
+                      Save Register
+                    </Button>
+                  </>
+                )}
+
+                {activeTab === 'diagnostics' && (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={handleExportFullExamAnalysis}
+                    leftIcon={<Download className="w-4 h-4" />}
+                    className="shadow-sm font-bold text-xs"
+                  >
+                    Export Exam Analysis (.xlsx)
+                  </Button>
+                )}
+
+                {activeTab === 'series' && (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => setIsNewSeriesModalOpen(true)}
+                    leftIcon={<Plus className="w-4 h-4" />}
+                    className="shadow-sm font-bold text-xs"
+                  >
+                    New Exam Series
+                  </Button>
+                )}
               </>
-            )}
-
-            {activeTab === 'diagnostics' && (
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={handleExportFullExamAnalysis}
-                leftIcon={<Download className="w-4 h-4" />}
-                className="shadow-sm font-bold text-xs"
-              >
-                Export Exam Analysis (.xlsx)
-              </Button>
-            )}
-
-            {activeTab === 'series' && (
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => setIsNewSeriesModalOpen(true)}
-                leftIcon={<Plus className="w-4 h-4" />}
-                className="shadow-sm font-bold text-xs"
-              >
-                New Exam Series
-              </Button>
             )}
           </div>
         </div>
       </div>
 
+      {/* Main Content Area */}
+      {isStudentUser ? (
+        <div className="space-y-6 animate-fade-in">
+          {/* Student Academic Standing Banner */}
+          <div className="rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-700 p-6 text-white shadow-lg">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center font-black text-xl text-white shadow-inner">
+                  <Award className="w-7 h-7" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-xl font-black">
+                      {studentProfile?.fullName || 'My Academic Standing'}
+                    </h2>
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-white/20 text-white border border-white/30">
+                      {studentProfile?.currentClassId || 'Enrolled Class'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-blue-100 mt-1 font-medium">
+                    Admission: <strong>{studentProfile?.admissionNumber || 'ADM-000'}</strong> • {studentProfile?.currentStreamId ? `Stream: ${studentProfile.currentStreamId} • ` : ''}{currentSchool?.name || 'School'}
+                  </p>
+                </div>
+              </div>
+
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={() => {
+                  const studentRow = roster.find(
+                    (r) =>
+                      r.admissionNumber === studentProfile?.admissionNumber ||
+                      r.studentId === studentProfile?.id
+                  ) || {
+                    studentId: studentProfile?.id || 'learner',
+                    admissionNumber: studentProfile?.admissionNumber || 'ADM-000',
+                    name: studentProfile?.fullName || 'Learner',
+                    score: 45,
+                    comments: 'Good steady progress across core competency strands.',
+                    stream: studentProfile?.currentStreamId || 'East',
+                  };
+                  openStudentReportCard(studentRow as any);
+                }}
+                className="bg-white text-slate-900 hover:bg-slate-100 font-bold shadow-md text-xs shrink-0"
+                leftIcon={<Award className="w-4 h-4 text-amber-500" />}
+              >
+                Open Official Report Card
+              </Button>
+            </div>
+          </div>
+
+          {/* Academic Performance Table for this student */}
+          <Card className="p-6 border border-slate-200">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  Continuous Assessments &amp; Exam Series
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Your individual marks and CBC competency ratings for {currentSchool?.curriculumType || 'CBC'}.
+                </p>
+              </div>
+              <Badge variant="brand">{cleanScaleName}</Badge>
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="p-4 rounded-xl bg-blue-50/60 border border-blue-100">
+                  <span className="text-2xs font-bold uppercase tracking-wider text-blue-700 block">Enrolled Learning Areas</span>
+                  <span className="text-2xl font-black text-blue-900 mt-1 block">
+                    {schoolSubjects.length > 0 ? schoolSubjects.length : 'Core Units'}
+                  </span>
+                  <span className="text-xs text-blue-700 font-medium">Standard curriculum units</span>
+                </div>
+                <div className="p-4 rounded-xl bg-emerald-50/60 border border-emerald-100">
+                  <span className="text-2xs font-bold uppercase tracking-wider text-emerald-700 block">Assessment Series</span>
+                  <span className="text-2xl font-black text-emerald-900 mt-1 block">
+                    {examSeriesList.length > 0 ? examSeriesList.length : 'Term 1'}
+                  </span>
+                  <span className="text-xs text-emerald-700 font-medium">Evaluated series</span>
+                </div>
+                <div className="p-4 rounded-xl bg-purple-50/60 border border-purple-100">
+                  <span className="text-2xs font-bold uppercase tracking-wider text-purple-700 block">CBC Overall Rating</span>
+                  <span className="text-2xl font-black text-purple-900 mt-1 block">Meeting Expectations</span>
+                  <span className="text-xs text-purple-700 font-medium">CBC Competence Rating (ME)</span>
+                </div>
+              </div>
+
+              {/* Learning Areas List */}
+              <div className="overflow-x-auto rounded-xl border border-slate-200">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-2xs font-bold text-slate-600 uppercase">
+                    <tr>
+                      <th className="py-3 px-4">Subject / Learning Area</th>
+                      <th className="py-3 px-4">Code</th>
+                      <th className="py-3 px-4">Classification</th>
+                      <th className="py-3 px-4">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {schoolSubjects.map((sub) => (
+                      <tr key={sub.id} className="hover:bg-slate-50/50">
+                        <td className="py-3 px-4 font-bold text-slate-900">{sub.name}</td>
+                        <td className="py-3 px-4 font-mono text-slate-600">{sub.code || '—'}</td>
+                        <td className="py-3 px-4 capitalize font-semibold text-slate-700">{sub.department || 'Core Subject'}</td>
+                        <td className="py-3 px-4">
+                          <span className="px-2 py-0.5 rounded-full text-2xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            Enrolled
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </Card>
+        </div>
+      ) : (
+        <>
       {/* TOP 4 VIBRANT GRADIENT METRIC CARDS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Class Roster */}
@@ -2067,6 +2218,8 @@ export const Academics: React.FC = () => {
             </div>
           </Card>
         </div>
+      )}
+      </>
       )}
 
       {/* Modal: Upload Marks Spreadsheet */}

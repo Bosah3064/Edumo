@@ -114,47 +114,7 @@ export async function initializeSchoolTables(
     created.push('subjects');
   }
 
-  // 3. Exam Series Table (structural initial series)
-  const examSeriesRef = collection(db, schoolBase, 'examSeries');
-  const examSeriesSnap = await getDocs(examSeriesRef);
-  if (examSeriesSnap.empty) {
-    const defaultExams = [
-      {
-        id: 'series-opener-2026',
-        name: '2026 Term 1 Opener Assessment',
-        academicYearId: '2026',
-        termId: 'term1',
-        weightPercentage: 20,
-        status: 'published',
-        createdAt: serverTimestamp(),
-      },
-      {
-        id: 'series-midterm-2026',
-        name: '2026 Term 1 Mid-Term Examination',
-        academicYearId: '2026',
-        termId: 'term1',
-        weightPercentage: 30,
-        status: 'published',
-        createdAt: serverTimestamp(),
-      },
-      {
-        id: 'series-endyear-2026',
-        name: '2026 End-of-Year Summative Examination & Promotion Exam',
-        academicYearId: '2026',
-        termId: 'term3',
-        weightPercentage: 50,
-        status: 'draft',
-        isPromotionExam: true,
-        createdAt: serverTimestamp(),
-      },
-    ];
-    for (const ex of defaultExams) {
-      await setDoc(doc(db, schoolBase, 'examSeries', ex.id), ex);
-      await setDoc(doc(db, schoolBase, 'exams', ex.id), ex);
-    }
-    created.push('examSeries');
-  }
-
+  // 3. Exam Series Table — Left clean, no fake assessments
   return { success: true, tablesCreated: created };
 }
 
@@ -190,6 +150,31 @@ const MOCK_INVOICE_NUMBERS = new Set([
   'inv-2026-001', 'inv-2026-002', 'inv-2026-003',
 ]);
 
+const MOCK_BOOK_TITLES = new Set([
+  'things fall apart',
+  'the river and the source',
+  'integrated science for cbc grade 7',
+  'kidagaa kimemwozea',
+  "a doll's house",
+]);
+
+const MOCK_HOSTEL_NAMES = new Set([
+  'kilimanjaro house',
+  'serengeti house',
+  'ruwenzori house',
+  'aberdare wing',
+]);
+
+const MOCK_ASSIGNMENT_SUBSTRINGS = [
+  'plant cell model',
+  'photosynthesis cycle',
+  'practical financial budgeting',
+  'kenyan folktales & narrative performance',
+  'drainage & climate of eastern africa',
+  'athari za teknolojia kwa vijana leo',
+  'kitchen garden journal',
+];
+
 /**
  * Checks if sample/mock learners are present in a list of students
  */
@@ -205,19 +190,65 @@ export function isSampleLearner(learner: { admissionNumber?: string; firstName?:
 }
 
 /**
+ * Checks if a book record is from the demonstration seed
+ */
+export function isSampleBook(book: { id?: string; title?: string }): boolean {
+  if (book.id && (book.id.startsWith('bk-') || book.id === 'bk-1' || book.id === 'bk-2' || book.id === 'bk-3' || book.id === 'bk-4' || book.id === 'bk-5')) {
+    return true;
+  }
+  const t = (book.title || '').trim().toLowerCase();
+  return MOCK_BOOK_TITLES.has(t);
+}
+
+/**
+ * Checks if a dormitory record is from the demonstration seed
+ */
+export function isSampleHostel(hostel: { id?: string; name?: string }): boolean {
+  if (hostel.id && (hostel.id.startsWith('drm-') || hostel.id === 'drm-1' || hostel.id === 'drm-2' || hostel.id === 'drm-3' || hostel.id === 'drm-4')) {
+    return true;
+  }
+  const n = (hostel.name || '').trim().toLowerCase();
+  return MOCK_HOSTEL_NAMES.has(n);
+}
+
+/**
+ * Checks if an assignment is from the demonstration seed
+ */
+export function isSampleAssignment(assignment: { id?: string; title?: string; teacherName?: string }): boolean {
+  const t = (assignment.title || '').toLowerCase();
+  const tn = (assignment.teacherName || '').toLowerCase();
+  if (tn.includes('kevin mutua') || tn.includes('david kibet') || tn.includes('sharon chebet') || tn.includes('beatrice odhiambo')) {
+    return true;
+  }
+  return MOCK_ASSIGNMENT_SUBSTRINGS.some((sub) => t.includes(sub));
+}
+
+/**
  * Purges all demonstration / mock data from a school's isolated Firestore database:
  * Deletes mock students (2026/0001 - 2026/0017, Emmanuel Kiprono, Zawadi Achieng, Faith Muthoni, etc.),
- * mock staff (Geoffrey Wanjala, David Kibet, etc.), mock invoices, mock attendance, and mock notices.
+ * mock staff (Geoffrey Wanjala, David Kibet, etc.), mock invoices, mock attendance, mock notices,
+ * mock library books (Things Fall Apart, etc.), mock hostels (Kilimanjaro House, etc.), and mock assignments.
  */
 export async function purgeMockSchoolData(
   db: Firestore,
   orgId: string,
   schoolId: string
-): Promise<{ studentsPurged: number; staffPurged: number; invoicesPurged: number; totalPurged: number }> {
+): Promise<{
+  studentsPurged: number;
+  staffPurged: number;
+  invoicesPurged: number;
+  booksPurged: number;
+  hostelsPurged: number;
+  assignmentsPurged: number;
+  totalPurged: number;
+}> {
   const schoolBase = `organizations/${orgId}/schools/${schoolId}`;
   let studentsPurged = 0;
   let staffPurged = 0;
   let invoicesPurged = 0;
+  let booksPurged = 0;
+  let hostelsPurged = 0;
+  let assignmentsPurged = 0;
 
   // 1. Purge Mock Students
   try {
@@ -302,44 +333,111 @@ export async function purgeMockSchoolData(
     const assignSnap = await getDocs(collection(db, schoolBase, 'assignments'));
     for (const d of assignSnap.docs) {
       const data = d.data();
-      const teacher = (data.teacherName || '').toLowerCase();
-      if (teacher.includes('kevin mutua') || teacher.includes('david kibet') || teacher.includes('sharon chebet') || teacher.includes('beatrice odhiambo')) {
+      if (isSampleAssignment(data)) {
         await deleteDoc(d.ref);
+        assignmentsPurged++;
       }
     }
   } catch (err) {
     console.warn('Error purging mock assignments:', err);
   }
 
-  // 7. Purge Mock Library Books
+  // 7. Purge Mock Library Books & Loans
   try {
     const libSnap = await getDocs(collection(db, schoolBase, 'library_books'));
     for (const d of libSnap.docs) {
-      if (d.id.startsWith('bk-')) {
+      const data = d.data();
+      if (isSampleBook({ id: d.id, ...data })) {
+        await deleteDoc(d.ref);
+        booksPurged++;
+      }
+    }
+
+    const loansSnap = await getDocs(collection(db, schoolBase, 'library_loans'));
+    for (const d of loansSnap.docs) {
+      const data = d.data();
+      const adm = data.admissionNo || '';
+      const name = (data.studentName || '').toLowerCase();
+      if (MOCK_ADMISSION_NUMBERS.has(adm) || MOCK_STUDENT_NAMES.has(name) || (data.bookId && data.bookId.startsWith('bk-'))) {
         await deleteDoc(d.ref);
       }
     }
   } catch (err) {
-    console.warn('Error purging mock library books:', err);
+    console.warn('Error purging mock library books and loans:', err);
   }
 
-  // 8. Purge Mock Hostels
+  // 8. Purge Mock Hostels & Allocations
   try {
     const hostelSnap = await getDocs(collection(db, schoolBase, 'hostels'));
     for (const d of hostelSnap.docs) {
-      if (d.id.startsWith('drm-')) {
+      const data = d.data();
+      if (isSampleHostel({ id: d.id, ...data })) {
+        await deleteDoc(d.ref);
+        hostelsPurged++;
+      }
+    }
+
+    // Remove allocations attached to mock dorms or mock students
+    for (const collName of ['hostel_allocations', 'allocations']) {
+      try {
+        const allocSnap = await getDocs(collection(db, schoolBase, collName));
+        for (const d of allocSnap.docs) {
+          const data = d.data();
+          const adm = data.admissionNo || '';
+          const name = (data.studentName || '').toLowerCase();
+          if (
+            (data.dormId && data.dormId.startsWith('drm-')) ||
+            MOCK_ADMISSION_NUMBERS.has(adm) ||
+            MOCK_STUDENT_NAMES.has(name)
+          ) {
+            await deleteDoc(d.ref);
+          }
+        }
+      } catch {}
+    }
+  } catch (err) {
+    console.warn('Error purging mock hostels:', err);
+  }
+
+  // 9. Purge Mock Quizzes & Learning Resources
+  try {
+    const quizSnap = await getDocs(collection(db, schoolBase, 'quizzes'));
+    for (const d of quizSnap.docs) {
+      if (d.id.startsWith('qz-') || d.id.includes('demo') || d.id.includes('sample')) {
+        await deleteDoc(d.ref);
+      }
+    }
+    const resSnap = await getDocs(collection(db, schoolBase, 'learning_resources'));
+    for (const d of resSnap.docs) {
+      if (d.id.startsWith('res-') || d.id.includes('demo') || d.id.includes('sample')) {
         await deleteDoc(d.ref);
       }
     }
   } catch (err) {
-    console.warn('Error purging mock hostels:', err);
+    console.warn('Error purging mock quizzes & resources:', err);
+  }
+
+  // 10. Purge Mock Timetable Slots
+  try {
+    const timeSnap = await getDocs(collection(db, schoolBase, 'timetables'));
+    for (const d of timeSnap.docs) {
+      const teacher = (d.data().teacherName || '').toLowerCase();
+      if (MOCK_STAFF_NAMES.has(teacher)) {
+        await deleteDoc(d.ref);
+      }
+    }
+  } catch (err) {
+    console.warn('Error purging mock timetable slots:', err);
   }
 
   return {
     studentsPurged,
     staffPurged,
     invoicesPurged,
-    totalPurged: studentsPurged + staffPurged + invoicesPurged,
+    booksPurged,
+    hostelsPurged,
+    assignmentsPurged,
+    totalPurged: studentsPurged + staffPurged + invoicesPurged + booksPurged + hostelsPurged + assignmentsPurged,
   };
 }
 
@@ -355,6 +453,68 @@ export async function wipeAllSchoolStudents(
   const schoolBase = `organizations/${orgId}/schools/${schoolId}`;
   let count = 0;
   const snap = await getDocs(collection(db, schoolBase, 'students'));
+  for (const d of snap.docs) {
+    await deleteDoc(d.ref);
+    count++;
+  }
+  return { deletedCount: count };
+}
+
+/**
+ * Wipes all library books and loans for this school
+ */
+export async function wipeAllSchoolBooks(
+  db: Firestore,
+  orgId: string,
+  schoolId: string
+): Promise<{ deletedCount: number }> {
+  const schoolBase = `organizations/${orgId}/schools/${schoolId}`;
+  let count = 0;
+  const snap = await getDocs(collection(db, schoolBase, 'library_books'));
+  for (const d of snap.docs) {
+    await deleteDoc(d.ref);
+    count++;
+  }
+  const loanSnap = await getDocs(collection(db, schoolBase, 'library_loans'));
+  for (const d of loanSnap.docs) {
+    await deleteDoc(d.ref);
+  }
+  return { deletedCount: count };
+}
+
+/**
+ * Wipes all hostels and allocations for this school
+ */
+export async function wipeAllSchoolHostels(
+  db: Firestore,
+  orgId: string,
+  schoolId: string
+): Promise<{ deletedCount: number }> {
+  const schoolBase = `organizations/${orgId}/schools/${schoolId}`;
+  let count = 0;
+  const snap = await getDocs(collection(db, schoolBase, 'hostels'));
+  for (const d of snap.docs) {
+    await deleteDoc(d.ref);
+    count++;
+  }
+  const allocSnap = await getDocs(collection(db, schoolBase, 'allocations'));
+  for (const d of allocSnap.docs) {
+    await deleteDoc(d.ref);
+  }
+  return { deletedCount: count };
+}
+
+/**
+ * Wipes all assignments for this school
+ */
+export async function wipeAllSchoolAssignments(
+  db: Firestore,
+  orgId: string,
+  schoolId: string
+): Promise<{ deletedCount: number }> {
+  const schoolBase = `organizations/${orgId}/schools/${schoolId}`;
+  let count = 0;
+  const snap = await getDocs(collection(db, schoolBase, 'assignments'));
   for (const d of snap.docs) {
     await deleteDoc(d.ref);
     count++;

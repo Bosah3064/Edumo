@@ -97,13 +97,38 @@ export const PlatformConsole: React.FC = () => {
     );
   }
 
-  const [tenants, setTenants] = useState<TenantSummary[]>([
-    { id: 'org-demo', name: 'Edumo Demonstration Academy Group', country: 'KE', plan: 'growth', studentCount: 420, branchCount: 2, status: 'active', mrr: 35000 },
-    { id: 'org-02', name: 'Nairobi St. Andrews Preparatory School', country: 'KE', plan: 'enterprise', studentCount: 850, branchCount: 3, status: 'active', mrr: 75000 },
-    { id: 'org-03', name: 'Kampala Junior Academy', country: 'UG', plan: 'starter', studentCount: 290, branchCount: 1, status: 'active', mrr: 18000 },
-    { id: 'org-04', name: 'Dar es Salaam International School', country: 'TZ', plan: 'growth', studentCount: 510, branchCount: 2, status: 'active', mrr: 42000 },
-    { id: 'org-05', name: 'Kigali Bright Horizons Academy', country: 'RW', plan: 'starter', studentCount: 195, branchCount: 1, status: 'active', mrr: 16000 },
-  ]);
+  const [tenants, setTenants] = useState<TenantSummary[]>([]);
+  const [loadingTenants, setLoadingTenants] = useState(true);
+
+  useEffect(() => {
+    const unsub = onSnapshot(
+      collection(db, 'organizations'),
+      (snap) => {
+        const list: TenantSummary[] = snap.docs.map((d) => {
+          const data = d.data();
+          return {
+            id: d.id,
+            name: data.name || 'Educational Institution',
+            country: data.country || 'KE',
+            plan: data.plan || 'growth',
+            studentCount: Number(data.studentCount || data.enrolledCount || 0),
+            branchCount: Number(data.branchCount || 1),
+            status: data.status || 'active',
+            mrr: Number(data.mrr || 0),
+          };
+        });
+        setTenants(list);
+        setLoadingTenants(false);
+      },
+      (err) => {
+        console.warn('Error fetching organizations for platform console:', err);
+        setTenants([]);
+        setLoadingTenants(false);
+      }
+    );
+
+    return () => unsub();
+  }, []);
 
   const [featureFlags, setFeatureFlags] = useState({
     enforceAppCheck: true,
@@ -130,10 +155,10 @@ export const PlatformConsole: React.FC = () => {
       // Gather exportable tenant data bundle
       const exportPackage = {
         exportedAt: new Date().toISOString(),
-        organization: organization?.name || 'Edumo Demonstration Academy Group',
-        organizationId: organization?.id || 'demo-org',
-        school: currentSchool?.name || 'Main Campus',
-        schoolId: currentSchool?.id || 'main-campus',
+        organization: organization?.name || 'Institution',
+        organizationId: organization?.id || '',
+        school: currentSchool?.name || 'School',
+        schoolId: currentSchool?.id || '',
         metadata: {
           complianceStandard: 'East African Data Protection Acts (Kenya DPA 2019 / Uganda DPA / Tanzania DPA / Rwanda DPA)',
           dataPortabilityGuarantee: 'Full lossless JSON export for migration or offline archiving',

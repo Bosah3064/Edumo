@@ -34,7 +34,8 @@ import { TeacherTaskTracker } from '../components/dashboard/TeacherTaskTracker';
 export const Dashboard: React.FC = () => {
   const { t } = useTranslation();
   const { currentUser } = useAuth();
-  const { organization, currentSchool, schools } = useTenant();
+  const { organization, currentSchool, schools, currentRole, isStudent, studentProfile } = useTenant();
+  const isStudentUser = isStudent || currentRole === 'student' || (currentRole as string) === 'learner';
   const navigate = useNavigate();
 
   const [studentCount, setStudentCount] = useState<number>(0);
@@ -276,6 +277,260 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in max-w-7xl mx-auto">
+      {isStudentUser ? (
+        <div className="space-y-6 animate-fade-in">
+          {/* Student Welcome Banner */}
+          <div className="relative rounded-2xl sm:rounded-3xl bg-gradient-to-r from-[#1d5f99] via-[#683669] to-[#a5243d] p-5 sm:p-7 md:p-8 overflow-hidden shadow-xl sm:shadow-2xl text-white">
+            <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-gradient-to-l from-white/10 to-transparent pointer-events-none" />
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="px-3 py-1 rounded-full text-xs font-bold bg-white/20 text-white border border-white/30 backdrop-blur-xs">
+                    {studentProfile?.currentClassId || 'Enrolled Class'}
+                  </span>
+                  <span className="px-2.5 py-1 rounded-full text-2xs font-bold bg-emerald-400/20 text-emerald-200 border border-emerald-400/30">
+                    Active Learner
+                  </span>
+                </div>
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-display font-bold text-white tracking-tight">
+                  Jambo, {studentProfile?.firstName || currentUser?.displayName || 'Learner'} 👋
+                </h1>
+                <p className="text-xs sm:text-sm text-white/90">
+                  Admission No:{' '}
+                  <strong className="font-mono text-white">
+                    {studentProfile?.admissionNumber || 'ADM-000'}
+                  </strong>
+                  {studentProfile?.currentStreamId ? ` • Stream: ${studentProfile.currentStreamId}` : ''}
+                  {' • '}
+                  {currentSchool?.name || 'Main Campus'} • Academic Year 2026
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2.5">
+                <Button
+                  variant="accent"
+                  size="sm"
+                  onClick={() => navigate('/assignments')}
+                  leftIcon={<Sparkles className="w-4 h-4 text-white" />}
+                  className="font-bold text-xs"
+                >
+                  My Assignments
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => navigate('/timetable')}
+                  leftIcon={<Clock className="w-4 h-4" />}
+                  className="bg-white/20 hover:bg-white/30 text-white font-bold border-white/30 text-xs"
+                >
+                  My Timetable
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => navigate('/academics')}
+                  leftIcon={<GraduationCap className="w-4 h-4" />}
+                  className="bg-white/20 hover:bg-white/30 text-white font-bold border-white/30 text-xs"
+                >
+                  My Grades &amp; Reports
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Student 4 KPI Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-md">
+              <span className="text-2xs font-extrabold uppercase tracking-wider text-blue-100 block">
+                Class &amp; Stream
+              </span>
+              <p className="text-2xl font-black mt-1">
+                {studentProfile?.currentClassId || 'Grade 4'}
+              </p>
+              <p className="text-2xs text-blue-100 mt-0.5 font-medium">
+                {studentProfile?.currentStreamId || 'East'} Stream
+              </p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white shadow-md">
+              <span className="text-2xs font-extrabold uppercase tracking-wider text-emerald-100 block">
+                Learning Areas
+              </span>
+              <p className="text-2xl font-black mt-1">Core CBC</p>
+              <p className="text-2xs text-emerald-100 mt-0.5 font-medium">
+                Standard Kenyan Curriculum
+              </p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-600 to-indigo-700 text-white shadow-md">
+              <span className="text-2xs font-extrabold uppercase tracking-wider text-purple-100 block">
+                Assignments
+              </span>
+              <p className="text-2xl font-black mt-1">{assignmentCount}</p>
+              <p className="text-2xs text-purple-100 mt-0.5 font-medium">
+                Class homework &amp; tasks
+              </p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-600 to-orange-700 text-white shadow-md">
+              <span className="text-2xs font-extrabold uppercase tracking-wider text-amber-100 block">
+                School Status
+              </span>
+              <p className="text-2xl font-black mt-1">Cleared</p>
+              <p className="text-2xs text-amber-100 mt-0.5 font-medium">Term 1 Session</p>
+            </div>
+          </div>
+
+          {/* Student Main Hub: Notices & Quick Shortcuts */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Student Notices (2 cols) */}
+            <Card className="lg:col-span-2 space-y-4 border border-slate-200">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                    <Megaphone className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-display font-bold text-slate-900 text-sm">
+                      School Announcements &amp; Term Updates
+                    </h3>
+                    <p className="text-2xs text-slate-500">
+                      Official notices broadcast to learners and parents
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {recentAnnouncements.length > 0 ? (
+                  recentAnnouncements.map((notice) => (
+                    <div
+                      key={notice.id}
+                      className="p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-slate-200 transition text-xs space-y-1.5"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <h4 className="font-bold text-slate-900">{notice.title}</h4>
+                        <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 shrink-0">
+                          {notice.targetRole}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-600 leading-relaxed">{notice.body}</p>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-8 rounded-2xl bg-slate-50 text-center text-xs text-slate-500">
+                    No active school notices at this time. Check back later for term updates.
+                  </div>
+                )}
+              </div>
+            </Card>
+
+            {/* Quick Student Navigation (1 col) */}
+            <Card className="space-y-3">
+              <h3 className="text-base font-display font-semibold text-gray-900 mb-2">
+                My Student Tools
+              </h3>
+
+              <button
+                onClick={() => navigate('/assignments')}
+                className="w-full flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-200 transition text-left cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                    <BookOpen className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-800">My Assignments</p>
+                    <p className="text-2xs text-gray-500">Homework &amp; Quizzes</p>
+                  </div>
+                </div>
+                <ArrowRight className="w-4 h-4 text-gray-400" />
+              </button>
+
+              <button
+                onClick={() => navigate('/timetable')}
+                className="w-full flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-200 transition text-left cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                    <Clock className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-800">Class Timetable</p>
+                    <p className="text-2xs text-gray-500">Daily lesson schedule</p>
+                  </div>
+                </div>
+                <ArrowRight className="w-4 h-4 text-gray-400" />
+              </button>
+
+              <button
+                onClick={() => navigate('/academics')}
+                className="w-full flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-200 transition text-left cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                    <GraduationCap className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-800">Terminal Report Card</p>
+                    <p className="text-2xs text-gray-500">Continuous assessments</p>
+                  </div>
+                </div>
+                <ArrowRight className="w-4 h-4 text-gray-400" />
+              </button>
+
+              <button
+                onClick={() => navigate('/library')}
+                className="w-full flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-200 transition text-left cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                    <BookOpen className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-800">Library Books</p>
+                    <p className="text-2xs text-gray-500">Borrowed volumes &amp; catalog</p>
+                  </div>
+                </div>
+                <ArrowRight className="w-4 h-4 text-gray-400" />
+              </button>
+
+              <button
+                onClick={() => navigate('/finance')}
+                className="w-full flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-200 transition text-left cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                    <CreditCard className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-800">Fee Statement &amp; Receipts</p>
+                    <p className="text-2xs text-gray-500">M-Pesa payment records</p>
+                  </div>
+                </div>
+                <ArrowRight className="w-4 h-4 text-gray-400" />
+              </button>
+
+              <button
+                onClick={() => navigate('/students')}
+                className="w-full flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-200 transition text-left cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center">
+                    <Users className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-800">My Learner Profile</p>
+                    <p className="text-2xs text-gray-500">Print Examination Card</p>
+                  </div>
+                </div>
+                <ArrowRight className="w-4 h-4 text-gray-400" />
+              </button>
+            </Card>
+          </div>
+        </div>
+      ) : (
+        <>
       {/* Top Welcome Banner (Master Spec Hero Card - Responsive for any mobile/tablet/desktop screen) */}
       <div className="relative rounded-2xl sm:rounded-3xl bg-gradient-to-r from-[#1d5f99] via-[#683669] to-[#a5243d] p-4 sm:p-6 md:p-8 overflow-hidden shadow-xl sm:shadow-2xl">
         <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-gradient-to-l from-white/10 to-transparent pointer-events-none" />
@@ -475,19 +730,19 @@ export const Dashboard: React.FC = () => {
             <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100">
               <span className="text-2xs font-semibold text-slate-500 uppercase tracking-wider block">Invoiced</span>
               <p className="text-sm sm:text-base font-bold text-slate-900 mt-0.5">
-                {formatKES(financeSummary.totalInvoiced || 796000)}
+                {formatKES(financeSummary.totalInvoiced || 0)}
               </p>
             </div>
             <div className="p-3 rounded-2xl bg-emerald-50/70 border border-emerald-100">
               <span className="text-2xs font-semibold text-emerald-700 uppercase tracking-wider block">Collected</span>
               <p className="text-sm sm:text-base font-bold text-emerald-800 mt-0.5">
-                {formatKES(financeSummary.totalPaid || 715000)}
+                {formatKES(financeSummary.totalPaid || 0)}
               </p>
             </div>
             <div className="p-3 rounded-2xl bg-amber-50/70 border border-amber-100">
               <span className="text-2xs font-semibold text-amber-700 uppercase tracking-wider block">Balance</span>
               <p className="text-sm sm:text-base font-bold text-amber-900 mt-0.5">
-                {formatKES(financeSummary.totalBalance || 81000)}
+                {formatKES(financeSummary.totalBalance || 0)}
               </p>
             </div>
           </div>
@@ -497,13 +752,13 @@ export const Dashboard: React.FC = () => {
             <div className="flex justify-between text-2xs font-semibold text-slate-600">
               <span>Term Collection Clearance</span>
               <span className="text-emerald-700 font-bold">
-                {financeSummary.collectionRate || 89}% Completed
+                {financeSummary.collectionRate || 0}% Completed
               </span>
             </div>
             <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
               <div
                 className="h-full rounded-full bg-gradient-to-r from-[#1d5f99] to-emerald-600 transition-all duration-700"
-                style={{ width: `${financeSummary.collectionRate || 89}%` }}
+                style={{ width: `${financeSummary.collectionRate || 0}%` }}
               />
             </div>
           </div>
@@ -766,6 +1021,8 @@ export const Dashboard: React.FC = () => {
           </div>
         </Card>
       </div>
+      </>
+      )}
     </div>
   );
 };

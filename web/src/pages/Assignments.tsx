@@ -15,6 +15,7 @@ import {
   onSnapshot,
   doc,
   setDoc,
+  deleteDoc,
   serverTimestamp,
   query,
   orderBy,
@@ -52,6 +53,7 @@ import {
   Calendar,
   AlertTriangle,
   Flame,
+  Trash2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type {
@@ -60,6 +62,11 @@ import type {
   ResourceCategory,
 } from '@edumo/shared';
 import { gradeQuizSubmission, shuffleQuestions } from '@edumo/shared';
+import {
+  isSampleAssignment,
+  purgeMockSchoolData,
+  wipeAllSchoolAssignments,
+} from '../utils/databaseInitializer';
 
 interface Assignment {
   id: string;
@@ -79,14 +86,93 @@ interface Assignment {
 }
 
 export const Assignments: React.FC = () => {
-  const { organization, currentSchool, currentRole } = useTenant();
+  const { organization, currentSchool, currentRole, isStudent, studentProfile } = useTenant();
   const { currentUser } = useAuth();
+
+  const isStudentUser = isStudent || currentRole === 'student' || (currentRole as string) === 'learner';
+  const studentClass = studentProfile?.currentClassId || '';
 
   // Active platform suite section (defaulting to homework for instant focus)
   const [activeTab, setActiveTab] = useState<'homework' | 'quizzes' | 'resources'>('homework');
 
   // Homework & Assignments State
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+
+  // Purge & Wipe states
+  const [isPurging, setIsPurging] = useState(false);
+  const [assignmentToDelete, setAssignmentToDelete] = useState<Assignment | null>(null);
+  const [isDeletingAssignment, setIsDeletingAssignment] = useState(false);
+  const [isWipeAllOpen, setIsWipeAllOpen] = useState(false);
+  const [isWipingAll, setIsWipingAll] = useState(false);
+
+  const sampleAssignmentsCount = useMemo(() => {
+    return assignments.filter((a) => isSampleAssignment(a)).length;
+  }, [assignments]);
+
+  const handlePurgeSampleAssignments = async () => {
+    if (!organization || !currentSchool) return;
+    setIsPurging(true);
+    try {
+      const res = await purgeMockSchoolData(db, organization.id, currentSchool.id);
+      toast.success(`Purged ${res.assignmentsPurged} sample assignments successfully!`, { icon: '✨' });
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to purge sample assignments');
+    } finally {
+      setIsPurging(false);
+    }
+  };
+
+  const handleWipeAllAssignments = async () => {
+    if (!organization || !currentSchool) return;
+    setIsWipingAll(true);
+    try {
+      const res = await wipeAllSchoolAssignments(db, organization.id, currentSchool.id);
+      toast.success(`Wiped ${res.deletedCount} assignments from school ledger`, { icon: '🗑️' });
+      setIsWipeAllOpen(false);
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to wipe assignments');
+    } finally {
+      setIsWipingAll(false);
+    }
+  };
+
+  const handleDeleteAssignment = async () => {
+    if (!organization || !currentSchool || !assignmentToDelete) return;
+    setIsDeletingAssignment(true);
+    try {
+      await deleteDoc(
+        doc(db, 'organizations', organization.id, 'schools', currentSchool.id, 'assignments', assignmentToDelete.id)
+      );
+      toast.success('Assignment deleted successfully');
+      setAssignmentToDelete(null);
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to delete assignment');
+    } finally {
+      setIsDeletingAssignment(false);
+    }
+  };
+
+  const handleDeleteQuiz = async (quizId: string) => {
+    if (!organization || !currentSchool) return;
+    if (!window.confirm('Are you sure you want to delete this quiz?')) return;
+    try {
+      await deleteDoc(doc(db, 'organizations', organization.id, 'schools', currentSchool.id, 'quizzes', quizId));
+      toast.success('Quiz deleted successfully');
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to delete quiz');
+    }
+  };
+
+  const handleDeleteResource = async (resourceId: string) => {
+    if (!organization || !currentSchool) return;
+    if (!window.confirm('Are you sure you want to delete this resource?')) return;
+    try {
+      await deleteDoc(doc(db, 'organizations', organization.id, 'schools', currentSchool.id, 'learning_resources', resourceId));
+      toast.success('Learning resource deleted successfully');
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to delete resource');
+    }
+  };
   const [, setLoadingAssignments] = useState(true);
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -156,6 +242,7 @@ export const Assignments: React.FC = () => {
   const [savingAssign, setSavingAssign] = useState(false);
 
   const teacherView =
+    !isStudentUser &&
     currentRole !== null &&
     ['orgOwner', 'principal', 'deputy', 'admin', 'teacher'].includes(currentRole);
 
@@ -619,6 +706,14 @@ export const Assignments: React.FC = () => {
     const pillFilter = (subjectPillFilter || '').toLowerCase();
 
     return assignments.filter((a) => {
+      // Role scoping: if user is student, strictly limit to their enrolled class
+      if (isStudentUser && studentClass) {
+        const aClass = (a.className || '').toLowerCase().trim();
+        const sClass = studentClass.toLowerCase().trim();
+        const matchesStudentClass = aClass === sClass || aClass.includes(sClass) || sClass.includes(aClass);
+        if (!matchesStudentClass) return false;
+      }
+
       const matchesSearch =
         !q ||
         (a.title || '').toLowerCase().includes(q) ||
@@ -641,19 +736,42 @@ export const Assignments: React.FC = () => {
 
       return matchesSearch && matchesClass && matchesSubjectPill && matchesStatus;
     });
-  }, [assignments, searchQuery, classFilter, subjectPillFilter, statusFilter]);
+  }, [assignments, searchQuery, classFilter, subjectPillFilter, statusFilter, isStudentUser, studentClass]);
 
   // Filtered resources
-  const filteredResources = resources.filter((r) => {
-    const rq = (resourceSearch || '').toLowerCase().trim();
-    const matchesCategory = resourceCategoryFilter === 'all' || r.category === resourceCategoryFilter;
-    const matchesSearch =
-      !rq ||
-      (r.title || '').toLowerCase().includes(rq) ||
-      (r.subject || '').toLowerCase().includes(rq) ||
-      (r.topic || '').toLowerCase().includes(rq);
-    return matchesCategory && matchesSearch;
-  });
+  const filteredResources = useMemo(() => {
+    return resources.filter((r) => {
+      const rq = (resourceSearch || '').toLowerCase().trim();
+      const matchesCategory = resourceCategoryFilter === 'all' || r.category === resourceCategoryFilter;
+      const matchesSearch =
+        !rq ||
+        (r.title || '').toLowerCase().includes(rq) ||
+        (r.subject || '').toLowerCase().includes(rq) ||
+        (r.topic || '').toLowerCase().includes(rq);
+
+      if (isStudentUser && studentClass && r.grade) {
+        const rGrade = (r.grade || '').toLowerCase().trim();
+        const sClass = studentClass.toLowerCase().trim();
+        const matchesStudentClass = rGrade === sClass || rGrade.includes(sClass) || sClass.includes(rGrade);
+        if (!matchesStudentClass) return false;
+      }
+
+      return matchesCategory && matchesSearch;
+    });
+  }, [resources, resourceSearch, resourceCategoryFilter, isStudentUser, studentClass]);
+
+  // Filtered quizzes
+  const filteredQuizzes = useMemo(() => {
+    return quizzes.filter((q) => {
+      if (isStudentUser && studentClass && q.grade) {
+        const qGrade = (q.grade || '').toLowerCase().trim();
+        const sClass = studentClass.toLowerCase().trim();
+        const matchesStudentClass = qGrade === sClass || qGrade.includes(sClass) || sClass.includes(qGrade);
+        if (!matchesStudentClass) return false;
+      }
+      return true;
+    });
+  }, [quizzes, isStudentUser, studentClass]);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto animate-fade-in pb-12">
@@ -678,15 +796,26 @@ export const Assignments: React.FC = () => {
         {/* Action Buttons */}
         <div className="flex items-center gap-2.5">
           {activeTab === 'homework' && teacherView && (
-            <Button
-              variant="primary"
-              size="md"
-              onClick={() => setCreateAssignmentOpen(true)}
-              className="bg-[#1d5f99] hover:bg-[#164a78] font-bold shadow-md cursor-pointer"
-              leftIcon={<Plus className="w-4 h-4" />}
-            >
-              New Assignment
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                size="md"
+                onClick={() => setIsWipeAllOpen(true)}
+                className="border-rose-200 text-rose-700 hover:bg-rose-50 font-bold shadow-xs cursor-pointer"
+                leftIcon={<Trash2 className="w-4 h-4 text-rose-600" />}
+              >
+                Wipe All Assignments
+              </Button>
+              <Button
+                variant="primary"
+                size="md"
+                onClick={() => setCreateAssignmentOpen(true)}
+                className="bg-[#1d5f99] hover:bg-[#164a78] font-bold shadow-md cursor-pointer"
+                leftIcon={<Plus className="w-4 h-4" />}
+              >
+                New Assignment
+              </Button>
+            </>
           )}
 
           {activeTab === 'quizzes' && teacherView && (
@@ -714,6 +843,66 @@ export const Assignments: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Purge Sample Assignments Banner */}
+      {sampleAssignmentsCount > 0 && teacherView && (
+        <div className="rounded-2xl bg-amber-50 border border-amber-200/80 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm animate-fade-in">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-slate-900">
+                Sample Assignments Detected ({sampleAssignmentsCount} mock records)
+              </h4>
+              <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">
+                Demonstration homework assignments are currently loaded in this school branch. Click below to wipe all mock assignments and keep only genuine class assignments.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePurgeSampleAssignments}
+              isLoading={isPurging}
+              className="border-amber-300 text-amber-800 hover:bg-amber-100/80 font-bold cursor-pointer"
+              leftIcon={<Trash2 className="w-4 h-4 text-amber-600" />}
+            >
+              Purge Sample Assignments
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Student Enrolled Class Banner */}
+      {isStudentUser && (
+        <div className="rounded-2xl bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 border border-blue-200 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs animate-fade-in">
+          <div className="flex items-start sm:items-center gap-3.5">
+            <div className="w-11 h-11 rounded-2xl bg-[#1d5f99] text-white flex items-center justify-center font-black shadow-md shrink-0">
+              <BookOpen className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-extrabold text-slate-900">
+                  {studentProfile?.fullName ? `${studentProfile.fullName}'s Class Portal` : 'My Learning & Homework Portal'}
+                </h3>
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-[#1d5f99] text-white shadow-xs">
+                  {studentClass || 'Enrolled Class'}
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 mt-0.5">
+                Admission: <strong className="text-slate-800">{studentProfile?.admissionNumber || 'ADM-000'}</strong> • Showing learning units, online quizzes & assignments for your class only.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-xs font-bold text-[#1d5f99] bg-white px-3.5 py-2 rounded-xl border border-blue-200 shadow-2xs">
+              {filteredAssignments.length} Active {filteredAssignments.length === 1 ? 'Assignment' : 'Assignments'}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* High-Impact Executive Metric Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -945,23 +1134,25 @@ export const Assignments: React.FC = () => {
                     </div>
 
                     <div className="space-y-3 pt-3 border-t border-slate-100">
-                      {/* Real-time Submission Progress Bar */}
-                      <div>
-                        <div className="flex items-center justify-between text-2xs font-semibold text-slate-700 mb-1">
-                          <span>Class Turnout: <strong>{submitted} / {total} Submitted</strong></span>
-                          <span className={percent >= 80 ? 'text-emerald-700 font-bold' : 'text-blue-700 font-bold'}>
-                            {percent}%
-                          </span>
+                      {/* Real-time Submission Progress Bar (Teachers & Administrators only) */}
+                      {!isStudentUser && (
+                        <div>
+                          <div className="flex items-center justify-between text-2xs font-semibold text-slate-700 mb-1">
+                            <span>Class Turnout: <strong>{submitted} / {total} Submitted</strong></span>
+                            <span className={percent >= 80 ? 'text-emerald-700 font-bold' : 'text-blue-700 font-bold'}>
+                              {percent}%
+                            </span>
+                          </div>
+                          <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden border border-slate-200">
+                            <div
+                              className={`h-full rounded-full transition-all duration-500 ${
+                                percent >= 80 ? 'bg-emerald-500' : percent >= 50 ? theme.barColor : 'bg-amber-500'
+                              }`}
+                              style={{ width: `${percent}%` }}
+                            />
+                          </div>
                         </div>
-                        <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden border border-slate-200">
-                          <div
-                            className={`h-full rounded-full transition-all duration-500 ${
-                              percent >= 80 ? 'bg-emerald-500' : percent >= 50 ? theme.barColor : 'bg-amber-500'
-                            }`}
-                            style={{ width: `${percent}%` }}
-                          />
-                        </div>
-                      </div>
+                      )}
 
                       {/* Educator Attribution */}
                       <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
@@ -980,18 +1171,30 @@ export const Assignments: React.FC = () => {
 
                   {/* Card Action Buttons */}
                   <div className="p-4 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between gap-2">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        setActiveAssignment(assignment);
-                        setDetailModalOpen(true);
-                      }}
-                      className="font-bold text-xs text-slate-700 hover:text-slate-900 cursor-pointer"
-                      leftIcon={<Eye className="w-3.5 h-3.5 text-slate-500" />}
-                    >
-                      View Rubric
-                    </Button>
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setActiveAssignment(assignment);
+                          setDetailModalOpen(true);
+                        }}
+                        className="font-bold text-xs text-slate-700 hover:text-slate-900 cursor-pointer"
+                        leftIcon={<Eye className="w-3.5 h-3.5 text-slate-500" />}
+                      >
+                        View Rubric
+                      </Button>
+                      {teacherView && (
+                        <button
+                          type="button"
+                          onClick={() => setAssignmentToDelete(assignment)}
+                          title="Delete assignment"
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
 
                     <Button
                       size="sm"
@@ -1041,14 +1244,14 @@ export const Assignments: React.FC = () => {
         <div className="space-y-4">
           {!activeQuiz ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {quizzes.length === 0 ? (
+              {filteredQuizzes.length === 0 ? (
                 <div className="col-span-full text-center py-12 bg-white rounded-2xl border border-slate-200 p-8 space-y-2">
                   <Timer className="w-10 h-10 text-slate-300 mx-auto" />
-                  <p className="text-xs font-bold text-slate-700">No online quizzes published yet</p>
+                  <p className="text-xs font-bold text-slate-700">No online quizzes available for your class</p>
                   <p className="text-2xs text-slate-400">Educators can build interactive auto-graded quizzes for continuous learner assessment.</p>
                 </div>
               ) : (
-                quizzes.map((quiz) => (
+                filteredQuizzes.map((quiz) => (
                 <div
                   key={quiz.id}
                   className="rounded-2xl border-2 border-purple-200 bg-white p-6 space-y-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
@@ -1093,15 +1296,27 @@ export const Assignments: React.FC = () => {
 
                   <div className="flex items-center justify-between pt-3 border-t border-slate-100 mt-2">
                     <span className="text-2xs text-slate-500 font-medium">Randomized item delivery</span>
-                    <Button
-                      size="sm"
-                      variant="primary"
-                      onClick={() => startQuiz(quiz)}
-                      className="bg-purple-700 hover:bg-purple-800 font-bold shadow-xs cursor-pointer"
-                      leftIcon={<Play className="w-3.5 h-3.5" />}
-                    >
-                      Start Online Quiz
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      {teacherView && (
+                        <button
+                          type="button"
+                          onClick={() => quiz.id && handleDeleteQuiz(quiz.id)}
+                          title="Delete quiz"
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="primary"
+                        onClick={() => startQuiz(quiz)}
+                        className="bg-purple-700 hover:bg-purple-800 font-bold shadow-xs cursor-pointer"
+                        leftIcon={<Play className="w-3.5 h-3.5" />}
+                      >
+                        Start Online Quiz
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )))}
@@ -1352,26 +1567,38 @@ export const Assignments: React.FC = () => {
                 <div className="flex items-center justify-between pt-3 mt-3 border-t border-slate-100">
                   <span className="text-2xs text-slate-500">By: {res.uploadedByName}</span>
 
-                  {res.category === 'video_lesson' && res.videoEmbedUrl ? (
-                    <Button
-                      size="sm"
-                      variant="primary"
-                      onClick={() => setActiveVideoResource(res)}
-                      className="bg-rose-600 hover:bg-rose-700"
-                      leftIcon={<Play className="w-3.5 h-3.5" />}
-                    >
-                      Watch Lesson
-                    </Button>
-                  ) : (
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => toast.success('Downloaded to local offline storage', { icon: '💾' })}
-                      leftIcon={<Download className="w-3.5 h-3.5" />}
-                    >
-                      Download
-                    </Button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {teacherView && (
+                      <button
+                        type="button"
+                        onClick={() => res.id && handleDeleteResource(res.id)}
+                        title="Delete resource"
+                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                    {res.category === 'video_lesson' && res.videoEmbedUrl ? (
+                      <Button
+                        size="sm"
+                        variant="primary"
+                        onClick={() => setActiveVideoResource(res)}
+                        className="bg-rose-600 hover:bg-rose-700"
+                        leftIcon={<Play className="w-3.5 h-3.5" />}
+                      >
+                        Watch Lesson
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => toast.success('Downloaded to local offline storage', { icon: '💾' })}
+                        leftIcon={<Download className="w-3.5 h-3.5" />}
+                      >
+                        Download
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </Card>
             )))}
@@ -1777,6 +2004,84 @@ export const Assignments: React.FC = () => {
           </div>
         </Modal>
       )}
+
+      {/* Delete Single Assignment Modal */}
+      <Modal
+        isOpen={Boolean(assignmentToDelete)}
+        onClose={() => setAssignmentToDelete(null)}
+        title="Confirm Assignment Deletion"
+        maxWidth="md"
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs">
+            <AlertTriangle className="w-5 h-5 shrink-0 text-rose-600 mt-0.5" />
+            <div>
+              <p className="font-bold">Are you sure you want to delete this assignment?</p>
+              <p className="mt-1 text-rose-700">
+                "{assignmentToDelete?.title}" for {assignmentToDelete?.className} will be permanently removed.
+              </p>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2.5 pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setAssignmentToDelete(null)}
+              disabled={isDeletingAssignment}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleDeleteAssignment}
+              isLoading={isDeletingAssignment}
+              className="bg-rose-600 hover:bg-rose-700 text-white font-bold"
+            >
+              Yes, Delete Assignment
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Wipe All Assignments Modal */}
+      <Modal
+        isOpen={isWipeAllOpen}
+        onClose={() => setIsWipeAllOpen(false)}
+        title="Wipe All Assignments"
+        maxWidth="md"
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-900 text-xs">
+            <AlertTriangle className="w-5 h-5 shrink-0 text-rose-600 mt-0.5" />
+            <div>
+              <p className="font-bold text-sm">Caution: Irreversible Operation</p>
+              <p className="mt-1 text-slate-700 leading-relaxed">
+                This will completely remove all assignments in this school branch from Firestore ({assignments.length} assignments). Only genuine newly created assignments will remain.
+              </p>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2.5 pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsWipeAllOpen(false)}
+              disabled={isWipingAll}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleWipeAllAssignments}
+              isLoading={isWipingAll}
+              className="bg-rose-600 hover:bg-rose-700 text-white font-bold"
+            >
+              Wipe All Assignments
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

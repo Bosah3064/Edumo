@@ -66,7 +66,7 @@ export const EducatorPortal: React.FC = () => {
   const educatorId = `EDU-TCH-${(currentUser?.uid || '8921').substring(0, 5).toUpperCase()}`;
 
   // Check if educator is affiliated to an active school
-  const isAffiliated = Boolean(currentSchool && organization && organization.id !== 'demo-org-edumo');
+  const isAffiliated = Boolean(currentSchool && organization);
 
   useEffect(() => {
     if (!currentUser?.email) {

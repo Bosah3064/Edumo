@@ -67,7 +67,8 @@ interface StudentRecord {
 }
 
 export const Students: React.FC = () => {
-  const { organization, currentSchool, schools } = useTenant();
+  const { organization, currentSchool, schools, currentRole, isStudent, studentProfile } = useTenant();
+  const isStudentUser = isStudent || currentRole === 'student' || (currentRole as string) === 'learner';
 
   const [students, setStudents] = useState<StudentRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -359,8 +360,130 @@ export const Students: React.FC = () => {
   const boardingLearners = students.filter((s) => s.boardingStatus === 'boarding').length;
   const activeLearners = students.filter((s) => (s.status || 'active') === 'active').length;
 
+  const myStudentRow: StudentRecord | null = isStudentUser
+    ? students.find(
+        (s) =>
+          s.admissionNumber === studentProfile?.admissionNumber ||
+          s.id === studentProfile?.id
+      ) || {
+        id: studentProfile?.id || 'learner',
+        admissionNumber: studentProfile?.admissionNumber || 'ADM-000',
+        firstName: studentProfile?.firstName || 'Learner',
+        lastName: studentProfile?.lastName || '',
+        currentClassId: studentProfile?.currentClassId || 'Grade 4',
+        currentStreamId: studentProfile?.currentStreamId || 'East',
+        boardingStatus: 'day',
+        status: 'active',
+        schoolEmail: studentProfile?.schoolEmail || studentProfile?.studentEmail || '',
+      }
+    : null;
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto animate-fade-in">
+      {isStudentUser ? (
+        <div className="space-y-6 animate-fade-in">
+          {/* Student Profile Hero */}
+          <div className="rounded-3xl bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-800 p-6 text-white shadow-xl">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+              <div className="flex items-center gap-5">
+                <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center font-black text-2xl text-white shadow-inner border border-white/20">
+                  {myStudentRow?.firstName ? myStudentRow.firstName[0].toUpperCase() : 'S'}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <h2 className="text-xl sm:text-2xl font-black">
+                      {myStudentRow?.firstName} {myStudentRow?.lastName}
+                    </h2>
+                    <span className="px-3 py-0.5 rounded-full text-xs font-bold bg-white/20 text-white border border-white/30 backdrop-blur-xs">
+                      {myStudentRow?.currentClassId || 'Enrolled Class'}
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-full text-2xs font-extrabold bg-emerald-400/20 text-emerald-200 border border-emerald-400/30">
+                      Active Learner
+                    </span>
+                  </div>
+                  <p className="text-xs text-blue-100 mt-1 font-medium">
+                    Admission No: <strong className="font-mono text-white">{myStudentRow?.admissionNumber}</strong>
+                    {myStudentRow?.currentStreamId ? ` • Stream: ${myStudentRow.currentStreamId}` : ''}
+                    {' • '}{currentSchool?.name || 'Main Campus'}
+                  </p>
+                </div>
+              </div>
+
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={() => setExamCardStudent(myStudentRow)}
+                leftIcon={<Printer className="w-4 h-4 text-brand-600" />}
+                className="bg-white text-slate-900 hover:bg-slate-100 font-bold shadow-md text-xs shrink-0"
+              >
+                Print Examination Card
+              </Button>
+            </div>
+          </div>
+
+          {/* Details Card */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card className="p-6 space-y-4 border border-slate-200">
+              <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                <Users className="w-4 h-4 text-brand-600" />
+                Institutional Enrolment Information
+              </h3>
+              <div className="space-y-3 text-xs">
+                <div className="flex justify-between py-2 border-b border-slate-100">
+                  <span className="text-slate-500 font-medium">Full Legal Name</span>
+                  <span className="font-bold text-slate-900">{myStudentRow?.firstName} {myStudentRow?.lastName}</span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-slate-100">
+                  <span className="text-slate-500 font-medium">Admission Number</span>
+                  <span className="font-mono font-bold text-slate-900">{myStudentRow?.admissionNumber}</span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-slate-100">
+                  <span className="text-slate-500 font-medium">Class / Grade</span>
+                  <span className="font-bold text-slate-900">{myStudentRow?.currentClassId || 'Not Assigned'}</span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-slate-100">
+                  <span className="text-slate-500 font-medium">Stream</span>
+                  <span className="font-bold text-slate-900">{myStudentRow?.currentStreamId || 'East'}</span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-slate-100">
+                  <span className="text-slate-500 font-medium">Boarding Status</span>
+                  <span className="font-bold capitalize text-slate-900">{myStudentRow?.boardingStatus || 'Day Scholar'}</span>
+                </div>
+                <div className="flex justify-between py-2">
+                  <span className="text-slate-500 font-medium">Institutional Email</span>
+                  <span className="font-mono text-slate-700">{myStudentRow?.schoolEmail || '—'}</span>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-6 space-y-4 border border-slate-200">
+              <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                <HeartPulse className="w-4 h-4 text-rose-500" />
+                Guardian &amp; Medical Contacts
+              </h3>
+              <div className="space-y-3 text-xs">
+                <div className="flex justify-between py-2 border-b border-slate-100">
+                  <span className="text-slate-500 font-medium">Guardian Phone</span>
+                  <span className="font-mono font-bold text-slate-900">{myStudentRow?.guardianPhone || 'On File'}</span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-slate-100">
+                  <span className="text-slate-500 font-medium">School Campus</span>
+                  <span className="font-bold text-slate-900">{currentSchool?.name || 'Main Campus'}</span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-slate-100">
+                  <span className="text-slate-500 font-medium">Academic Year</span>
+                  <span className="font-bold text-slate-900">2026 Academic Calendar</span>
+                </div>
+                <div className="flex justify-between py-2">
+                  <span className="text-slate-500 font-medium">Emergency Status</span>
+                  <span className="text-emerald-700 font-bold">Standard clearance</span>
+                </div>
+              </div>
+            </Card>
+          </div>
+        </div>
+      ) : (
+        <>
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white/70 backdrop-blur-xs p-5 rounded-2xl border border-gray-200/80 shadow-2xs">
         <div className="min-w-0 flex-1">
@@ -718,6 +841,8 @@ export const Students: React.FC = () => {
           </>
         )}
       </Card>
+      </>
+      )}
 
       {/* Enroll Student Modal */}
       <Modal

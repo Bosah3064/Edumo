@@ -77,7 +77,8 @@ interface InvoiceItem {
 }
 
 export const Finance: React.FC = () => {
-  const { organization, currentSchool, currentRole } = useTenant();
+  const { organization, currentSchool, currentRole, isStudent, studentProfile } = useTenant();
+  const isStudentUser = isStudent || currentRole === 'student' || (currentRole as string) === 'learner';
 
   if (currentRole === 'teacher') {
     return (
@@ -494,8 +495,272 @@ export const Finance: React.FC = () => {
     toast.success(`Payment voucher ${voucherNumber} authorized and posted to cashbook!`);
   };
 
+  // Student-specific invoice calculations
+  const studentInvoices = invoices.filter(
+    (inv) =>
+      inv.admissionNumber === studentProfile?.admissionNumber ||
+      inv.studentId === studentProfile?.id ||
+      (studentProfile?.fullName && inv.studentName.toLowerCase().includes(studentProfile.fullName.toLowerCase()))
+  );
+  const studentTotalBilled = studentInvoices.reduce((acc, i) => acc + i.totalAmount, 0);
+  const studentTotalPaid = studentInvoices.reduce((acc, i) => acc + i.paidAmount, 0);
+  const studentBalance = studentInvoices.reduce((acc, i) => acc + i.balance, 0);
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto animate-fade-in">
+      {isStudentUser ? (
+        <div className="space-y-6 animate-fade-in">
+          {/* Student Fee Account Hero */}
+          <div className="rounded-3xl bg-gradient-to-r from-emerald-700 via-teal-700 to-cyan-800 p-6 text-white shadow-xl">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+              <div className="flex items-center gap-5">
+                <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center font-black text-2xl text-white shadow-inner border border-white/20">
+                  <CreditCard className="w-8 h-8" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <h2 className="text-xl sm:text-2xl font-black">
+                      {studentProfile?.fullName || 'Learner Fee Account'}
+                    </h2>
+                    <span className="px-3 py-0.5 rounded-full text-xs font-bold bg-white/20 text-white border border-white/30 backdrop-blur-xs">
+                      {studentProfile?.currentClassId || 'Enrolled Class'}
+                    </span>
+                    <span
+                      className={`px-2.5 py-0.5 rounded-full text-2xs font-extrabold ${
+                        studentBalance <= 0
+                          ? 'bg-emerald-400/20 text-emerald-200 border border-emerald-400/30'
+                          : 'bg-amber-400/20 text-amber-200 border border-amber-400/30'
+                      }`}
+                    >
+                      {studentBalance <= 0 ? 'Fees Fully Paid' : 'Balance Pending'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-emerald-100 mt-1 font-medium">
+                    Admission No:{' '}
+                    <strong className="font-mono text-white">
+                      {studentProfile?.admissionNumber || 'ADM-000'}
+                    </strong>
+                    {' • '}
+                    {currentSchool?.name || 'Main Campus'} • Academic Year 2026
+                  </p>
+                </div>
+              </div>
+
+              {studentBalance > 0 && studentInvoices.length > 0 && (
+                <Button
+                  variant="secondary"
+                  size="md"
+                  onClick={() => {
+                    const firstPending =
+                      studentInvoices.find((i) => i.balance > 0) || studentInvoices[0];
+                    setPayModalInvoice(firstPending);
+                    setPayAmount(String(firstPending.balance));
+                    setPayerName(firstPending.studentName);
+                    setPayerPhone(firstPending.guardianPhone || '');
+                  }}
+                  leftIcon={<Smartphone className="w-4 h-4 text-emerald-600" />}
+                  className="bg-white text-slate-900 hover:bg-slate-100 font-bold shadow-md text-xs shrink-0"
+                >
+                  Pay Balance via M-Pesa
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Fee Balance Metric Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
+              <span className="text-2xs font-bold uppercase tracking-wider text-slate-500 block">
+                Total Invoiced
+              </span>
+              <span className="text-2xl font-black text-slate-900 mt-1 block">
+                {currency} {studentTotalBilled.toLocaleString()}
+              </span>
+              <span className="text-xs text-slate-500 font-medium">Billed tuition and levies</span>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-emerald-50/60 border border-emerald-200 shadow-xs">
+              <span className="text-2xs font-bold uppercase tracking-wider text-emerald-700 block">
+                Total Amount Paid
+              </span>
+              <span className="text-2xl font-black text-emerald-900 mt-1 block">
+                {currency} {studentTotalPaid.toLocaleString()}
+              </span>
+              <span className="text-xs text-emerald-700 font-medium">Cleared and verified</span>
+            </div>
+
+            <div
+              className={`p-5 rounded-2xl border shadow-xs ${
+                studentBalance > 0
+                  ? 'bg-rose-50/70 border-rose-200 text-rose-900'
+                  : 'bg-emerald-50/70 border-emerald-200 text-emerald-900'
+              }`}
+            >
+              <span className="text-2xs font-bold uppercase tracking-wider block">
+                Outstanding Balance
+              </span>
+              <span className="text-2xl font-black mt-1 block">
+                {currency} {studentBalance.toLocaleString()}
+              </span>
+              <span className="text-xs font-medium">
+                {studentBalance > 0
+                  ? 'Payable before mid-term exams'
+                  : 'Zero outstanding balance'}
+              </span>
+            </div>
+          </div>
+
+          {/* Student Invoices & Payment Ledger Table */}
+          <Card className="p-6 border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  Termly Fee Invoices &amp; Receipts
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Your official fee statements and verifiable payment receipts.
+                </p>
+              </div>
+            </div>
+
+            {studentInvoices.length === 0 ? (
+              <div className="p-8 text-center space-y-2">
+                <Receipt className="w-10 h-10 text-slate-300 mx-auto" />
+                <p className="font-bold text-slate-700 text-sm">No Fee Invoices Generated Yet</p>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                  The bursar has not yet issued termly invoices for admission{' '}
+                  {studentProfile?.admissionNumber || 'ADM-000'}. Invoices will appear here
+                  automatically upon generation.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto rounded-xl border border-slate-200">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-2xs font-bold text-slate-600 uppercase">
+                    <tr>
+                      <th className="py-3 px-4">Invoice #</th>
+                      <th className="py-3 px-4">Term</th>
+                      <th className="py-3 px-4 text-right">Total Billed</th>
+                      <th className="py-3 px-4 text-right">Amount Paid</th>
+                      <th className="py-3 px-4 text-right">Balance</th>
+                      <th className="py-3 px-4 text-center">Status</th>
+                      <th className="py-3 px-4 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {studentInvoices.map((inv) => (
+                      <tr key={inv.id} className="hover:bg-slate-50/50">
+                        <td className="py-3 px-4 font-mono font-bold text-slate-900">
+                          {inv.invoiceNumber}
+                        </td>
+                        <td className="py-3 px-4 font-medium text-slate-700">{inv.termId}</td>
+                        <td className="py-3 px-4 text-right font-mono font-semibold text-slate-900">
+                          {currency} {inv.totalAmount.toLocaleString()}
+                        </td>
+                        <td className="py-3 px-4 text-right font-mono font-semibold text-emerald-600">
+                          {currency} {inv.paidAmount.toLocaleString()}
+                        </td>
+                        <td className="py-3 px-4 text-right font-mono font-bold text-slate-900">
+                          {currency} {inv.balance.toLocaleString()}
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <Badge
+                            variant={
+                              inv.status === 'paid'
+                                ? 'accent'
+                                : inv.status === 'partial'
+                                ? 'warning'
+                                : 'danger'
+                            }
+                            size="sm"
+                          >
+                            {inv.status.toUpperCase()}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            {inv.balance > 0 ? (
+                              <Button
+                                size="sm"
+                                variant="primary"
+                                onClick={() => {
+                                  setPayModalInvoice(inv);
+                                  setPayAmount(String(inv.balance));
+                                  setPayerName(inv.studentName);
+                                  setPayerPhone(inv.guardianPhone || '');
+                                }}
+                                className="text-2xs h-7 py-0"
+                                leftIcon={<Smartphone className="w-3.5 h-3.5" />}
+                              >
+                                Pay M-Pesa
+                              </Button>
+                            ) : null}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                setActiveReceipt({
+                                  receiptNumber: `REC-2026-${inv.invoiceNumber.slice(-3)}`,
+                                  paymentDate: new Date().toLocaleString(),
+                                  studentName: inv.studentName,
+                                  admissionNumber: inv.admissionNumber,
+                                  className: inv.className,
+                                  payerName: inv.studentName,
+                                  amountPaid:
+                                    inv.paidAmount > 0 ? inv.paidAmount : inv.totalAmount,
+                                  currency,
+                                  paymentMethod: 'MPESA',
+                                  transactionRef: `TXN-${inv.invoiceNumber}`,
+                                  totalInvoiceAmount: inv.totalAmount,
+                                  balanceRemaining: inv.balance,
+                                  feeItemDescription: `${inv.termId} Tuition & Operational Levies`,
+                                });
+                              }}
+                              className="text-2xs h-7 py-0 text-emerald-700"
+                              leftIcon={<Receipt className="w-3.5 h-3.5" />}
+                            >
+                              Official Receipt
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+
+          {/* Payment Instructions / Lipa na M-Pesa Guide */}
+          <div className="p-5 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-950 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <span className="font-bold text-sm block text-emerald-900">
+                Lipa na M-Pesa Direct Settlement Instructions
+              </span>
+              <p className="text-2xs text-emerald-800">
+                Business Paybill:{' '}
+                <strong>{(currentSchool?.settings as any)?.mpesaPaybill || '247247'}</strong> • Account
+                No:{' '}
+                <strong className="font-mono">
+                  {studentProfile?.admissionNumber || 'ADM-000'}
+                </strong>
+              </p>
+              <p className="text-2xs text-emerald-700">
+                Payments made via M-Pesa reflect instantly in your fee ledger and SMS confirmation
+                is sent to your guardian.
+              </p>
+            </div>
+            <Badge
+              variant="accent"
+              size="md"
+              className="font-bold shrink-0 self-start sm:self-auto"
+            >
+              Automated Daraja Reconciliation
+            </Badge>
+          </div>
+        </div>
+      ) : (
+        <>
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -1373,6 +1638,8 @@ export const Finance: React.FC = () => {
             </Card>
           ))}
         </div>
+      )}
+      </>
       )}
 
       {/* Modal: Record Fee Payment */}

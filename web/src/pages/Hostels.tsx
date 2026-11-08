@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useTenant } from '../contexts/TenantContext';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -37,6 +37,11 @@ import {
   Check,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import {
+  isSampleHostel,
+  purgeMockSchoolData,
+  wipeAllSchoolHostels,
+} from '../utils/databaseInitializer';
 
 export interface HostelDorm {
   id: string;
@@ -81,8 +86,10 @@ interface StudentOption {
 }
 
 export const Hostels: React.FC = () => {
-  const { organization, currentSchool } = useTenant();
+  const { organization, currentSchool, currentRole, isStudent, studentProfile } = useTenant();
   const { currentUser } = useAuth();
+
+  const isStudentUser = isStudent || currentRole === 'student' || (currentRole as string) === 'learner';
 
   // Active view: 'dorms' | 'allocations'
   const [activeTab, setActiveTab] = useState<'dorms' | 'allocations'>('dorms');
@@ -98,6 +105,16 @@ export const Hostels: React.FC = () => {
   const [loadingAllocations, setLoadingAllocations] = useState(true);
   const [allocationSearch, setAllocationSearch] = useState('');
   const [selectedDormFilter, setSelectedDormFilter] = useState('all');
+
+  const myAllocation = useMemo(() => {
+    if (!isStudentUser || !studentProfile) return null;
+    return allocations.find(
+      (a) =>
+        (studentProfile.admissionNumber && a.admissionNo?.toLowerCase().trim() === studentProfile.admissionNumber.toLowerCase().trim()) ||
+        (studentProfile.id && a.studentId === studentProfile.id) ||
+        (studentProfile.firstName && a.studentName?.toLowerCase().includes(studentProfile.firstName.toLowerCase()))
+    );
+  }, [allocations, isStudentUser, studentProfile]);
 
   // Real Staff for Housemaster/Matron
   const [staffOptions, setStaffOptions] = useState<StaffOption[]>([]);
@@ -126,6 +143,11 @@ export const Hostels: React.FC = () => {
 
   // View Residents Modal
   const [viewingDormResidents, setViewingDormResidents] = useState<HostelDorm | null>(null);
+  const [isPurging, setIsPurging] = useState(false);
+  const [dormToDelete, setDormToDelete] = useState<HostelDorm | null>(null);
+  const [isDeleteDormModalOpen, setIsDeleteDormModalOpen] = useState(false);
+  const [isWipeAllDormsModalOpen, setIsWipeAllDormsModalOpen] = useState(false);
+  const [isWipingAllDorms, setIsWipingAllDorms] = useState(false);
 
   // 1. Listen to real dormitories in Firestore
   useEffect(() => {
@@ -503,6 +525,63 @@ export const Hostels: React.FC = () => {
     }
   };
 
+  const hasSampleDorms = dorms.some(isSampleHostel);
+
+  const handlePurgeSampleDorms = async () => {
+    if (!organization?.id || !currentSchool?.id) return;
+    setIsPurging(true);
+    const toastId = toast.loading('Purging sample demonstration dormitories...');
+    try {
+      const res = await purgeMockSchoolData(db, organization.id, currentSchool.id);
+      toast.success(`Wiped ${res.hostelsPurged} sample dormitories and demo records!`, { id: toastId });
+    } catch (err) {
+      console.error('Failed to purge sample dorms:', err);
+      toast.error('Failed to purge sample dormitories', { id: toastId });
+    } finally {
+      setIsPurging(false);
+    }
+  };
+
+  const handleDeleteDorm = async () => {
+    if (!organization?.id || !currentSchool?.id || !dormToDelete) return;
+    const toastId = toast.loading(`Deleting "${dormToDelete.name}"...`);
+    try {
+      await deleteDoc(
+        doc(
+          db,
+          'organizations',
+          organization.id,
+          'schools',
+          currentSchool.id,
+          'hostels',
+          dormToDelete.id
+        )
+      );
+      toast.success(`"${dormToDelete.name}" deleted successfully.`, { id: toastId });
+      setIsDeleteDormModalOpen(false);
+      setDormToDelete(null);
+    } catch (err) {
+      console.error('Error deleting dorm:', err);
+      toast.error('Failed to delete dormitory', { id: toastId });
+    }
+  };
+
+  const handleWipeAllDorms = async () => {
+    if (!organization?.id || !currentSchool?.id) return;
+    setIsWipingAllDorms(true);
+    const toastId = toast.loading('Wiping all dormitories for this school...');
+    try {
+      const res = await wipeAllSchoolHostels(db, organization.id, currentSchool.id);
+      toast.success(`Wiped all ${res.deletedCount} dormitories. Clean slate ready!`, { id: toastId });
+      setIsWipeAllDormsModalOpen(false);
+    } catch (err) {
+      console.error('Failed to wipe dormitories:', err);
+      toast.error('Failed to wipe dormitories', { id: toastId });
+    } finally {
+      setIsWipingAllDorms(false);
+    }
+  };
+
   // Metrics
   const totalHostels = dorms.length;
   const totalCapacity = dorms.reduce((sum, d) => sum + d.capacity, 0);
@@ -557,29 +636,135 @@ export const Hostels: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setIsAllocateModalOpen(true)}
-            leftIcon={<Bed className="w-4 h-4 text-emerald-600" />}
-            className="border-emerald-200 text-emerald-800 hover:bg-emerald-50"
-          >
-            Allocate Student Bed
-          </Button>
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => setIsRegisterDormModalOpen(true)}
-            leftIcon={<Plus className="w-4 h-4" />}
-            className="shadow-sm"
-          >
-            Register New Hostel
-          </Button>
-        </div>
+        {!isStudentUser && (
+          <div className="flex items-center gap-2.5">
+            {dorms.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsWipeAllDormsModalOpen(true)}
+                leftIcon={<Trash2 className="w-4 h-4 text-rose-500" />}
+                className="font-bold text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200"
+              >
+                Wipe All Dorms
+              </Button>
+            )}
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setIsAllocateModalOpen(true)}
+              leftIcon={<Bed className="w-4 h-4 text-emerald-600" />}
+              className="border-emerald-200 text-emerald-800 hover:bg-emerald-50"
+            >
+              Allocate Student Bed
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setIsRegisterDormModalOpen(true)}
+              leftIcon={<Plus className="w-4 h-4" />}
+              className="shadow-sm"
+            >
+              Register New Hostel
+            </Button>
+          </div>
+        )}
       </div>
 
-      {/* TOP 4 VIBRANT GRADIENT METRIC CARDS */}
+      {/* Sample demonstration dorms detection banner with 1-click purge */}
+      {hasSampleDorms && !isStudentUser && (
+        <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-amber-900 animate-fade-in">
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-xl bg-amber-200/80 text-amber-900 shrink-0 mt-0.5">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="font-black text-sm text-amber-950">
+                Sample Demonstration Dormitories Detected
+              </p>
+              <p className="text-xs text-amber-800 mt-0.5">
+                Demonstration dorms (e.g. Kilimanjaro House, Serengeti House) are detected in this school branch. Click to wipe all sample boarding records.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={handlePurgeSampleDorms}
+              isLoading={isPurging}
+              leftIcon={<Trash2 className="w-4 h-4" />}
+              className="font-bold whitespace-nowrap shadow-xs"
+            >
+              Wipe Sample Dorms
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Student View: My Boarding Allocation */}
+      {isStudentUser ? (
+        <div className="space-y-6 animate-fade-in">
+          <div className="rounded-2xl bg-gradient-to-r from-indigo-50 via-purple-50 to-blue-50 border border-indigo-200 p-6 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-black shadow-md">
+                  <Home className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-bold text-slate-900">
+                      {studentProfile?.fullName ? `${studentProfile.fullName}'s Boarding Accommodation` : 'My Boarding Status'}
+                    </h2>
+                    <Badge variant={myAllocation ? 'success' : 'neutral'}>
+                      {myAllocation ? 'Boarding Resident' : 'Day Scholar'}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-slate-600 mt-0.5">
+                    Admission: <strong>{studentProfile?.admissionNumber || 'ADM-000'}</strong> • {currentSchool?.name || 'School Campus'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {myAllocation ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6 pt-6 border-t border-indigo-200/60">
+                <div className="p-4 rounded-xl bg-white border border-indigo-100 shadow-2xs">
+                  <span className="text-2xs font-bold uppercase text-slate-400 block">Dormitory / Wing</span>
+                  <span className="text-base font-extrabold text-indigo-900 flex items-center gap-1.5 mt-1">
+                    <Building className="w-4 h-4 text-indigo-600" /> {myAllocation.dormName}
+                  </span>
+                </div>
+                <div className="p-4 rounded-xl bg-white border border-indigo-100 shadow-2xs">
+                  <span className="text-2xs font-bold uppercase text-slate-400 block">Room &amp; Bed Number</span>
+                  <span className="text-base font-extrabold text-slate-900 flex items-center gap-1.5 mt-1">
+                    <Bed className="w-4 h-4 text-emerald-600" /> {myAllocation.roomNumber} • {myAllocation.bedNumber}
+                  </span>
+                </div>
+                <div className="p-4 rounded-xl bg-white border border-indigo-100 shadow-2xs">
+                  <span className="text-2xs font-bold uppercase text-slate-400 block">Housemaster / Matron</span>
+                  <span className="text-sm font-bold text-slate-800 flex items-center gap-1.5 mt-1">
+                    <UserCheck className="w-4 h-4 text-blue-600" /> {dorms.find((d) => d.id === myAllocation.dormId)?.housemaster || 'Assigned Housemaster'}
+                  </span>
+                </div>
+                <div className="p-4 rounded-xl bg-white border border-indigo-100 shadow-2xs">
+                  <span className="text-2xs font-bold uppercase text-slate-400 block">Special Diet / Medical</span>
+                  <span className="text-xs font-semibold text-slate-700 block mt-1 line-clamp-2">
+                    {myAllocation.medicalNotes || 'No special dietary/medical notes recorded.'}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-6 p-6 rounded-xl bg-white border border-slate-200 text-center">
+                <p className="text-sm font-bold text-slate-800">You are currently registered as a Day Scholar.</p>
+                <p className="text-xs text-slate-500 mt-1">No boarding wing or bed has been assigned. Please consult the school boarding office if you are a boarding resident.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* TOP 4 VIBRANT GRADIENT METRIC CARDS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Total Hostels */}
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-700 p-5 text-white shadow-md">
@@ -858,6 +1043,17 @@ export const Hostels: React.FC = () => {
                       >
                         Allocate Bed
                       </Button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDormToDelete(dorm);
+                          setIsDeleteDormModalOpen(true);
+                        }}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors shrink-0"
+                        title="Delete Dormitory"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </Card>
                 );
@@ -963,6 +1159,8 @@ export const Hostels: React.FC = () => {
             </div>
           )}
         </div>
+      )}
+      </>
       )}
 
       {/* ============================================================ */}
@@ -1175,6 +1373,83 @@ export const Hostels: React.FC = () => {
           </div>
         </Modal>
       )}
+
+      {/* Delete Dormitory Modal */}
+      <Modal
+        isOpen={isDeleteDormModalOpen}
+        onClose={() => {
+          setIsDeleteDormModalOpen(false);
+          setDormToDelete(null);
+        }}
+        title="Delete Dormitory"
+        description="Permanently remove this hostel block from the campus"
+        maxWidth="md"
+      >
+        <div className="space-y-4 pt-2">
+          <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs">
+            <p className="font-bold">Are you sure you want to delete this dormitory?</p>
+            <p className="mt-1 font-semibold text-rose-800">
+              {dormToDelete?.name} ({dormToDelete?.capacity} Beds)
+            </p>
+            <p className="mt-1 text-slate-500">
+              This action cannot be undone. Any active resident bed allocations in this dorm will also be deallocated.
+            </p>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setIsDeleteDormModalOpen(false);
+                setDormToDelete(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleDeleteDorm}
+              leftIcon={<Trash2 className="w-4 h-4" />}
+            >
+              Confirm Delete
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Wipe All Dorms Modal */}
+      <Modal
+        isOpen={isWipeAllDormsModalOpen}
+        onClose={() => setIsWipeAllDormsModalOpen(false)}
+        title="Wipe All Dormitories"
+        description="Clear all boarding blocks and resident bed allocations"
+        maxWidth="md"
+      >
+        <div className="space-y-4 pt-2">
+          <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs">
+            <p className="font-black text-rose-950">⚠️ WARNING: Irreversible Operation</p>
+            <p className="mt-1 text-slate-700">
+              This will permanently delete <strong>all {dorms.length} hostel dormitories</strong> and all resident bed allocations in{' '}
+              <strong>{currentSchool?.name || 'this school branch'}</strong>.
+            </p>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              variant="secondary"
+              onClick={() => setIsWipeAllDormsModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleWipeAllDorms}
+              isLoading={isWipingAllDorms}
+              leftIcon={<Trash2 className="w-4 h-4" />}
+            >
+              Wipe All {dorms.length} Hostels
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

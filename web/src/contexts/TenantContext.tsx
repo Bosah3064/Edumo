@@ -17,11 +17,29 @@ import type {
 } from '@edumo/shared';
 import { DEFAULT_ROLE_PERMISSIONS } from '@edumo/shared';
 
+export interface ActiveStudentProfile {
+  id: string;
+  admissionNumber: string;
+  firstName: string;
+  lastName: string;
+  fullName: string;
+  currentClassId: string;
+  currentStreamId?: string;
+  gender?: string;
+  boardingStatus?: 'day' | 'boarding';
+  schoolEmail?: string;
+  studentEmail?: string;
+  userId?: string;
+  guardianPhone?: string;
+}
+
 interface TenantContextType {
   organization: Organization | null;
   schools: School[];
   currentSchool: School | null;
   currentRole: UserRole | null;
+  isStudent: boolean;
+  studentProfile: ActiveStudentProfile | null;
   userPermissions: Permission[];
   loading: boolean;
   switchSchool: (schoolId: string) => void;
@@ -55,25 +73,12 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         if (snapshot.exists()) {
           setOrganization({ id: snapshot.id, ...(snapshot.data() as DocumentData) } as Organization);
         } else {
-          // Fallback demo organization if not found
-          setOrganization({
-            id: activeOrgId,
-            name: 'Edumo Demonstration Academy',
-            type: 'group',
-            country: 'KE',
-            status: 'active',
-          } as Organization);
+          setOrganization(null);
         }
       },
       (error) => {
         console.error('Error listening to organization:', error);
-        setOrganization({
-          id: activeOrgId,
-          name: 'Edumo Demonstration Academy',
-          type: 'group',
-          country: 'KE',
-          status: 'active',
-        } as Organization);
+        setOrganization(null);
       }
     );
 
@@ -86,23 +91,9 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           (d) => ({ id: d.id, ...(d.data() as DocumentData) } as School)
         );
 
-        if (fetchedSchools.length === 0) {
-          // Provide fallback school structure if empty
-          const defaultSchool = {
-            id: 'main-campus',
-            name: 'Edumo Nairobi Main Campus',
-            code: 'MAIN',
-            type: 'combined',
-            country: 'KE',
-            curriculumType: 'CBC',
-            gradingMode: 'cbc_no_aggregate',
-            status: 'active',
-          } as School;
-          setSchools([defaultSchool]);
-          setCurrentSchoolId('main-campus');
-        } else {
-          setSchools(fetchedSchools);
+        setSchools(fetchedSchools);
 
+        if (fetchedSchools.length > 0) {
           // Auto-select initial school if none selected or current is invalid
           setCurrentSchoolId((prev) => {
             if (prev && fetchedSchools.some((s) => s.id === prev)) {
@@ -119,26 +110,18 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
               );
               if (accessibleId) return accessibleId;
             }
-            return fetchedSchools[0]?.id || 'main-campus';
+            return fetchedSchools[0]?.id || null;
           });
+        } else {
+          setCurrentSchoolId(null);
         }
 
         setLoading(false);
       },
       (error) => {
         console.error('Error listening to schools:', error);
-        const defaultSchool = {
-          id: 'main-campus',
-          name: 'Edumo Nairobi Main Campus',
-          code: 'MAIN',
-          type: 'combined',
-          country: 'KE',
-          curriculumType: 'CBC',
-          gradingMode: 'cbc_no_aggregate',
-          status: 'active',
-        } as School;
-        setSchools([defaultSchool]);
-        setCurrentSchoolId('main-campus');
+        setSchools([]);
+        setCurrentSchoolId(null);
         setLoading(false);
       }
     );
@@ -227,6 +210,117 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setPreviewRole(null);
   };
 
+  const [databaseStaffRole, setDatabaseStaffRole] = useState<UserRole | null>(null);
+
+  // Listen to staff roster to resolve user's real database role in this school
+  useEffect(() => {
+    if (!activeOrgId || !currentSchoolId || !currentUser) {
+      setDatabaseStaffRole(null);
+      return;
+    }
+    const staffRef = collection(db, 'organizations', activeOrgId, 'schools', currentSchoolId, 'staff');
+    const unsubStaff = onSnapshot(
+      staffRef,
+      (snap) => {
+        const email = (currentUser.email || '').toLowerCase().trim();
+        const uid = currentUser.uid;
+        const matchedStaff = snap.docs.find((d) => {
+          const data = d.data();
+          if (data.userId && data.userId === uid) return true;
+          if (email && data.schoolEmail && data.schoolEmail.toLowerCase().trim() === email) return true;
+          if (email && data.email && data.email.toLowerCase().trim() === email) return true;
+          return false;
+        });
+        if (matchedStaff) {
+          const d = matchedStaff.data();
+          const roleFound = (d.role || d.roles?.[0] || 'teacher') as UserRole;
+          setDatabaseStaffRole(roleFound);
+        } else {
+          setDatabaseStaffRole(null);
+        }
+      },
+      () => setDatabaseStaffRole(null)
+    );
+
+    return () => unsubStaff();
+  }, [activeOrgId, currentSchoolId, currentUser]);
+
+  const [studentProfile, setStudentProfile] = useState<ActiveStudentProfile | null>(null);
+
+  // Listen to student profile in active school from Firestore
+  useEffect(() => {
+    if (!activeOrgId || !currentSchoolId || !currentUser) {
+      setStudentProfile(null);
+      return;
+    }
+
+    const studentsRef = collection(db, 'organizations', activeOrgId, 'schools', currentSchoolId, 'students');
+    const unsub = onSnapshot(
+      studentsRef,
+      (snapshot) => {
+        const list: Array<{ id: string; [key: string]: any }> = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+        const userEmail = (currentUser.email || '').toLowerCase().trim();
+        const userUid = currentUser.uid;
+        const claimAdmission = (((claims as any)?.admissionNumber || (claims as any)?.studentId || '') as string).toLowerCase().trim();
+
+        // 1. Match by UID
+        let matched = list.find((s) => userUid && s.userId === userUid);
+
+        // 2. Match by schoolEmail or studentEmail
+        if (!matched && userEmail) {
+          matched = list.find((s) => {
+            const se = (s.schoolEmail || s.studentEmail || '').toLowerCase().trim();
+            return se === userEmail;
+          });
+        }
+
+        // 3. Match by admission number
+        if (!matched && (claimAdmission || userEmail)) {
+          matched = list.find((s) => {
+            const adm = (s.admissionNumber || '').toLowerCase().trim();
+            if (claimAdmission && adm === claimAdmission) return true;
+            if (userEmail && adm) {
+              const cleanAdm = adm.replace(/[^a-z0-9]/g, '');
+              const cleanUser = userEmail.split('@')[0].replace(/[^a-z0-9]/g, '');
+              if (cleanAdm && cleanUser && (cleanUser.includes(cleanAdm) || cleanAdm.includes(cleanUser))) {
+                return true;
+              }
+            }
+            return false;
+          });
+        }
+
+        if (matched) {
+          const fn = matched.firstName || 'Learner';
+          const ln = matched.lastName || '';
+          setStudentProfile({
+            id: matched.id,
+            admissionNumber: matched.admissionNumber || '',
+            firstName: fn,
+            lastName: ln,
+            fullName: `${fn} ${ln}`.trim(),
+            currentClassId: matched.currentClassId || '',
+            currentStreamId: matched.currentStreamId || '',
+            gender: matched.gender || 'unspecified',
+            boardingStatus: matched.boardingStatus || 'day',
+            schoolEmail: matched.schoolEmail || matched.studentEmail || currentUser.email || '',
+            studentEmail: matched.studentEmail,
+            userId: matched.userId,
+            guardianPhone: matched.guardianPhone,
+          });
+        } else {
+          setStudentProfile(null);
+        }
+      },
+      (err) => {
+        console.warn('Error listening to student profile:', err);
+        setStudentProfile(null);
+      }
+    );
+
+    return () => unsub();
+  }, [activeOrgId, currentSchoolId, currentUser, claims]);
+
   // Determine current user's role in this school accurately from authenticated claims and profile
   const currentRole = useMemo<UserRole | null>(() => {
     // 1. Explicit per-school role from token claims
@@ -241,23 +335,25 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (userProfileRole) {
       return userProfileRole as UserRole;
     }
-    // 4. Match preset demo email accounts
-    const email = currentUser?.email?.toLowerCase() || '';
-    if (email.includes('owner@')) return 'orgOwner';
-    if (email.includes('principal@')) return 'principal';
-    if (email.includes('it@')) return 'admin';
-    if (email.includes('exams@') || email.includes('dean@')) return 'deputy';
-    if (email.includes('bursar@') || email.includes('finance@')) return 'bursar';
-    if (email.includes('parent@')) return 'guardian';
-    if (email.includes('student@')) return 'student';
-
-    // 5. If current user is the actual creator/owner of this organization
+    // 4. If current user is the actual creator/owner of this organization
     if (organization?.ownerId && currentUser?.uid && organization.ownerId === currentUser.uid) {
       return 'orgOwner';
     }
-    // 6. Default for educators/members: 'teacher'
+    // 5. Real staff role from database in this school
+    if (databaseStaffRole) {
+      return databaseStaffRole;
+    }
+    // 6. Real student matched in database
+    if (studentProfile) {
+      return 'student';
+    }
+    // 7. Default for educators/members: 'teacher'
     return 'teacher';
-  }, [claims, currentSchoolId, userProfileRole, currentUser?.email, organization?.ownerId, currentUser?.uid]);
+  }, [claims, currentSchoolId, userProfileRole, organization?.ownerId, currentUser?.uid, databaseStaffRole, studentProfile]);
+
+  const isStudent = useMemo(() => {
+    return currentRole === 'student' || (currentRole as string) === 'learner';
+  }, [currentRole]);
 
   // Compute permissions for current role
   const userPermissions = useMemo<Permission[]>(() => {
@@ -319,6 +415,8 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         schools,
         currentSchool,
         currentRole,
+        isStudent,
+        studentProfile,
         userPermissions,
         loading,
         switchSchool,
