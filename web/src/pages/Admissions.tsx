@@ -125,85 +125,8 @@ export const Admissions: React.FC = () => {
         ...(d.data() as Omit<AdmissionApplication, 'id'>),
       }));
 
-      if (list.length === 0) {
-        // Friendly initial sample applications for immediate testing & demonstration
-        const sampleApps: AdmissionApplication[] = [
-          {
-            id: 'app-01',
-            applicationNumber: 'APP-2026-081',
-            applicantFirstName: 'Joshua',
-            applicantLastName: 'Makena',
-            gender: 'male',
-            dateOfBirth: '2016-04-10',
-            targetClass: 'Grade 4',
-            previousSchool: 'St. Marys Primary Academy',
-            examScore: 82,
-            examMaxScore: 100,
-            examNotes: 'Demonstrated outstanding numeracy and oral reading fluency.',
-            guardianName: 'Agnes Makena',
-            guardianPhone: '+254711889900',
-            guardianEmail: 'agnes.makena@gmail.com',
-            guardianRelation: 'Mother',
-            status: 'offered',
-            appliedDate: '2026-01-18',
-          },
-          {
-            id: 'app-02',
-            applicationNumber: 'APP-2026-082',
-            applicantFirstName: 'Precious',
-            applicantLastName: 'Wanjala',
-            gender: 'female',
-            dateOfBirth: '2017-09-22',
-            targetClass: 'Grade 3',
-            previousSchool: 'Greenhills Junior School',
-            examScore: 68,
-            examMaxScore: 100,
-            examNotes: 'Satisfactory baseline assessment. Needs mild phonics support.',
-            guardianName: 'Peter Wanjala',
-            guardianPhone: '+254722334411',
-            guardianEmail: 'p.wanjala@yahoo.com',
-            guardianRelation: 'Father',
-            status: 'entrance_exam',
-            appliedDate: '2026-01-20',
-          },
-          {
-            id: 'app-03',
-            applicationNumber: 'APP-2026-083',
-            applicantFirstName: 'Ethan',
-            applicantLastName: 'Barasa',
-            gender: 'male',
-            dateOfBirth: '2015-11-05',
-            targetClass: 'Grade 5',
-            previousSchool: 'Highland Springs Academy',
-            guardianName: 'Miriam Barasa',
-            guardianPhone: '+254733445522',
-            guardianRelation: 'Mother',
-            status: 'under_review',
-            appliedDate: '2026-01-25',
-          },
-          {
-            id: 'app-04',
-            applicationNumber: 'APP-2026-084',
-            applicantFirstName: 'Grace',
-            applicantLastName: 'Atieno',
-            gender: 'female',
-            dateOfBirth: '2016-02-14',
-            targetClass: 'Grade 4',
-            previousSchool: 'Valley Crest School',
-            examScore: 91,
-            examMaxScore: 100,
-            examNotes: 'Exceeding expectations in CBC creative arts and mathematics.',
-            guardianName: 'David Ochieng',
-            guardianPhone: '+254744556633',
-            guardianRelation: 'Guardian',
-            status: 'enrolled',
-            appliedDate: '2026-01-12',
-          },
-        ];
-        setApplications(sampleApps);
-      } else {
-        setApplications(list);
-      }
+      // Set genuine live Firestore database records
+      setApplications(list);
       setLoading(false);
     });
 

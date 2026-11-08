@@ -44,7 +44,7 @@ export const Timetable: React.FC = () => {
   const [day, setDay] = useState<'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday'>('Monday');
   const [periodNumber, setPeriodNumber] = useState(1);
   const [subjectName, setSubjectName] = useState('Mathematics');
-  const [teacherName, setTeacherName] = useState('Mr. Peter Kamau');
+  const [teacherName, setTeacherName] = useState('');
   const [roomName, setRoomName] = useState('Room 4B');
 
   // Substitution Modal

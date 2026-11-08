@@ -22,12 +22,14 @@ export default defineConfig({
         'logo.png',
       ],
       manifest: {
+        id: 'com.edumo.school',
         name: 'Edumo — School Management',
         short_name: 'Edumo',
         description: 'Smart school management for East African schools',
         theme_color: '#1d5f99',
-        background_color: '#0B0F19',
+        background_color: '#ffffff',
         display: 'standalone',
+        display_override: ['standalone', 'window-controls-overlay'],
         orientation: 'portrait-primary',
         start_url: './',
         scope: './',
@@ -35,6 +37,10 @@ export default defineConfig({
         dir: 'ltr',
         prefer_related_applications: false,
         categories: ['education', 'productivity'],
+        launch_handler: {
+          client_mode: ['navigate-existing', 'auto'],
+        },
+        handle_links: 'preferred',
         icons: [
           {
             src: 'icons/icon-192-v2.png',
@@ -96,7 +102,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        cacheId: 'edumo-v2-1',
+        cacheId: 'edumo-v2-2-live',
         skipWaiting: true,
         clientsClaim: true,
         cleanupOutdatedCaches: true,

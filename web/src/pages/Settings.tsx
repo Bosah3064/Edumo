@@ -3460,7 +3460,7 @@ export const Settings: React.FC = () => {
                 teacherRemarks: 'Active community engagement and high civic awareness.',
               },
             ],
-            teacherComments: 'Emmanuel is an outstanding, disciplined learner who consistently demonstrates academic excellence and cooperative leadership.',
+            teacherComments: 'This learner is an outstanding, disciplined student who consistently demonstrates academic excellence and cooperative leadership.',
             principalComments: 'Excellent performance! Successfully met all CBC competency standards. Recommended for immediate academic advancement.',
             isPromoted: true,
             nextClass: 'Grade 5',
