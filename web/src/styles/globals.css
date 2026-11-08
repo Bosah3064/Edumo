@@ -404,6 +404,30 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+}
+
+html, body, #root {
+  overscroll-behavior-y: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* UI Chrome elements should never trigger text selection or callouts on touch */
+header, nav, aside, button, .ui-chrome, .no-select {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Remove 300ms double-tap zoom delay across all interactive elements */
+a, button, input, select, textarea, [role="button"], nav a {
+  touch-action: manipulation;
+}
+
 @supports (padding: max(0px)) {
   .pb-safe {
     padding-bottom: max(env(safe-area-inset-bottom, 0px), 1rem);
@@ -413,15 +437,26 @@
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   html, body {
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
   }
   
   /* Smooth touch momentum scrolling on mobile */
-  .overflow-x-auto, .overflow-y-auto {
+  .overflow-x-auto, .overflow-y-auto, main {
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+
+  /* Sleek mobile scrollbars */
+  ::-webkit-scrollbar {
+    width: 3px;
+    height: 3px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.4);
+    border-radius: 9999px;
   }
 }
 

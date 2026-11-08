@@ -107,7 +107,10 @@ export const PWAInstallBanner: React.FC = () => {
       {!isDismissed && !showModal && !isStandalone && (
         <aside
           aria-label="Install Edumo application banner"
-          className="fixed bottom-20 left-3 right-3 z-40 p-3 rounded-2xl bg-gradient-to-r from-[#1d5f99] via-[#234c7a] to-[#683669] text-white shadow-2xl border border-white/20 backdrop-blur-xl animate-fade-in flex items-center justify-between gap-2.5 max-w-md mx-auto"
+          className="fixed left-3 right-3 z-40 p-3 rounded-2xl bg-gradient-to-r from-[#1d5f99] via-[#234c7a] to-[#683669] text-white shadow-2xl border border-white/20 backdrop-blur-xl animate-fade-in flex items-center justify-between gap-2.5 max-w-md mx-auto"
+          style={{
+            bottom: 'calc(4.65rem + env(safe-area-inset-bottom, 0px))',
+          }}
         >
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-9 h-9 rounded-xl bg-white/20 border border-white/30 flex items-center justify-center text-white shrink-0 shadow-inner">

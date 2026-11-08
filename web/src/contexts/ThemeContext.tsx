@@ -27,6 +27,12 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       root.classList.add('light');
     }
     localStorage.setItem('edumo_theme', theme);
+
+    // Dynamic mobile system status bar color sync
+    const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+    if (metaThemeColor) {
+      metaThemeColor.setAttribute('content', theme === 'dark' ? '#0f172a' : '#ffffff');
+    }
   }, [theme]);
 
   const toggleTheme = () => {

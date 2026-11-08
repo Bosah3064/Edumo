@@ -10,13 +10,25 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Spinner } from '../ui/Spinner';
 import { usePINLock } from '../../hooks/usePINLock';
 import { PINLockScreen } from '../security/PINLockScreen';
+import { usePWAInstall } from '../../hooks/usePWAInstall';
 
 export const AppShell: React.FC = () => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const { currentSchool } = useTenant();
   const { currentUser, loading } = useAuth();
   const { isLocked, unlock } = usePINLock();
+  const { isStandalone } = usePWAInstall();
   const location = useLocation();
+
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      if (isStandalone) {
+        document.documentElement.classList.add('pwa-standalone');
+      } else {
+        document.documentElement.classList.remove('pwa-standalone');
+      }
+    }
+  }, [isStandalone]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -67,10 +79,10 @@ export const AppShell: React.FC = () => {
       {isMobileSidebarOpen && (
         <div className="fixed inset-0 z-50 lg:hidden flex">
           <div
-            className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs animate-fade-in"
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs animate-fade-in"
             onClick={() => setIsMobileSidebarOpen(false)}
           />
-          <div className="relative z-10 w-64 h-full max-h-[100dvh] flex flex-col animate-slide-in-right overflow-hidden shadow-2xl">
+          <div className="relative z-10 w-72 sm:w-80 max-w-[85vw] h-full max-h-[100dvh] flex flex-col animate-slide-in-right overflow-hidden shadow-2xl">
             <Sidebar onClose={() => setIsMobileSidebarOpen(false)} />
           </div>
         </div>
@@ -81,7 +93,12 @@ export const AppShell: React.FC = () => {
         <OfflineBanner />
         <TopBar onToggleSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)} />
 
-        <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-6 lg:p-8 pb-24 lg:pb-8">
+        <main
+          className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-5 lg:p-8"
+          style={{
+            paddingBottom: 'calc(5.25rem + env(safe-area-inset-bottom, 0px))',
+          }}
+        >
           <Outlet />
         </main>
 

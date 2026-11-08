@@ -244,8 +244,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
       {/* Brand Header — Crisp White Container with Mobile Close Action */}
       <div className="flex flex-col min-h-0 flex-1 overflow-hidden">
         <div
-          className="h-16 px-4 flex items-center justify-between border-b border-slate-200 shadow-2xs shrink-0"
-          style={{ backgroundColor: '#ffffff', color: '#0f172a' }}
+          className="px-4 flex items-center justify-between border-b border-slate-200 shadow-2xs shrink-0"
+          style={{
+            backgroundColor: '#ffffff',
+            color: '#0f172a',
+            paddingTop: 'max(env(safe-area-inset-top, 0px), 0.5rem)',
+            height: 'calc(4rem + env(safe-area-inset-top, 0px))',
+          }}
         >
           {activeLogo ? (
             <NavLink to="/dashboard" className="flex items-center gap-3 min-w-0 flex-1 hover:opacity-90 transition-opacity">
