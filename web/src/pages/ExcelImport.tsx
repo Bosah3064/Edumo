@@ -34,7 +34,7 @@ interface DryRunRow {
 }
 
 export const ExcelImport: React.FC = () => {
-  const { organization, currentSchool } = useTenant();
+  const { organization, currentSchool, currentRole, isAdmin, isStudent } = useTenant();
   const [entityType, setEntityType] = useState<'students' | 'staff'>('students');
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   const [isDryRunComplete, setIsDryRunComplete] = useState(false);
@@ -240,6 +240,28 @@ export const ExcelImport: React.FC = () => {
       toast.error('Failed to rollback the batch', { id: toastId });
     }
   };
+
+  if (!isAdmin) {
+    return (
+      <div className="max-w-3xl mx-auto py-16 px-4 text-center animate-fade-in">
+        <div className="bg-white rounded-3xl p-8 sm:p-10 border border-slate-200/80 shadow-sm max-w-lg mx-auto">
+          <div className="w-16 h-16 bg-emerald-50 text-emerald-700 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-2xs">
+            <FileSpreadsheet className="w-8 h-8" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-900 mb-2">Bulk Spreadsheet Import Restricted</h2>
+          <p className="text-sm text-slate-600 mb-6 leading-relaxed">
+            Direct schema ingestion, batch student uploads, and rollback management are reserved for institutional IT administrators and principals.
+          </p>
+          <a
+            href={isStudent ? '/dashboard' : '/educator-portal'}
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-slate-900 text-white font-semibold text-sm hover:bg-slate-800 shadow-sm transition-all"
+          >
+            {isStudent ? 'Return to Dashboard' : 'Go to Educator Portal'}
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto animate-fade-in pb-12">

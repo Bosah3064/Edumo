@@ -38,6 +38,7 @@ import toast from 'react-hot-toast';
 import { collection, onSnapshot, query, where, doc, getDoc, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import type { Subject } from '@edumo/shared';
+import { isSampleLearner } from '../utils/databaseInitializer';
 
 interface LinkedChild {
   id: string;
@@ -104,7 +105,10 @@ export const ParentPortal: React.FC = () => {
 
       const matchedStudents = snap.docs.filter((d) => {
         const data = d.data();
-        // If not logged in as a parent (e.g. previewing as admin or demo without credentials), show students
+        // Ignore mock / sample learners
+        if (isSampleLearner(data)) return false;
+
+        // If not logged in as a parent (e.g. previewing without credentials), show school students
         if (!userPhone && !userEmail) return true;
 
         // Strict role-based isolation: Match guardian phone or email

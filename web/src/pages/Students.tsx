@@ -67,7 +67,7 @@ interface StudentRecord {
 }
 
 export const Students: React.FC = () => {
-  const { organization, currentSchool, schools, currentRole, isStudent, studentProfile } = useTenant();
+  const { organization, currentSchool, schools, currentRole, isStudent, isAdmin, studentProfile } = useTenant();
   const isStudentUser = isStudent || currentRole === 'student' || (currentRole as string) === 'learner';
 
   const [students, setStudents] = useState<StudentRecord[]>([]);
@@ -118,8 +118,16 @@ export const Students: React.FC = () => {
           ...(d.data() as DocumentData),
         })) as StudentRecord[];
 
+        // Filter out any mock/sample learners so only 100% genuine database records are shown
+        const realList = list.filter((s) => !isSampleLearner(s));
+
+        // Auto-purge any lingering sample records from Firestore in the background
+        if (list.length !== realList.length && organization?.id && currentSchool?.id) {
+          purgeMockSchoolData(db, organization.id, currentSchool.id).catch(() => {});
+        }
+
         // Set real live data
-        setStudents(list);
+        setStudents(realList);
         setLoading(false);
       },
       (err) => {
@@ -280,8 +288,6 @@ export const Students: React.FC = () => {
       setExportingExcel(false);
     }
   };
-
-  const hasSampleLearners = students.some(isSampleLearner);
 
   const handlePurgeSampleData = async () => {
     if (!organization?.id || !currentSchool?.id) return;
@@ -501,7 +507,7 @@ export const Students: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 shrink-0">
-          {totalLearners > 0 && (
+          {isAdmin && totalLearners > 0 && (
             <Button
               variant="outline"
               size="sm"
@@ -522,51 +528,22 @@ export const Students: React.FC = () => {
           >
             Export Excel (.xlsx)
           </Button>
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => {
-              setAdmissionNo(getNextAdmissionNumber(students, getCurrentAdmissionYear()));
-              setIsEnrollModalOpen(true);
-            }}
-            leftIcon={<UserPlus className="w-4 h-4" />}
-            className="shadow-sm font-bold"
-          >
-            Enroll New Learner
-          </Button>
+          {isAdmin && (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => {
+                setAdmissionNo(getNextAdmissionNumber(students, getCurrentAdmissionYear()));
+                setIsEnrollModalOpen(true);
+              }}
+              leftIcon={<UserPlus className="w-4 h-4" />}
+              className="shadow-sm font-bold"
+            >
+              Enroll New Learner
+            </Button>
+          )}
         </div>
       </div>
-
-      {/* Sample demonstration data detection banner with 1-click purge */}
-      {hasSampleLearners && (
-        <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-amber-900 animate-fade-in">
-          <div className="flex items-start gap-3">
-            <div className="p-2 rounded-xl bg-amber-200/80 text-amber-900 shrink-0 mt-0.5">
-              <AlertTriangle className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="font-black text-sm text-amber-950">
-                Sample Demonstration Learners Detected
-              </p>
-              <p className="text-xs text-amber-800 mt-0.5">
-                Demonstration records (e.g. Emmanuel Kiprono, Zawadi Achieng, Faith Muthoni) are detected in this school branch. Click to wipe all mock learners and keep only real school data.
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={handlePurgeSampleData}
-              isLoading={isPurging}
-              leftIcon={<Trash2 className="w-4 h-4" />}
-              className="font-bold whitespace-nowrap shadow-xs"
-            >
-              Wipe Sample Data
-            </Button>
-          </div>
-        </div>
-      )}
 
       {/* Top Colorful Metric Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -798,7 +775,7 @@ export const Students: React.FC = () => {
                           >
                             <Printer className="w-4 h-4" />
                           </button>
-                          {schools.length > 1 && (
+                          {isAdmin && schools.length > 1 && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -820,17 +797,19 @@ export const Students: React.FC = () => {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setStudentToDelete(student);
-                              setIsDeleteModalOpen(true);
-                            }}
-                            className="p-1.5 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                            title="Delete Learner Record"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          {isAdmin && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setStudentToDelete(student);
+                                setIsDeleteModalOpen(true);
+                              }}
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                              title="Delete Learner Record"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

@@ -82,7 +82,8 @@ const LEVEL_COLORS: Record<string, { badge: string; border: string; bg: string }
 };
 
 export const Classes: React.FC = () => {
-  const { organization, currentSchool } = useTenant();
+  const { organization, currentSchool, currentRole, isStudent, isAdmin, studentProfile } = useTenant();
+  const isStudentUser = isStudent || currentRole === 'student' || (currentRole as string) === 'learner';
 
   // Active view tab: 'classes' | 'units'
   const [activeTab, setActiveTab] = useState<'classes' | 'units'>('classes');
@@ -1009,8 +1010,187 @@ export const Classes: React.FC = () => {
 
   const departments = Array.from(new Set(subjects.map((s) => s.department).filter(Boolean))) as string[];
 
+  // Student specific calculations for personalized curriculum dashboard
+  const studentClass = studentProfile?.currentClassId || 'Grade 4';
+  const studentStream = studentProfile?.currentStreamId || 'East';
+  const enrolledClassItem = classes.find(
+    (c) =>
+      c.name.toLowerCase() === studentClass.toLowerCase() ||
+      c.id === studentClass ||
+      c.name.toLowerCase().replace(/[^a-z0-9]/g, '') === studentClass.toLowerCase().replace(/[^a-z0-9]/g, '')
+  );
+  const enrolledStreamItem = enrolledClassItem?.streamDetails?.find(
+    (s) => s.name.toLowerCase() === studentStream.toLowerCase()
+  );
+  const studentClassTeacher = enrolledStreamItem?.classTeacher || enrolledClassItem?.classTeacher || 'Assigned Class Teacher';
+  const enrolledClassmatesCount = enrolledStreamItem?.enrolled || enrolledClassItem?.enrolled || 0;
+
+  const studentUnits = subjects.filter((s) => {
+    if (!s.applicableClasses || s.applicableClasses.length === 0 || s.applicableClasses.includes('all')) {
+      return true;
+    }
+    return s.applicableClasses.some(
+      (c) =>
+        c.toLowerCase() === studentClass.toLowerCase() ||
+        c.toLowerCase().replace(/[^a-z0-9]/g, '') === studentClass.toLowerCase().replace(/[^a-z0-9]/g, '')
+    );
+  });
+
+  const studentCoreUnitsCount = studentUnits.filter((u) => u.isMandatory !== false).length;
+  const studentElectiveUnitsCount = studentUnits.filter((u) => u.isMandatory === false).length;
+  const studentWeeklyPeriods = studentUnits.reduce((acc, u) => acc + (u.weeklyPeriods || 4), 0);
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto animate-fade-in pb-12">
+      {isStudentUser ? (
+        <div className="space-y-6 animate-fade-in">
+          {/* Hero Banner */}
+          <div className="rounded-3xl bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-800 p-6 text-white shadow-xl">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+              <div className="flex items-center gap-5">
+                <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center font-black text-2xl text-white shadow-inner border border-white/20">
+                  <GraduationCap className="w-8 h-8" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <h2 className="text-xl sm:text-2xl font-black">
+                      {studentProfile?.fullName || 'My Academic Class & Learning Areas'}
+                    </h2>
+                    <span className="px-3 py-0.5 rounded-full text-xs font-bold bg-white/20 text-white border border-white/30 backdrop-blur-xs">
+                      {studentClass} • Stream {studentStream}
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-full text-2xs font-extrabold bg-emerald-400/20 text-emerald-200 border border-emerald-400/30">
+                      Active Enrolment
+                    </span>
+                  </div>
+                  <p className="text-xs text-blue-100 mt-1 font-medium">
+                    Admission No: <strong className="font-mono text-white">{studentProfile?.admissionNumber || 'ADM-000'}</strong>
+                    {' • '}
+                    Class Teacher: <strong className="text-white">{studentClassTeacher}</strong>
+                    {' • '}
+                    {currentSchool?.name || 'Main Campus'} • {currentSchool?.curriculumType || 'CBC Curriculum'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 4 Student KPI Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="p-5 rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-700 text-white shadow-md">
+              <span className="text-2xs font-extrabold uppercase tracking-wider text-blue-100 block">Class Cohort</span>
+              <p className="text-2xl font-black mt-1">{studentClass} - {studentStream}</p>
+              <p className="text-xs text-blue-100 mt-0.5 font-medium">{enrolledClassmatesCount} Peers in Stream</p>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-600 via-teal-600 to-emerald-700 text-white shadow-md">
+              <span className="text-2xs font-extrabold uppercase tracking-wider text-emerald-100 block">Curriculum Areas</span>
+              <p className="text-2xl font-black mt-1">{studentUnits.length} Units</p>
+              <p className="text-xs text-emerald-100 mt-0.5 font-medium">{studentCoreUnitsCount} Core • {studentElectiveUnitsCount} Elective</p>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 text-white shadow-md">
+              <span className="text-2xs font-extrabold uppercase tracking-wider text-purple-100 block">Weekly Periods</span>
+              <p className="text-2xl font-black mt-1">{studentWeeklyPeriods} Periods</p>
+              <p className="text-xs text-purple-100 mt-0.5 font-medium">Scheduled Across 5 Days</p>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-500 via-orange-500 to-amber-600 text-white shadow-md">
+              <span className="text-2xs font-extrabold uppercase tracking-wider text-amber-100 block">Academic Curriculum</span>
+              <p className="text-2xl font-black mt-1">{currentSchool?.curriculumType || 'CBC'}</p>
+              <p className="text-xs text-amber-100 mt-0.5 font-medium">Competency-Based Standard</p>
+            </div>
+          </div>
+
+          {/* Student Learning Areas Section */}
+          <Card className="p-6 border border-slate-200 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  Enrolled Learning Areas &amp; Instructors
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Subjects and practical learning areas scheduled for {studentClass}
+                </p>
+              </div>
+              <div className="w-full sm:w-64">
+                <Input
+                  placeholder="Search subjects or teachers..."
+                  value={unitSearch}
+                  onChange={(e) => setUnitSearch(e.target.value)}
+                  leftIcon={<Search className="w-4 h-4 text-slate-400" />}
+                  className="text-xs"
+                />
+              </div>
+            </div>
+
+            {studentUnits.length === 0 ? (
+              <div className="p-12 text-center text-slate-500 space-y-2">
+                <BookOpen className="w-12 h-12 mx-auto text-slate-300" />
+                <p className="font-bold text-slate-700 text-sm">No Curriculum Units Assigned Yet</p>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                  Learning areas for {studentClass} will be assigned by your department educators.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {studentUnits
+                  .filter((u) => {
+                    const q = unitSearch.toLowerCase().trim();
+                    return (
+                      !q ||
+                      u.name.toLowerCase().includes(q) ||
+                      (u.code || '').toLowerCase().includes(q) ||
+                      (u.teacherName || '').toLowerCase().includes(q) ||
+                      (u.department || '').toLowerCase().includes(q)
+                    );
+                  })
+                  .map((sub) => (
+                    <div
+                      key={sub.id}
+                      className="p-4 rounded-2xl border border-slate-200 bg-white hover:border-blue-300 hover:shadow-xs transition-all space-y-3 flex flex-col justify-between"
+                    >
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-mono text-2xs font-extrabold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-100">
+                            {sub.code || 'UNIT'}
+                          </span>
+                          <span
+                            className={`text-2xs font-extrabold px-2.5 py-0.5 rounded-full ${
+                              sub.isMandatory !== false
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : 'bg-purple-50 text-purple-700 border border-purple-200'
+                            }`}
+                          >
+                            {sub.isMandatory !== false ? 'Core Unit' : 'Elective'}
+                          </span>
+                        </div>
+
+                        <div>
+                          <h4 className="font-bold text-slate-900 text-sm">{sub.name}</h4>
+                          <span className="text-2xs text-slate-500 font-medium block mt-0.5">
+                            {sub.department || 'General Learning Area'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-2xs text-slate-600">
+                        <span className="flex items-center gap-1 font-medium">
+                          <Users className="w-3.5 h-3.5 text-slate-400" />
+                          {sub.teacherName || 'Assigned Instructor'}
+                        </span>
+                        <span className="font-bold text-slate-700">
+                          {sub.weeklyPeriods || 4} periods/wk
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </Card>
+        </div>
+      ) : (
+        <>
       {/* Top Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white/70 backdrop-blur-xs p-5 rounded-2xl border border-slate-200/80 shadow-2xs">
         <div className="min-w-0 flex-1">
@@ -1031,7 +1211,7 @@ export const Classes: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-          {classes.length === 0 && (
+          {classes.length === 0 && isAdmin && (
             <Button
               variant="secondary"
               size="sm"
@@ -1044,27 +1224,31 @@ export const Classes: React.FC = () => {
           )}
 
           {activeTab === 'classes' ? (
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => setIsAddClassModalOpen(true)}
-              leftIcon={<Plus className="w-4 h-4" />}
-              className="shadow-sm font-bold"
-            >
-              Add New Class
-            </Button>
+            isAdmin && (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setIsAddClassModalOpen(true)}
+                leftIcon={<Plus className="w-4 h-4" />}
+                className="shadow-sm font-bold"
+              >
+                Add New Class
+              </Button>
+            )
           ) : (
             <div className="flex items-center gap-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={handleSeedStandardUnits}
-                isLoading={seedingCurriculum}
-                leftIcon={<Sparkles className="w-4 h-4 text-brand-600" />}
-                className="font-bold"
-              >
-                Load Standard Units
-              </Button>
+              {isAdmin && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleSeedStandardUnits}
+                  isLoading={seedingCurriculum}
+                  leftIcon={<Sparkles className="w-4 h-4 text-brand-600" />}
+                  className="font-bold"
+                >
+                  Load Standard Units
+                </Button>
+              )}
               <Button
                 variant="primary"
                 size="sm"
@@ -1296,22 +1480,24 @@ export const Classes: React.FC = () => {
                         </div>
 
                         {/* Top quick actions */}
-                        <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={() => handleOpenEditClass(cls)}
-                            className="p-1 rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                            title="Edit Class Information"
-                          >
-                            <Pencil className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteClass(cls)}
-                            className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                            title="Delete Class"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                        {isAdmin && (
+                          <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => handleOpenEditClass(cls)}
+                              className="p-1 rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                              title="Edit Class Information"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteClass(cls)}
+                              className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                              title="Delete Class"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )}
                       </div>
 
                       {/* Stream Breakdown Section */}
@@ -1321,12 +1507,14 @@ export const Classes: React.FC = () => {
                             <FolderTree className="w-3 h-3 text-[#1d5f99]" />
                             Streams ({cls.streams.length})
                           </span>
-                          <button
-                            onClick={() => handleOpenManageStreams(cls)}
-                            className="text-[10.5px] font-bold text-[#1d5f99] hover:underline flex items-center gap-0.5"
-                          >
-                            Manage Streams <ChevronRight className="w-3 h-3" />
-                          </button>
+                          {isAdmin && (
+                            <button
+                              onClick={() => handleOpenManageStreams(cls)}
+                              className="text-[10.5px] font-bold text-[#1d5f99] hover:underline flex items-center gap-0.5"
+                            >
+                              Manage Streams <ChevronRight className="w-3 h-3" />
+                            </button>
+                          )}
                         </div>
 
                         {/* Stream pills with real data */}
@@ -1631,13 +1819,15 @@ export const Classes: React.FC = () => {
                       >
                         <Pencil className="w-3.5 h-3.5" />
                       </button>
-                      <button
-                        onClick={() => handleDeleteUnit(sub)}
-                        className="p-1.5 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                        title="Delete unit"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      {isAdmin && (
+                        <button
+                          onClick={() => handleDeleteUnit(sub)}
+                          className="p-1.5 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                          title="Delete unit"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 </Card>
@@ -1645,6 +1835,8 @@ export const Classes: React.FC = () => {
             </div>
           )}
         </div>
+      )}
+        </>
       )}
 
       {/* ============================================================ */}

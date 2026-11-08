@@ -86,8 +86,13 @@ interface LearnerMarkRow {
 
 export const Academics: React.FC = () => {
   const navigate = useNavigate();
-  const { organization, currentSchool, currentRole, isStudent, studentProfile } = useTenant();
+  const { organization, currentSchool, currentRole, isStudent, isAdmin, studentProfile } = useTenant();
   const isStudentUser = isStudent || currentRole === 'student' || (currentRole as string) === 'learner';
+  const canManageSeriesAndPromotions =
+    isAdmin ||
+    (currentRole as string) === 'exam_officer' ||
+    (currentRole as string) === 'exams' ||
+    currentRole === 'deputy';
   const { currentUser } = useAuth();
   const { isOnline, queueOfflineAction } = useOffline();
 
@@ -907,7 +912,7 @@ export const Academics: React.FC = () => {
                   </Button>
                 )}
 
-                {activeTab === 'series' && (
+                {activeTab === 'series' && canManageSeriesAndPromotions && (
                   <Button
                     variant="primary"
                     size="sm"
@@ -1189,17 +1194,19 @@ export const Academics: React.FC = () => {
           Learner Trajectory &amp; Multi-Term
         </button>
 
-        <button
-          onClick={() => setActiveTab('promotion')}
-          className={`pb-3 px-4 text-xs font-bold transition flex items-center gap-2 border-b-2 whitespace-nowrap ${
-            activeTab === 'promotion'
-              ? 'border-emerald-600 text-emerald-600 font-extrabold'
-              : 'border-transparent text-gray-500 hover:text-gray-900'
-          }`}
-        >
-          <Award className="w-4 h-4 text-emerald-600" />
-          End-of-Year Promotion ({promotionsList.filter((p) => p.status === 'promoted').length} Eligible)
-        </button>
+        {canManageSeriesAndPromotions && (
+          <button
+            onClick={() => setActiveTab('promotion')}
+            className={`pb-3 px-4 text-xs font-bold transition flex items-center gap-2 border-b-2 whitespace-nowrap ${
+              activeTab === 'promotion'
+                ? 'border-emerald-600 text-emerald-600 font-extrabold'
+                : 'border-transparent text-gray-500 hover:text-gray-900'
+            }`}
+          >
+            <Award className="w-4 h-4 text-emerald-600" />
+            End-of-Year Promotion ({promotionsList.filter((p) => p.status === 'promoted').length} Eligible)
+          </button>
+        )}
       </div>
 
       {/* Global Interactive Filter Bar (Used Across All Analytics Views) */}

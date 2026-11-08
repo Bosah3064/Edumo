@@ -6,7 +6,7 @@ import './i18n';
 import { registerSW } from 'virtual:pwa-register';
 
 // Versioned PWA cache migration & auto-refresh
-const APP_VERSION = '2.2.0';
+const APP_VERSION = '2.3.0';
 
 if (typeof window !== 'undefined') {
   try {

@@ -93,10 +93,16 @@ export interface BroadcastRecord {
 }
 
 export const Messaging: React.FC = () => {
-  const { organization, currentSchool } = useTenant();
+  const { organization, currentSchool, currentRole, isStudent, isGuardian, isAdmin } = useTenant();
+  const isStudentUser = isStudent || currentRole === 'student' || (currentRole as string) === 'learner';
+  const isGuardianUser = isGuardian || currentRole === 'guardian' || (currentRole as string) === 'parent';
+  const canSendBroadcast = isAdmin || currentRole === 'teacher';
+  const canCreateSlip = isAdmin || currentRole === 'teacher';
   const { currentUser } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<'messages' | 'broadcast' | 'slips'>('messages');
+  const [activeTab, setActiveTab] = useState<'messages' | 'broadcast' | 'slips'>(() => {
+    return isStudentUser ? 'broadcast' : 'messages';
+  });
   const [mobileView, setMobileView] = useState<'threads' | 'chat'>('threads');
 
   // Threads & Active Chat
@@ -481,32 +487,40 @@ export const Messaging: React.FC = () => {
             Messaging &amp; Parent Broadcasts
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1 font-medium">
-            Two-way guardian communication with office hours policy, SMS emergency campaigns, and digital consent slips.
+            {isStudentUser
+              ? 'Institutional circulars, teacher updates, and school excursion permission forms'
+              : 'Two-way guardian communication with office hours policy, SMS emergency campaigns, and digital consent slips.'}
           </p>
         </div>
 
         {/* Global Action Buttons */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setIsSlipModalOpen(true)}
-            leftIcon={<FileCheck2 className="w-4 h-4 text-purple-600" />}
-            className="text-xs font-bold"
-          >
-            Create Permission Slip
-          </Button>
+        {!isStudentUser && !isGuardianUser && (
+          <div className="flex items-center gap-2 flex-wrap">
+            {canCreateSlip && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setIsSlipModalOpen(true)}
+                leftIcon={<FileCheck2 className="w-4 h-4 text-purple-600" />}
+                className="text-xs font-bold"
+              >
+                Create Permission Slip
+              </Button>
+            )}
 
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => setIsNewBroadcastModalOpen(true)}
-            leftIcon={<Radio className="w-4 h-4 text-white" />}
-            className="text-xs font-bold bg-[#1d5f99] hover:bg-[#164a78]"
-          >
-            Dispatch SMS Broadcast
-          </Button>
-        </div>
+            {canSendBroadcast && (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setIsNewBroadcastModalOpen(true)}
+                leftIcon={<Radio className="w-4 h-4 text-white" />}
+                className="text-xs font-bold bg-[#1d5f99] hover:bg-[#164a78]"
+              >
+                Dispatch SMS Broadcast
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Office Hours & SMS Credits Banner */}
@@ -525,30 +539,34 @@ export const Messaging: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
-          <div className="px-3 py-1.5 rounded-xl bg-white border border-blue-200 shadow-2xs text-blue-900 font-mono text-xs font-bold flex items-center gap-1.5">
-            <Radio className="w-3.5 h-3.5 text-emerald-600" />
-            <span>{smsCredits.toLocaleString()} SMS Credits</span>
+        {!isStudentUser && !isGuardianUser && (
+          <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+            <div className="px-3 py-1.5 rounded-xl bg-white border border-blue-200 shadow-2xs text-blue-900 font-mono text-xs font-bold flex items-center gap-1.5">
+              <Radio className="w-3.5 h-3.5 text-emerald-600" />
+              <span>{smsCredits.toLocaleString()} SMS Credits</span>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* High-Level Navigation Tabs */}
       <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-2xl border border-slate-200 text-xs font-bold overflow-x-auto scrollbar-none">
-        <button
-          onClick={() => {
-            setActiveTab('messages');
-            setMobileView('threads');
-          }}
-          className={`py-2 px-3.5 rounded-xl transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-            activeTab === 'messages'
-              ? 'bg-white text-[#1d5f99] shadow-xs border border-slate-200'
-              : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <MessageSquare className="w-4 h-4" />
-          <span>Guardian Chats ({threads.length})</span>
-        </button>
+        {!isStudentUser && (
+          <button
+            onClick={() => {
+              setActiveTab('messages');
+              setMobileView('threads');
+            }}
+            className={`py-2 px-3.5 rounded-xl transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+              activeTab === 'messages'
+                ? 'bg-white text-[#1d5f99] shadow-xs border border-slate-200'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <MessageSquare className="w-4 h-4" />
+            <span>Guardian Chats ({threads.length})</span>
+          </button>
+        )}
 
         <button
           onClick={() => setActiveTab('broadcast')}
@@ -559,7 +577,7 @@ export const Messaging: React.FC = () => {
           }`}
         >
           <Radio className="w-4 h-4" />
-          <span>SMS Broadcasts ({broadcastRecords.length})</span>
+          <span>{isStudentUser ? 'School Notices & Circulars' : 'SMS Broadcasts'} ({broadcastRecords.length})</span>
         </button>
 
         <button
@@ -571,7 +589,7 @@ export const Messaging: React.FC = () => {
           }`}
         >
           <FileCheck2 className="w-4 h-4" />
-          <span>Permission Slips ({slips.length})</span>
+          <span>{isStudentUser ? 'Excursion Slips' : 'Permission Slips'} ({slips.length})</span>
         </button>
       </div>
 

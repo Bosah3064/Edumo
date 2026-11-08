@@ -76,7 +76,7 @@ interface StudentOption {
 }
 
 export const Library: React.FC = () => {
-  const { organization, currentSchool, currentRole, isStudent, studentProfile } = useTenant();
+  const { organization, currentSchool, currentRole, isStudent, isAdmin, studentProfile } = useTenant();
   const { currentUser } = useAuth();
 
   const isStudentUser = isStudent || currentRole === 'student' || (currentRole as string) === 'learner';
@@ -126,6 +126,10 @@ export const Library: React.FC = () => {
   const [isWipeAllBooksModalOpen, setIsWipeAllBooksModalOpen] = useState(false);
   const [isWipingAllBooks, setIsWipingAllBooks] = useState(false);
 
+  // Student Book Loan Request Modal
+  const [requestBookModalBook, setRequestBookModalBook] = useState<BookItem | null>(null);
+  const [requestingBook, setRequestingBook] = useState(false);
+
   // 1. Listen to real library books in Firestore
   useEffect(() => {
     if (!organization || !currentSchool) return;
@@ -159,7 +163,12 @@ export const Library: React.FC = () => {
           };
         });
 
-        setBooks(list);
+        const realList = list.filter((b) => !isSampleBook(b));
+        if (list.length !== realList.length && organization?.id && currentSchool?.id) {
+          purgeMockSchoolData(db, organization.id, currentSchool.id).catch(() => {});
+        }
+
+        setBooks(realList);
         setLoadingBooks(false);
       },
       (err) => {
@@ -207,7 +216,10 @@ export const Library: React.FC = () => {
           };
         });
 
-        setLoans(list);
+        const realLoans = list.filter(
+          (l) => !isSampleBook({ id: l.bookId, title: l.bookTitle })
+        );
+        setLoans(realLoans);
         setLoadingLoans(false);
       },
       (err) => {
@@ -437,8 +449,6 @@ export const Library: React.FC = () => {
     }
   };
 
-  const hasSampleBooks = books.some(isSampleBook);
-
   const handlePurgeSampleBooks = async () => {
     if (!organization?.id || !currentSchool?.id) return;
     setIsPurging(true);
@@ -491,6 +501,67 @@ export const Library: React.FC = () => {
       toast.error('Failed to wipe books', { id: toastId });
     } finally {
       setIsWipingAllBooks(false);
+    }
+  };
+
+  const handleStudentBorrowBook = async () => {
+    if (!organization?.id || !currentSchool?.id || !requestBookModalBook) return;
+    setRequestingBook(true);
+    const toastId = toast.loading(`Borrowing "${requestBookModalBook.title}"...`);
+    try {
+      const loanId = `LN-${Date.now().toString().slice(-6)}`;
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + 14);
+      const dueDateStr = dueDate.toISOString().split('T')[0];
+      const todayStr = new Date().toISOString().split('T')[0];
+
+      const loanDocRef = doc(
+        db,
+        'organizations',
+        organization.id,
+        'schools',
+        currentSchool.id,
+        'library_loans',
+        loanId
+      );
+
+      await setDoc(loanDocRef, {
+        id: loanId,
+        bookId: requestBookModalBook.id,
+        bookTitle: requestBookModalBook.title,
+        studentId: studentProfile?.id || currentUser?.uid || 'learner',
+        studentName: studentProfile?.fullName || currentUser?.displayName || 'Learner',
+        admissionNo: studentProfile?.admissionNumber || 'ADM-000',
+        className: studentProfile?.currentClassId || 'Grade 4',
+        borrowedDate: todayStr,
+        dueDate: dueDateStr,
+        status: 'active',
+        createdAt: serverTimestamp(),
+      });
+
+      // Decrement available copies on book
+      const bookDocRef = doc(
+        db,
+        'organizations',
+        organization.id,
+        'schools',
+        currentSchool.id,
+        'library_books',
+        requestBookModalBook.id
+      );
+      await updateDoc(bookDocRef, {
+        availableCopies: Math.max(0, requestBookModalBook.availableCopies - 1),
+        updatedAt: serverTimestamp(),
+      });
+
+      toast.success(`You have borrowed "${requestBookModalBook.title}". Due date: ${dueDateStr}`, { id: toastId });
+      setRequestBookModalBook(null);
+      setActiveTab('loans');
+    } catch (err: any) {
+      console.error('Error borrowing book:', err);
+      toast.error(err?.message || 'Failed to borrow book', { id: toastId });
+    } finally {
+      setRequestingBook(false);
     }
   };
 
@@ -595,37 +666,6 @@ export const Library: React.FC = () => {
         )}
       </div>
 
-      {/* Sample demonstration books detection banner with 1-click purge */}
-      {hasSampleBooks && !isStudentUser && (
-        <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-amber-900 animate-fade-in">
-          <div className="flex items-start gap-3">
-            <div className="p-2 rounded-xl bg-amber-200/80 text-amber-900 shrink-0 mt-0.5">
-              <AlertTriangle className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="font-black text-sm text-amber-950">
-                Sample Demonstration Library Books Detected
-              </p>
-              <p className="text-xs text-amber-800 mt-0.5">
-                Demonstration volumes (e.g. Things Fall Apart, The River and the Source) are in this school database. Click to wipe all sample library data.
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={handlePurgeSampleBooks}
-              isLoading={isPurging}
-              leftIcon={<Trash2 className="w-4 h-4" />}
-              className="font-bold whitespace-nowrap shadow-xs"
-            >
-              Wipe Sample Books
-            </Button>
-          </div>
-        </div>
-      )}
-
       {/* TOP 4 VIBRANT GRADIENT METRIC CARDS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Total Volumes */}
@@ -668,16 +708,18 @@ export const Library: React.FC = () => {
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 p-5 text-white shadow-md">
           <div className="flex items-center justify-between">
             <span className="text-2xs font-extrabold uppercase tracking-wider text-purple-100">
-              Active Student Loans
+              {isStudentUser ? 'My Active Borrowed Books' : 'Active Student Loans'}
             </span>
             <div className="p-2 rounded-xl bg-white/15 backdrop-blur-xs">
               <Users className="w-5 h-5 text-white" />
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-3xl font-black tracking-tight">{activeLoansCount}</div>
+            <div className="text-3xl font-black tracking-tight">
+              {isStudentUser ? filteredLoans.filter((l) => l.status === 'active').length : activeLoansCount}
+            </div>
             <p className="text-xs text-purple-100 mt-1 font-medium">
-              Currently in learners' hands
+              {isStudentUser ? 'Currently with you' : 'Currently in learners\' hands'}
             </p>
           </div>
         </div>
@@ -686,16 +728,24 @@ export const Library: React.FC = () => {
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-rose-500 via-pink-600 to-rose-700 p-5 text-white shadow-md">
           <div className="flex items-center justify-between">
             <span className="text-2xs font-extrabold uppercase tracking-wider text-rose-100">
-              Overdue Returns
+              {isStudentUser ? 'My Overdue Books' : 'Overdue Returns'}
             </span>
             <div className="p-2 rounded-xl bg-white/15 backdrop-blur-xs">
               <AlertTriangle className="w-5 h-5 text-white" />
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-3xl font-black tracking-tight">{overdueLoansCount}</div>
+            <div className="text-3xl font-black tracking-tight">
+              {isStudentUser ? filteredLoans.filter((l) => l.status === 'overdue').length : overdueLoansCount}
+            </div>
             <p className="text-xs text-rose-100 mt-1 font-medium">
-              {overdueLoansCount === 0 ? 'All book loans in good standing' : 'Past due loan notices required'}
+              {isStudentUser
+                ? filteredLoans.filter((l) => l.status === 'overdue').length === 0
+                  ? 'All borrowed books in good standing'
+                  : 'Past due: Please return to library'
+                : overdueLoansCount === 0
+                ? 'All book loans in good standing'
+                : 'Past due loan notices required'}
             </p>
           </div>
         </div>
@@ -833,7 +883,24 @@ export const Library: React.FC = () => {
                         {book.totalCopies - book.availableCopies} currently loaned out
                       </span>
                       <div className="flex items-center gap-1.5">
-                        {!isStudentUser && (
+                        {isStudentUser ? (
+                          book.availableCopies > 0 ? (
+                            <Button
+                              type="button"
+                              variant="primary"
+                              size="sm"
+                              onClick={() => setRequestBookModalBook(book)}
+                              className="text-2xs py-1 h-7 font-bold shadow-xs bg-[#1d5f99] hover:bg-[#164a78]"
+                              leftIcon={<BookOpen className="w-3.5 h-3.5" />}
+                            >
+                              Apply to Borrow
+                            </Button>
+                          ) : (
+                            <span className="px-2 py-1 rounded-md text-2xs font-semibold bg-slate-100 text-slate-500">
+                              All Copies Borrowed
+                            </span>
+                          )
+                        ) : (
                           <>
                             <Button
                               type="button"
@@ -848,17 +915,19 @@ export const Library: React.FC = () => {
                             >
                               Issue Copy
                             </Button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setBookToDelete(book);
-                                setIsDeleteBookModalOpen(true);
-                              }}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                              title="Delete Book from Catalog"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            {isAdmin && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setBookToDelete(book);
+                                  setIsDeleteBookModalOpen(true);
+                                }}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                                title="Delete Book from Catalog"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
                           </>
                         )}
                       </div>
@@ -984,7 +1053,7 @@ export const Library: React.FC = () => {
                         )}
                       </td>
                       <td className="py-3 px-4 text-right">
-                        {!isStudentUser && loan.status !== 'returned' && (
+                        {loan.status !== 'returned' && (
                           <Button
                             type="button"
                             variant="secondary"
@@ -993,7 +1062,7 @@ export const Library: React.FC = () => {
                             leftIcon={<Check className="w-3.5 h-3.5 text-emerald-600" />}
                             className="text-2xs py-1 h-7 font-bold border-emerald-200 text-emerald-800 hover:bg-emerald-50"
                           >
-                            Mark Returned
+                            {isStudentUser ? 'Return Book' : 'Mark Returned'}
                           </Button>
                         )}
                       </td>
@@ -1234,6 +1303,73 @@ export const Library: React.FC = () => {
             </Button>
           </div>
         </div>
+      </Modal>
+      {/* Modal: Student Apply to Borrow Book */}
+      <Modal
+        isOpen={Boolean(requestBookModalBook)}
+        onClose={() => setRequestBookModalBook(null)}
+        title="Apply to Borrow Book"
+        maxWidth="md"
+      >
+        {requestBookModalBook && (
+          <div className="space-y-4 text-xs pt-1">
+            <div className="p-4 rounded-xl bg-blue-50/80 border border-blue-200 space-y-2">
+              <div className="flex items-start gap-3">
+                <div className="p-2.5 rounded-xl bg-blue-600 text-white shrink-0">
+                  <BookOpen className="w-5 h-5" />
+                </div>
+                <div className="space-y-0.5">
+                  <h4 className="font-black text-sm text-slate-900">{requestBookModalBook.title}</h4>
+                  <p className="text-xs text-slate-700 font-medium">Author: {requestBookModalBook.author}</p>
+                  <p className="text-2xs text-slate-500 font-mono">
+                    Category: {requestBookModalBook.category} • Shelf: {requestBookModalBook.shelfLocation || 'Main Stack'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2 text-2xs text-slate-600 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+              <div className="flex justify-between py-1 border-b border-slate-200/60">
+                <span className="font-semibold text-slate-500">Learner Name:</span>
+                <span className="font-bold text-slate-900">{studentProfile?.fullName || currentUser?.displayName || 'Learner'}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-slate-200/60">
+                <span className="font-semibold text-slate-500">Admission No:</span>
+                <span className="font-mono font-bold text-slate-900">{studentProfile?.admissionNumber || 'ADM-000'}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-slate-200/60">
+                <span className="font-semibold text-slate-500">Loan Duration:</span>
+                <span className="font-bold text-emerald-700">14 Days (Standard School Term Loan)</span>
+              </div>
+              <div className="flex justify-between py-1">
+                <span className="font-semibold text-slate-500">Due Date:</span>
+                <span className="font-bold text-slate-900">
+                  {new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2.5 pt-2 border-t border-slate-100">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setRequestBookModalBook(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleStudentBorrowBook}
+                isLoading={requestingBook}
+                leftIcon={<Check className="w-4 h-4" />}
+                className="bg-[#1d5f99] hover:bg-[#164a78] font-bold"
+              >
+                Confirm &amp; Borrow Book
+              </Button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

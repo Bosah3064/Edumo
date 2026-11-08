@@ -13,9 +13,9 @@ import { Building2, Plus, Phone, MapPin, CheckCircle2, BarChart3, Users, Trendin
 import toast from 'react-hot-toast';
 
 export const Branches: React.FC = () => {
-  const { organization, schools, currentSchool, switchSchool, hasPermission, currentRole } = useTenant();
+  const { organization, schools, currentSchool, switchSchool, hasPermission, currentRole, isAdmin } = useTenant();
 
-  if (currentRole === 'teacher') {
+  if (!isAdmin) {
     return (
       <div className="max-w-3xl mx-auto py-16 px-4 text-center animate-fade-in">
         <div className="bg-white rounded-3xl p-8 sm:p-10 border border-slate-200/80 shadow-sm max-w-lg mx-auto">

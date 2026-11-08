@@ -86,7 +86,7 @@ interface StudentOption {
 }
 
 export const Hostels: React.FC = () => {
-  const { organization, currentSchool, currentRole, isStudent, studentProfile } = useTenant();
+  const { organization, currentSchool, currentRole, isStudent, isAdmin, studentProfile } = useTenant();
   const { currentUser } = useAuth();
 
   const isStudentUser = isStudent || currentRole === 'student' || (currentRole as string) === 'learner';
@@ -182,7 +182,12 @@ export const Hostels: React.FC = () => {
           };
         });
 
-        setDorms(list);
+        const realList = list.filter((d) => !isSampleHostel(d));
+        if (list.length !== realList.length && organization?.id && currentSchool?.id) {
+          purgeMockSchoolData(db, organization.id, currentSchool.id).catch(() => {});
+        }
+
+        setDorms(realList);
         setLoadingDorms(false);
       },
       (err) => {
@@ -228,7 +233,10 @@ export const Hostels: React.FC = () => {
           };
         });
 
-        setAllocations(list);
+        const realAllocations = list.filter(
+          (a) => !isSampleHostel({ id: a.dormId, name: a.dormName })
+        );
+        setAllocations(realAllocations);
         setLoadingAllocations(false);
       },
       (err) => {
@@ -525,8 +533,6 @@ export const Hostels: React.FC = () => {
     }
   };
 
-  const hasSampleDorms = dorms.some(isSampleHostel);
-
   const handlePurgeSampleDorms = async () => {
     if (!organization?.id || !currentSchool?.id) return;
     setIsPurging(true);
@@ -638,7 +644,7 @@ export const Hostels: React.FC = () => {
 
         {!isStudentUser && (
           <div className="flex items-center gap-2.5">
-            {dorms.length > 0 && (
+            {isAdmin && dorms.length > 0 && (
               <Button
                 variant="outline"
                 size="sm"
@@ -670,37 +676,6 @@ export const Hostels: React.FC = () => {
           </div>
         )}
       </div>
-
-      {/* Sample demonstration dorms detection banner with 1-click purge */}
-      {hasSampleDorms && !isStudentUser && (
-        <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-amber-900 animate-fade-in">
-          <div className="flex items-start gap-3">
-            <div className="p-2 rounded-xl bg-amber-200/80 text-amber-900 shrink-0 mt-0.5">
-              <AlertTriangle className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="font-black text-sm text-amber-950">
-                Sample Demonstration Dormitories Detected
-              </p>
-              <p className="text-xs text-amber-800 mt-0.5">
-                Demonstration dorms (e.g. Kilimanjaro House, Serengeti House) are detected in this school branch. Click to wipe all sample boarding records.
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={handlePurgeSampleDorms}
-              isLoading={isPurging}
-              leftIcon={<Trash2 className="w-4 h-4" />}
-              className="font-bold whitespace-nowrap shadow-xs"
-            >
-              Wipe Sample Dorms
-            </Button>
-          </div>
-        </div>
-      )}
 
       {/* Student View: My Boarding Allocation */}
       {isStudentUser ? (

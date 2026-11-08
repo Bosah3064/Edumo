@@ -30,12 +30,15 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import { TeacherTaskTracker } from '../components/dashboard/TeacherTaskTracker';
+import { isSampleLearner } from '../utils/databaseInitializer';
 
 export const Dashboard: React.FC = () => {
   const { t } = useTranslation();
   const { currentUser } = useAuth();
-  const { organization, currentSchool, schools, currentRole, isStudent, studentProfile } = useTenant();
+  const { organization, currentSchool, schools, currentRole, isStudent, isAdmin, isTeacher, isBursar, studentProfile } = useTenant();
   const isStudentUser = isStudent || currentRole === 'student' || (currentRole as string) === 'learner';
+  const isTeacherUser = isTeacher || currentRole === 'teacher';
+  const isBursarUser = isBursar || currentRole === 'bursar' || (currentRole as string) === 'accounts';
   const navigate = useNavigate();
 
   const [studentCount, setStudentCount] = useState<number>(0);
@@ -113,11 +116,12 @@ export const Dashboard: React.FC = () => {
     const unsubStudents = onSnapshot(
       studentsRef,
       (snap) => {
-        setStudentCount(snap.size);
+        const realDocs = snap.docs.filter((d) => !isSampleLearner(d.data()));
+        setStudentCount(realDocs.length);
         let m = 0;
         let f = 0;
         const counts: Record<string, number> = {};
-        snap.docs.forEach((d) => {
+        realDocs.forEach((d) => {
           const data = d.data();
           if (data.gender === 'male') m++;
           if (data.gender === 'female') f++;
@@ -580,25 +584,71 @@ export const Dashboard: React.FC = () => {
 
           {/* Action Buttons: balanced grid on phone screens, inline on desktop */}
           <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 sm:gap-3 w-full md:w-auto shrink-0 pt-1 md:pt-0">
-            <Button
-              variant="accent"
-              size="sm"
-              className="w-full sm:w-auto justify-center text-xs sm:text-sm !py-2.5 sm:!py-2 shadow-sm font-bold active:scale-98 transition-transform cursor-pointer"
-              onClick={() => navigate('/attendance')}
-              leftIcon={<CalendarCheck2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />}
-            >
-              Take Attendance
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              className="w-full sm:w-auto justify-center text-xs sm:text-sm !py-2.5 sm:!py-2 shadow-sm font-bold active:scale-98 transition-transform cursor-pointer"
-              onClick={() => navigate('/students')}
-              leftIcon={<UserPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />}
-            >
-              Enroll Student
-            </Button>
-            {studentCount === 0 && (
+            {isBursarUser ? (
+              <>
+                <Button
+                  variant="accent"
+                  size="sm"
+                  className="w-full sm:w-auto justify-center text-xs sm:text-sm !py-2.5 sm:!py-2 shadow-sm font-bold active:scale-98 transition-transform cursor-pointer"
+                  onClick={() => navigate('/finance')}
+                  leftIcon={<CreditCard className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />}
+                >
+                  Post Payment
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  className="w-full sm:w-auto justify-center text-xs sm:text-sm !py-2.5 sm:!py-2 shadow-sm font-bold active:scale-98 transition-transform cursor-pointer"
+                  onClick={() => navigate('/finance')}
+                  leftIcon={<DollarSign className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />}
+                >
+                  Fee Register
+                </Button>
+              </>
+            ) : isTeacherUser ? (
+              <>
+                <Button
+                  variant="accent"
+                  size="sm"
+                  className="w-full sm:w-auto justify-center text-xs sm:text-sm !py-2.5 sm:!py-2 shadow-sm font-bold active:scale-98 transition-transform cursor-pointer"
+                  onClick={() => navigate('/attendance')}
+                  leftIcon={<CalendarCheck2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />}
+                >
+                  Take Attendance
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  className="w-full sm:w-auto justify-center text-xs sm:text-sm !py-2.5 sm:!py-2 shadow-sm font-bold active:scale-98 transition-transform cursor-pointer"
+                  onClick={() => navigate('/assignments')}
+                  leftIcon={<BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />}
+                >
+                  Class Tasks
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  variant="accent"
+                  size="sm"
+                  className="w-full sm:w-auto justify-center text-xs sm:text-sm !py-2.5 sm:!py-2 shadow-sm font-bold active:scale-98 transition-transform cursor-pointer"
+                  onClick={() => navigate('/attendance')}
+                  leftIcon={<CalendarCheck2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />}
+                >
+                  Take Attendance
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  className="w-full sm:w-auto justify-center text-xs sm:text-sm !py-2.5 sm:!py-2 shadow-sm font-bold active:scale-98 transition-transform cursor-pointer"
+                  onClick={() => navigate('/students')}
+                  leftIcon={<UserPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />}
+                >
+                  Enroll Student
+                </Button>
+              </>
+            )}
+            {studentCount === 0 && !isBursarUser && (
               <Button
                 variant="outline"
                 size="sm"
@@ -701,68 +751,129 @@ export const Dashboard: React.FC = () => {
 
       {/* Real Financial Overview & Notice Board Cards Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Term Financial Collections Card */}
-        <Card className="space-y-4 border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                <Wallet className="w-5 h-5" />
+        {/* If Teacher: Academic Tasks Card. If Admin/Bursar: Term Financial Collections Card */}
+        {isTeacherUser ? (
+          <Card className="space-y-4 border border-slate-200 shadow-xs">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                  <BookOpen className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-display font-bold text-slate-900 text-sm">
+                    Class Tasks &amp; Assessments
+                  </h3>
+                  <p className="text-2xs text-slate-500">Active homework and continuous evaluation</p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-display font-bold text-slate-900 text-sm">
-                  Term 1 Fee Collections
-                </h3>
-                <p className="text-2xs text-slate-500">Live school revenue and fee clearance ledger</p>
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-xs"
+                onClick={() => navigate('/assignments')}
+                rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+              >
+                All Tasks
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                <span className="text-2xs font-semibold text-slate-500 uppercase tracking-wider block">Assigned</span>
+                <p className="text-sm sm:text-base font-bold text-slate-900 mt-0.5">
+                  {assignmentCount} Tasks
+                </p>
+              </div>
+              <div className="p-3 rounded-2xl bg-purple-50/70 border border-purple-100">
+                <span className="text-2xs font-semibold text-purple-700 uppercase tracking-wider block">Classes</span>
+                <p className="text-sm sm:text-base font-bold text-purple-800 mt-0.5">
+                  {classCount} Active
+                </p>
+              </div>
+              <div className="p-3 rounded-2xl bg-emerald-50/70 border border-emerald-100">
+                <span className="text-2xs font-semibold text-emerald-700 uppercase tracking-wider block">Assessments</span>
+                <p className="text-sm sm:text-base font-bold text-emerald-800 mt-0.5">
+                  Continuous
+                </p>
               </div>
             </div>
-            <Button
-              size="sm"
-              variant="outline"
-              className="text-xs"
-              onClick={() => navigate('/finance')}
-              rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
-            >
-              Fee Register
-            </Button>
-          </div>
 
-          <div className="grid grid-cols-3 gap-3">
-            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100">
-              <span className="text-2xs font-semibold text-slate-500 uppercase tracking-wider block">Invoiced</span>
-              <p className="text-sm sm:text-base font-bold text-slate-900 mt-0.5">
-                {formatKES(financeSummary.totalInvoiced || 0)}
-              </p>
+            <div className="pt-2 flex items-center justify-between text-xs">
+              <span className="text-slate-500 font-medium">Ready to record continuous marks?</span>
+              <Button
+                size="sm"
+                variant="primary"
+                onClick={() => navigate('/academics')}
+                className="text-xs font-bold"
+                leftIcon={<GraduationCap className="w-4 h-4" />}
+              >
+                Enter Marks
+              </Button>
             </div>
-            <div className="p-3 rounded-2xl bg-emerald-50/70 border border-emerald-100">
-              <span className="text-2xs font-semibold text-emerald-700 uppercase tracking-wider block">Collected</span>
-              <p className="text-sm sm:text-base font-bold text-emerald-800 mt-0.5">
-                {formatKES(financeSummary.totalPaid || 0)}
-              </p>
+          </Card>
+        ) : (
+          <Card className="space-y-4 border border-slate-200 shadow-xs">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <Wallet className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-display font-bold text-slate-900 text-sm">
+                    Term 1 Fee Collections
+                  </h3>
+                  <p className="text-2xs text-slate-500">Live school revenue and fee clearance ledger</p>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-xs"
+                onClick={() => navigate('/finance')}
+                rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+              >
+                Fee Register
+              </Button>
             </div>
-            <div className="p-3 rounded-2xl bg-amber-50/70 border border-amber-100">
-              <span className="text-2xs font-semibold text-amber-700 uppercase tracking-wider block">Balance</span>
-              <p className="text-sm sm:text-base font-bold text-amber-900 mt-0.5">
-                {formatKES(financeSummary.totalBalance || 0)}
-              </p>
-            </div>
-          </div>
 
-          {/* Collection Progress Bar */}
-          <div className="space-y-1.5 pt-1">
-            <div className="flex justify-between text-2xs font-semibold text-slate-600">
-              <span>Term Collection Clearance</span>
-              <span className="text-emerald-700 font-bold">
-                {financeSummary.collectionRate || 0}% Completed
-              </span>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                <span className="text-2xs font-semibold text-slate-500 uppercase tracking-wider block">Invoiced</span>
+                <p className="text-sm sm:text-base font-bold text-slate-900 mt-0.5">
+                  {formatKES(financeSummary.totalInvoiced || 0)}
+                </p>
+              </div>
+              <div className="p-3 rounded-2xl bg-emerald-50/70 border border-emerald-100">
+                <span className="text-2xs font-semibold text-emerald-700 uppercase tracking-wider block">Collected</span>
+                <p className="text-sm sm:text-base font-bold text-emerald-800 mt-0.5">
+                  {formatKES(financeSummary.totalPaid || 0)}
+                </p>
+              </div>
+              <div className="p-3 rounded-2xl bg-amber-50/70 border border-amber-100">
+                <span className="text-2xs font-semibold text-amber-700 uppercase tracking-wider block">Balance</span>
+                <p className="text-sm sm:text-base font-bold text-amber-900 mt-0.5">
+                  {formatKES(financeSummary.totalBalance || 0)}
+                </p>
+              </div>
             </div>
-            <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-[#1d5f99] to-emerald-600 transition-all duration-700"
-                style={{ width: `${financeSummary.collectionRate || 0}%` }}
-              />
+
+            {/* Collection Progress Bar */}
+            <div className="space-y-1.5 pt-1">
+              <div className="flex justify-between text-2xs font-semibold text-slate-600">
+                <span>Term Collection Clearance</span>
+                <span className="text-emerald-700 font-bold">
+                  {financeSummary.collectionRate || 0}% Completed
+                </span>
+              </div>
+              <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-[#1d5f99] to-emerald-600 transition-all duration-700"
+                  style={{ width: `${financeSummary.collectionRate || 0}%` }}
+                />
+              </div>
             </div>
-          </div>
-        </Card>
+          </Card>
+        )}
 
         {/* Live School Notice Board & Official Broadcasts Card */}
         <Card className="space-y-4 border border-slate-200 shadow-xs">

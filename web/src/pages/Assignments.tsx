@@ -105,10 +105,6 @@ export const Assignments: React.FC = () => {
   const [isWipeAllOpen, setIsWipeAllOpen] = useState(false);
   const [isWipingAll, setIsWipingAll] = useState(false);
 
-  const sampleAssignmentsCount = useMemo(() => {
-    return assignments.filter((a) => isSampleAssignment(a)).length;
-  }, [assignments]);
-
   const handlePurgeSampleAssignments = async () => {
     if (!organization || !currentSchool) return;
     setIsPurging(true);
@@ -472,7 +468,11 @@ export const Assignments: React.FC = () => {
           id: d.id,
           ...(d.data() as Omit<Assignment, 'id'>),
         }));
-        setAssignments(items);
+        const realItems = items.filter((a) => !isSampleAssignment(a));
+        if (items.length !== realItems.length && organization?.id && currentSchool?.id) {
+          purgeMockSchoolData(db, organization.id, currentSchool.id).catch(() => {});
+        }
+        setAssignments(realItems);
         setLoadingAssignments(false);
       },
       (err) => {
@@ -843,37 +843,6 @@ export const Assignments: React.FC = () => {
           )}
         </div>
       </div>
-
-      {/* Purge Sample Assignments Banner */}
-      {sampleAssignmentsCount > 0 && teacherView && (
-        <div className="rounded-2xl bg-amber-50 border border-amber-200/80 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm animate-fade-in">
-          <div className="flex items-start sm:items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
-              <AlertTriangle className="w-5 h-5" />
-            </div>
-            <div>
-              <h4 className="text-sm font-bold text-slate-900">
-                Sample Assignments Detected ({sampleAssignmentsCount} mock records)
-              </h4>
-              <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">
-                Demonstration homework assignments are currently loaded in this school branch. Click below to wipe all mock assignments and keep only genuine class assignments.
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handlePurgeSampleAssignments}
-              isLoading={isPurging}
-              className="border-amber-300 text-amber-800 hover:bg-amber-100/80 font-bold cursor-pointer"
-              leftIcon={<Trash2 className="w-4 h-4 text-amber-600" />}
-            >
-              Purge Sample Assignments
-            </Button>
-          </div>
-        </div>
-      )}
 
       {/* Student Enrolled Class Banner */}
       {isStudentUser && (

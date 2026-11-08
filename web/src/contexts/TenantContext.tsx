@@ -16,6 +16,7 @@ import type {
   Permission,
 } from '@edumo/shared';
 import { DEFAULT_ROLE_PERMISSIONS } from '@edumo/shared';
+import { purgeMockSchoolData } from '../utils/databaseInitializer';
 
 export interface ActiveStudentProfile {
   id: string;
@@ -39,6 +40,10 @@ interface TenantContextType {
   currentSchool: School | null;
   currentRole: UserRole | null;
   isStudent: boolean;
+  isGuardian: boolean;
+  isTeacher: boolean;
+  isBursar: boolean;
+  isAdmin: boolean;
   studentProfile: ActiveStudentProfile | null;
   userPermissions: Permission[];
   loading: boolean;
@@ -196,6 +201,23 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       root.style.setProperty('--sidebar-border', '#e2e8f0');
     }
   }, [currentSchool]);
+
+  // One-time automatic background purge of legacy mock / demonstration records for active school
+  useEffect(() => {
+    if (!activeOrgId || !currentSchool?.id) return;
+    const sessionKey = `edumo_mock_purged_${activeOrgId}_${currentSchool.id}`;
+    if (typeof window !== 'undefined' && sessionStorage.getItem(sessionKey)) return;
+
+    purgeMockSchoolData(db, activeOrgId, currentSchool.id)
+      .then(() => {
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem(sessionKey, 'true');
+        }
+      })
+      .catch((err) => {
+        console.warn('Background school data cleanup skipped:', err);
+      });
+  }, [activeOrgId, currentSchool?.id]);
 
   const [previewRole, setPreviewRole] = useState<string | null>(() => {
     if (typeof window === 'undefined') return null;
@@ -355,6 +377,31 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return currentRole === 'student' || (currentRole as string) === 'learner';
   }, [currentRole]);
 
+  const isGuardian = useMemo(() => {
+    return currentRole === 'guardian' || (currentRole as string) === 'parent' || Boolean(claims?.isGuardian);
+  }, [currentRole, claims?.isGuardian]);
+
+  const isTeacher = useMemo(() => {
+    return currentRole === 'teacher' || (currentRole as string) === 'educator';
+  }, [currentRole]);
+
+  const isBursar = useMemo(() => {
+    return currentRole === 'bursar' || (currentRole as string) === 'accountant' || (currentRole as string) === 'finance_officer';
+  }, [currentRole]);
+
+  const isAdmin = useMemo(() => {
+    const r = (currentRole as string) || '';
+    return (
+      r === 'principal' ||
+      r === 'deputy' ||
+      r === 'admin' ||
+      r === 'orgOwner' ||
+      r === 'platformAdmin' ||
+      r === 'schoolAdmin' ||
+      r === 'it_admin'
+    );
+  }, [currentRole]);
+
   // Compute permissions for current role
   const userPermissions = useMemo<Permission[]>(() => {
     if (!currentRole) return [];
@@ -416,6 +463,10 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         currentSchool,
         currentRole,
         isStudent,
+        isGuardian,
+        isTeacher,
+        isBursar,
+        isAdmin,
         studentProfile,
         userPermissions,
         loading,

@@ -45,7 +45,13 @@ interface AnnouncementItem {
 }
 
 export const Announcements: React.FC = () => {
-  const { organization, currentSchool } = useTenant();
+  const { organization, currentSchool, currentRole, isStudent, isAdmin } = useTenant();
+  const isStudentUser = isStudent || currentRole === 'student' || (currentRole as string) === 'learner';
+  const canManageAnnouncements =
+    isAdmin ||
+    currentRole === 'teacher' ||
+    currentRole === 'deputy' ||
+    (currentRole as string) === 'exam_officer';
   const { currentUser } = useAuth();
 
   const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([]);
@@ -222,19 +228,23 @@ export const Announcements: React.FC = () => {
             </h1>
           </div>
           <p className="text-xs text-gray-500 mt-1">
-            Broadcast school circulars, event alerts, and emergency SMS to guardians of <strong>{currentSchool?.name || 'Main Campus'}</strong>
+            {isStudentUser
+              ? 'Official circulars, school event alerts, and term announcements published for learners and guardians'
+              : `Broadcast school circulars, event alerts, and emergency SMS to guardians of ${currentSchool?.name || 'Main Campus'}`}
           </p>
         </div>
 
-        <Button
-          variant="primary"
-          size="sm"
-          onClick={() => setIsModalOpen(true)}
-          leftIcon={<Plus className="w-4 h-4" />}
-          className="shadow-sm"
-        >
-          New Announcement
-        </Button>
+        {!isStudentUser && canManageAnnouncements && (
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => setIsModalOpen(true)}
+            leftIcon={<Plus className="w-4 h-4" />}
+            className="shadow-sm"
+          >
+            New Announcement
+          </Button>
+        )}
       </div>
 
       {/* TOP 4 VIBRANT GRADIENT METRIC CARDS */}
@@ -382,18 +392,22 @@ export const Announcements: React.FC = () => {
           <Megaphone className="w-12 h-12 mx-auto mb-3 text-slate-400" />
           <h3 className="text-base font-extrabold text-slate-900">No announcements broadcasted yet</h3>
           <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
-            Send school circulars, event reminders, or urgent SMS alerts to parents and faculty members.
+            {isStudentUser
+              ? 'No official announcements or circulars published yet.'
+              : 'Send school circulars, event reminders, or urgent SMS alerts to parents and faculty members.'}
           </p>
-          <div className="mt-5">
-            <Button
-              size="sm"
-              variant="primary"
-              onClick={() => setIsModalOpen(true)}
-              leftIcon={<Plus className="w-4 h-4" />}
-            >
-              Broadcast First Notice
-            </Button>
-          </div>
+          {!isStudentUser && canManageAnnouncements && (
+            <div className="mt-5">
+              <Button
+                size="sm"
+                variant="primary"
+                onClick={() => setIsModalOpen(true)}
+                leftIcon={<Plus className="w-4 h-4" />}
+              >
+                Broadcast First Notice
+              </Button>
+            </div>
+          )}
         </Card>
       ) : filteredAnnouncements.length === 0 ? (
         <Card className="text-center py-10 text-slate-500">
@@ -452,13 +466,15 @@ export const Announcements: React.FC = () => {
                   <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 uppercase">
                     {ann.audience}
                   </span>
-                  <button
-                    onClick={() => handleDeleteAnnouncement(ann.id, ann.title)}
-                    className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
-                    title="Delete notice"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {isAdmin && (
+                    <button
+                      onClick={() => handleDeleteAnnouncement(ann.id, ann.title)}
+                      className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                      title="Delete notice"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               </div>
 

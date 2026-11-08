@@ -78,7 +78,7 @@ export const ReportCardModal: React.FC<ReportCardModalProps> = ({
   attendanceTotal = 65,
   template: initialTemplate,
 }) => {
-  const { currentSchool } = useTenant();
+  const { currentSchool, organization } = useTenant();
   const phone = schoolPhone || currentSchool?.contacts?.phone;
   const email = schoolEmail || currentSchool?.contacts?.email;
   const address =
@@ -102,7 +102,8 @@ export const ReportCardModal: React.FC<ReportCardModalProps> = ({
 
   useEffect(() => {
     if (!currentSchool) return;
-    const orgId = (currentSchool as any).organizationId || localStorage.getItem('edumo_active_org_id') || 'demo-org-edumo';
+    const orgId = organization?.id || (currentSchool as any).organizationId || localStorage.getItem('edumo_active_org_id') || '';
+    if (!orgId) return;
     const subCol = collection(db, 'organizations', orgId, 'schools', currentSchool.id, 'subjects');
     getDocs(subCol)
       .then((snap) => {

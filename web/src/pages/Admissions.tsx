@@ -68,7 +68,7 @@ export interface AdmissionApplication {
 }
 
 export const Admissions: React.FC = () => {
-  const { organization, currentSchool } = useTenant();
+  const { organization, currentSchool, currentRole, isStudent } = useTenant();
   const { currentUser } = useAuth();
 
   const [applications, setApplications] = useState<AdmissionApplication[]>([]);
@@ -361,6 +361,28 @@ export const Admissions: React.FC = () => {
       specialConditions: app.examNotes || 'Admission granted based on satisfactory entrance examination.',
     });
   };
+
+  if (isStudent || currentRole === 'student' || (currentRole as string) === 'learner') {
+    return (
+      <div className="max-w-3xl mx-auto py-16 px-4 text-center animate-fade-in">
+        <div className="bg-white rounded-3xl p-8 sm:p-10 border border-slate-200/80 shadow-sm max-w-lg mx-auto">
+          <div className="w-16 h-16 bg-blue-50 text-[#1d5f99] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-2xs">
+            <GraduationCap className="w-8 h-8" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-900 mb-2">Admissions Intake Restricted</h2>
+          <p className="text-sm text-slate-600 mb-6 leading-relaxed">
+            New pupil intake applications and matriculation processing are managed by the institutional admissions office.
+          </p>
+          <a
+            href="/dashboard"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-[#1d5f99] to-[#683669] text-white font-semibold text-sm hover:opacity-95 shadow-sm transition-all"
+          >
+            Return to Student Dashboard
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto animate-fade-in">

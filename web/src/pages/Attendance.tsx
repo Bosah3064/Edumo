@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { exportAttendanceRegister } from '../utils/excelExport';
+import { isSampleLearner } from '../utils/databaseInitializer';
 
 type AttendanceStatus = 'present' | 'absent' | 'late' | 'excused';
 
@@ -43,6 +44,28 @@ export const Attendance: React.FC = () => {
   const { organization, currentSchool, currentRole, isStudent, studentProfile } = useTenant();
   const isStudentUser = isStudent || currentRole === 'student' || (currentRole as string) === 'learner';
   const { currentUser } = useAuth();
+
+  if (currentRole === 'bursar') {
+    return (
+      <div className="max-w-3xl mx-auto py-16 px-4 text-center animate-fade-in">
+        <div className="bg-white rounded-3xl p-8 sm:p-10 border border-slate-200/80 shadow-sm max-w-lg mx-auto">
+          <div className="w-16 h-16 bg-blue-50 text-[#1d5f99] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-2xs">
+            <Calendar className="w-8 h-8" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-900 mb-2">Classroom Attendance</h2>
+          <p className="text-sm text-slate-600 mb-6 leading-relaxed">
+            Daily roll calls and attendance registers are managed by class educators. Head to the Financial Ledger to view fees, invoices, and vouchers.
+          </p>
+          <a
+            href="/finance"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#1d5f99] text-white font-semibold text-sm hover:bg-[#164a78] shadow-sm transition-all"
+          >
+            Go to Fee Ledger
+          </a>
+        </div>
+      </div>
+    );
+  }
   const { isOnline, queueOfflineAction } = useOffline();
 
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
@@ -100,16 +123,18 @@ export const Attendance: React.FC = () => {
     );
 
     const unsubStudents = onSnapshot(studentsRef, (snap) => {
-      const studentsList = snap.docs.map((d) => {
-        const data = d.data();
-        return {
-          id: d.id,
-          admissionNumber: data.admissionNumber || '',
-          firstName: data.firstName || '',
-          lastName: data.lastName || '',
-          currentClassId: data.currentClassId || data.className || data.class || '',
-        };
-      });
+      const studentsList = snap.docs
+        .map((d) => {
+          const data = d.data();
+          return {
+            id: d.id,
+            admissionNumber: data.admissionNumber || '',
+            firstName: data.firstName || '',
+            lastName: data.lastName || '',
+            currentClassId: data.currentClassId || data.className || data.class || '',
+          };
+        })
+        .filter((s) => !isSampleLearner(s));
       setAllStudents(studentsList);
 
       // Extract all student classes to enrich class dropdown

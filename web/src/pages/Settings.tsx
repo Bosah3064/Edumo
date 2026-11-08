@@ -165,7 +165,7 @@ const MiniatureTemplatePreview: React.FC<{
         <div className="h-full rounded flex flex-col justify-between">
           <div className="bg-emerald-700 text-white p-1 rounded-t text-center">
             <span className="text-[8px] font-black uppercase tracking-wider block">KENYA CBC PROGRESS REPORT</span>
-            <span className="text-[6.5px] text-emerald-100 block truncate">{schoolName || 'Edumo Demonstration'}</span>
+            <span className="text-[6.5px] text-emerald-100 block truncate">{schoolName || 'School Campus'}</span>
           </div>
           <div className="grid grid-cols-4 gap-0.5 text-[6px] font-bold text-center my-0.5">
             <span className="bg-emerald-100 text-emerald-800 rounded px-0.5 py-0.2">EE (4)</span>
@@ -553,9 +553,9 @@ const MiniatureExamCardPreview: React.FC<{
 /*  Settings Page                                                      */
 /* ================================================================== */
 export const Settings: React.FC = () => {
-  const { organization, currentSchool, schools, currentRole } = useTenant();
+  const { organization, currentSchool, schools, currentRole, isAdmin } = useTenant();
 
-  if (currentRole === 'teacher') {
+  if (!isAdmin) {
     return (
       <div className="max-w-3xl mx-auto py-16 px-4 text-center animate-fade-in">
         <div className="bg-white rounded-3xl p-8 sm:p-10 border border-slate-200/80 shadow-sm max-w-lg mx-auto">
@@ -1604,7 +1604,7 @@ export const Settings: React.FC = () => {
                         </div>
                         <div className="text-left">
                           <h3 className="text-base font-bold text-gray-900 leading-tight uppercase tracking-wide">
-                            {currentSchool?.name || 'Edumo Demonstration Academy'}
+                            {currentSchool?.name || 'School Campus'}
                           </h3>
                           <p className="text-xs text-gray-500 italic">
                             "{schoolMotto || 'Knowledge, Discipline and Excellence'}"
@@ -2570,7 +2570,7 @@ export const Settings: React.FC = () => {
                             templateId={tmpl.id}
                             primaryColor={primaryColor}
                             secondaryColor={secondaryColor}
-                            schoolName={currentSchool?.name || 'Edumo Demonstration Academy'}
+                            schoolName={currentSchool?.name || 'School Campus'}
                           />
                         </div>
 
@@ -3377,11 +3377,11 @@ export const Settings: React.FC = () => {
           isOpen={previewTemplateModal !== null}
           onClose={() => setPreviewTemplateModal(null)}
           template={previewTemplateModal}
-          schoolName={currentSchool?.name || 'Edumo Demonstration Academy'}
+          schoolName={currentSchool?.name || 'School Campus'}
           schoolLogo={logoPreviewUrl || logoUrl || currentSchool?.branding?.logo}
           schoolMotto={schoolMotto || currentSchool?.branding?.motto || 'Knowledge, Character and Excellence'}
           schoolPhone={schoolPhone || currentSchool?.contacts?.phone || '+254 700 000 000'}
-          schoolEmail={schoolEmail || currentSchool?.contacts?.email || 'info@edumo.demo.ac.ke'}
+          schoolEmail={schoolEmail || currentSchool?.contacts?.email || 'info@school.ac.ke'}
           schoolAddress={`${city || 'Nairobi'}, ${county || 'Nairobi County'}, Kenya`}
           schoolCode={currentSchool?.code || 'MAIN'}
           termTitle="Term 3 Final Assessment & Promotion Evaluation"
@@ -4080,7 +4080,7 @@ export const Settings: React.FC = () => {
                   </div>
                   <div>
                     <h2 className="text-base font-black uppercase tracking-tight text-slate-900">
-                      {currentSchool?.name || 'Edumo Demonstration Academy'}
+                      {currentSchool?.name || 'School Campus'}
                     </h2>
                     <p className="text-2xs font-semibold text-slate-500 italic">
                       "{schoolMotto || currentSchool?.branding?.motto || 'Knowledge, Character and Excellence'}"
