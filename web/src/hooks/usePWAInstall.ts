@@ -32,26 +32,31 @@ export const usePWAInstall = () => {
   const [hasPrompt, setHasPrompt] = useState<boolean>(() => Boolean(globalDeferredPrompt));
   const [isIOS, setIsIOS] = useState<boolean>(false);
   const [isAndroid, setIsAndroid] = useState<boolean>(false);
-  const [isWindows, setIsWindows] = useState<boolean>(false);
-  const [isDesktop, setIsDesktop] = useState<boolean>(false);
+  const [isPhone, setIsPhone] = useState<boolean>(false);
+  const [isInAppBrowser, setIsInAppBrowser] = useState<boolean>(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // Platform detection
-    const ua = window.navigator.userAgent.toLowerCase();
-    const isIOSDevice = /iphone|ipad|ipod/.test(ua);
-    const isAndroidDevice = /android/.test(ua);
-    const isWin = /windows|win32|win64/i.test(ua);
-    const isMobileDevice = /iphone|ipad|ipod|android|mobile/i.test(ua);
+    const evaluatePlatform = () => {
+      const ua = window.navigator.userAgent.toLowerCase();
+      const isIOSPhone = /iphone|ipod/.test(ua) || (navigator.maxTouchPoints > 1 && /macintosh/.test(ua) && window.innerWidth < 1024);
+      const isAndroidPhone = /android/.test(ua);
+      // Strictly mobile phones (screen width < 1024 and mobile device UA)
+      const isPhoneDevice = (isIOSPhone || isAndroidPhone || (/mobile/.test(ua) && window.innerWidth < 768)) && window.innerWidth < 1024;
+      const inApp = /fbav|instagram|fban|line|micromessenger|snapchat|whatsapp|wv/i.test(ua);
 
-    setIsIOS(isIOSDevice);
-    setIsAndroid(isAndroidDevice);
-    setIsWindows(isWin);
-    setIsDesktop(!isMobileDevice);
+      setIsIOS(isIOSPhone);
+      setIsAndroid(isAndroidPhone);
+      setIsPhone(isPhoneDevice);
+      setIsInAppBrowser(inApp);
+    };
 
-    // Initial sync
+    evaluatePlatform();
     setIsStandalone(detectStandalone());
+
+    const handleResize = () => evaluatePlatform();
+    window.addEventListener('resize', handleResize);
 
     // Capture beforeinstallprompt
     const handleBeforeInstallPrompt = (e: Event) => {
@@ -89,6 +94,7 @@ export const usePWAInstall = () => {
     }
 
     return () => {
+      window.removeEventListener('resize', handleResize);
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('edumo-deferred-prompt-ready', handlePromptReady);
       window.removeEventListener('appinstalled', handleAppInstalled);
@@ -114,22 +120,16 @@ export const usePWAInstall = () => {
       }
     }
 
-    // Fallback: show interactive platform instructions modal
+    // Fallback: show interactive mobile instructions modal
     return 'guide';
   };
 
-  // If the user is currently running in standalone display mode (the PWA is already open),
-  // they don't need install prompts. If in standard browser, they can always install!
-  const canInstall = !isStandalone;
+  // Strictly for mobile phones: canInstall is true ONLY if user is visiting via browser on a mobile phone
+  const canInstall = isPhone && !isStandalone;
   const isInstalled = isStandalone;
 
-  const platformLabel = isIOS
-    ? 'iPhone / iPad'
-    : isAndroid
-    ? 'Android'
-    : isWindows
-    ? 'Windows PC'
-    : 'Desktop';
+  const phoneOS: 'android' | 'ios' | null = isAndroid ? 'android' : isIOS ? 'ios' : null;
+  const platformLabel: string = isIOS ? 'iPhone' : isAndroid ? 'Android' : 'Mobile';
 
   return {
     isStandalone,
@@ -138,9 +138,13 @@ export const usePWAInstall = () => {
     hasPrompt,
     isIOS,
     isAndroid,
-    isWindows,
-    isDesktop,
+    isPhone,
+    phoneOS,
     platformLabel,
+    isInAppBrowser,
+    // Desktop compatibility flags (strictly false since PWA is mobile-only)
+    isWindows: false,
+    isDesktop: false,
     triggerInstall,
   };
 };

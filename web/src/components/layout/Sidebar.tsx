@@ -48,7 +48,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   const { signOut, currentUser, isPlatformAdmin } = useAuth();
   const { currentRole, currentSchool, organization, hasPermission, setRoleOverride, previewRole } = useTenant();
   const { unreadCount } = useNotifications();
-  const { canInstall, isWindows, isDesktop } = usePWAInstall();
+  const { canInstall, isIOS, isAndroid } = usePWAInstall();
   const navigate = useNavigate();
   const [roleMenuOpen, setRoleMenuOpen] = useState(false);
   const [sidebarLanguage, setSidebarLanguage] = useState<'en' | 'sw'>(() =>
@@ -428,7 +428,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
           paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))',
         }}
       >
-        {/* INSTALL APP BUTTON AT THE BOTTOM — ADAPTIVE FOR WINDOWS / DESKTOP / MOBILE */}
+        {/* MOBILE APP INSTALLATION BUTTON — STRICTLY FOR MOBILE PHONES */}
         {canInstall && (
           <button
             type="button"
@@ -439,17 +439,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
             className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-extrabold transition-all bg-gradient-to-r from-[#1d5f99] to-[#683669] text-white shadow-sm hover:opacity-95 active:scale-98 cursor-pointer"
           >
             <div className="flex items-center gap-2 truncate">
-              {isWindows || isDesktop ? (
-                <Monitor className="w-4 h-4 text-white shrink-0" />
-              ) : (
-                <Smartphone className="w-4 h-4 text-white shrink-0" />
-              )}
+              <Smartphone className="w-4 h-4 text-white shrink-0" />
               <span className="text-white font-bold tracking-tight truncate">
-                {isWindows ? 'Install Windows App' : isDesktop ? 'Install Desktop App' : 'Install Mobile App'}
+                {isAndroid ? 'Install on Android' : isIOS ? 'Add to iPhone Home Screen' : 'Install Mobile App'}
               </span>
             </div>
             <span className="text-[10px] px-2 py-0.5 rounded-full bg-white text-[#1d5f99] font-black uppercase tracking-wider shadow-2xs shrink-0 ml-1">
-              {isWindows ? 'WIN' : 'APP'}
+              {isAndroid ? 'ANDROID' : isIOS ? 'IOS' : 'APP'}
             </span>
           </button>
         )}

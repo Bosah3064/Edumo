@@ -4,7 +4,6 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useOffline } from '../../contexts/OfflineContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotifications } from '../../contexts/NotificationContext';
-import { usePWAInstall } from '../../hooks/usePWAInstall';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Menu,
@@ -18,7 +17,6 @@ import {
   User,
   Settings,
   Bell,
-  Download,
   CheckCheck,
   ArrowRight,
   Clock,
@@ -34,7 +32,6 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar }) => {
   const { isOnline } = useOffline();
   const { currentUser, signOut } = useAuth();
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
-  const { isStandalone, canInstall, platformLabel, triggerInstall } = usePWAInstall();
   const navigate = useNavigate();
 
   const [profileOpen, setProfileOpen] = useState(false);
@@ -67,10 +64,6 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar }) => {
     window.dispatchEvent(new CustomEvent('edumo-sidebar-language-change', { detail: nextLang }));
   };
 
-  const handleInstallClick = () => {
-    window.dispatchEvent(new CustomEvent('edumo-trigger-pwa-install'));
-  };
-
   const recentNotifications = notifications.slice(0, 4);
 
   return (
@@ -94,7 +87,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar }) => {
         <BranchSwitcher />
       </div>
 
-      {/* Right Column: Offline/Online, Install App, Notifications, Language, Theme, Profile */}
+      {/* Right Column: Offline/Online, Notifications, Language, Theme, Profile */}
       <div className="flex items-center gap-1.5 sm:gap-2.5">
         {/* Offline / Online indicator pill */}
         <div
@@ -116,18 +109,6 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar }) => {
             </>
           )}
         </div>
-
-        {/* 1-Tap Install App Button (Visible when NOT already in standalone window) */}
-        {!isStandalone && (
-          <button
-            onClick={handleInstallClick}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-[#1d5f99] to-[#683669] text-white hover:opacity-95 font-bold text-xs transition-all shadow-xs shrink-0 cursor-pointer active:scale-95"
-            title={`Install Edumo App for ${platformLabel}`}
-          >
-            <Download className="w-3.5 h-3.5 text-white" />
-            <span className="hidden sm:inline">Install App</span>
-          </button>
-        )}
 
         {/* Notifications Dropdown Bell */}
         <div className="relative" ref={notifRef}>

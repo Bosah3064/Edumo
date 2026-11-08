@@ -2,32 +2,48 @@
 <html lang="en" class="h-full">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="description" content="Edumo — Smart school management for East African schools. Attendance, grades, fees, communication. Offline-first, mobile-first." />
-    <meta name="theme-color" content="#6366F1" />
+    <meta name="theme-color" content="#1d5f99" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Edumo" />
+    <meta name="format-detection" content="telephone=no" />
 
-    <link rel="icon" type="image/svg+xml" href="/icons/favicon.svg" />
-    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="icon" type="image/svg+xml" href="./icons/favicon.svg?v=2" />
+    <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon-v2.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192-v2.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="./icons/icon-512-v2.png" />
 
-    <!-- Preload fonts -->
+    <!-- Preload enterprise typography: Plus Jakarta Sans, Inter, Outfit & Lexend -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lexend:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
 
     <title>Edumo — School Management</title>
-    <script type="module" crossorigin src="/Edumo/assets/index-JK_GgguU.js"></script>
-    <link rel="modulepreload" crossorigin href="/Edumo/assets/vendor-BPm2bpqh.js">
-    <link rel="modulepreload" crossorigin href="/Edumo/assets/query-DV11aFp9.js">
-    <link rel="modulepreload" crossorigin href="/Edumo/assets/firebase-qr57GuzV.js">
-    <link rel="stylesheet" crossorigin href="/Edumo/assets/index-Oo4SCd5t.css">
-  <link rel="manifest" href="/Edumo/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/Edumo/registerSW.js"></script></head>
-  <body class="h-full bg-surface-50 dark:bg-surface-900 text-surface-900 dark:text-surface-50 antialiased">
+    <script type="module" crossorigin src="/Edumo/assets/index-BxENofgk.js"></script>
+    <link rel="modulepreload" crossorigin href="/Edumo/assets/vendor-aHA_Af7b.js">
+    <link rel="modulepreload" crossorigin href="/Edumo/assets/query-CRKtD0J7.js">
+    <link rel="modulepreload" crossorigin href="/Edumo/assets/firebase-JiP0uEiz.js">
+    <link rel="stylesheet" crossorigin href="/Edumo/assets/index-eMD_12j3.css">
+  <link rel="manifest" href="/Edumo/manifest.webmanifest"></head>
+  <body class="h-full bg-[#f3f4f6] text-[#1f2937] antialiased font-sans">
     <div id="root" class="h-full"></div>
+    <script>
+      (function(l) {
+        if (l.search[1] === '/' ) {
+          var decoded = l.search.slice(1).split('&').map(function(s) { 
+            return s.replace(/~and~/g, '&');
+          }).join('?');
+          window.history.replaceState(null, null,
+              l.pathname.slice(0, -1) + decoded + l.hash
+          );
+        }
+      }(window.location));
+    </script>
   </body>
 </html>

@@ -9,6 +9,10 @@ import {
   GraduationCap,
   Sparkles,
   Menu,
+  MessageSquare,
+  Bell,
+  BookOpen,
+  DollarSign,
 } from 'lucide-react';
 
 interface MobileNavProps {
@@ -28,22 +32,45 @@ export const MobileNav: React.FC<MobileNavProps> = ({ onOpenMore }) => {
     }
   };
 
-  const isTeacher = currentRole === 'teacher';
   const isSwahili = typeof localStorage !== 'undefined' && localStorage.getItem('edumo_sidebar_lang') === 'sw';
+  const role = (currentRole as string) || 'teacher';
 
-  const items = isTeacher
-    ? [
-        { to: '/dashboard', label: isSwahili ? 'Dashibodi' : 'Dashboard', icon: LayoutDashboard },
-        { to: '/attendance', label: isSwahili ? 'Mahudhurio' : 'Attendance', icon: CalendarCheck2 },
-        { to: '/academics', label: isSwahili ? 'Matokeo' : 'Academics', icon: GraduationCap },
-        { to: '/educator-portal', label: isSwahili ? 'Walimu' : 'Teacher Portal', icon: Sparkles },
-      ]
-    : [
-        { to: '/dashboard', label: isSwahili ? 'Dashibodi' : 'Dashboard', icon: LayoutDashboard },
-        { to: '/attendance', label: isSwahili ? 'Mahudhurio' : 'Attendance', icon: CalendarCheck2 },
-        { to: '/students', label: isSwahili ? 'Wanafunzi' : 'Learners', icon: Users },
-        { to: '/academics', label: isSwahili ? 'Matokeo' : 'Academics', icon: GraduationCap },
-      ];
+  let items = [
+    { to: '/dashboard', label: isSwahili ? 'Dashibodi' : 'Dashboard', icon: LayoutDashboard },
+    { to: '/attendance', label: isSwahili ? 'Mahudhurio' : 'Attendance', icon: CalendarCheck2 },
+    { to: '/students', label: isSwahili ? 'Wanafunzi' : 'Learners', icon: Users },
+    { to: '/academics', label: isSwahili ? 'Matokeo' : 'Academics', icon: GraduationCap },
+  ];
+
+  if (role === 'parent') {
+    items = [
+      { to: '/parent-portal', label: isSwahili ? 'Wanafunzi' : 'My Children', icon: Users },
+      { to: '/messaging', label: isSwahili ? 'Ujumbe' : 'Messages', icon: MessageSquare },
+      { to: '/notifications', label: isSwahili ? 'Taarifa' : 'Alerts', icon: Bell },
+      { to: '/dashboard', label: isSwahili ? 'Dashibodi' : 'Dashboard', icon: LayoutDashboard },
+    ];
+  } else if (role === 'student') {
+    items = [
+      { to: '/dashboard', label: isSwahili ? 'Dashibodi' : 'Dashboard', icon: LayoutDashboard },
+      { to: '/timetable', label: isSwahili ? 'Ratiba' : 'Timetable', icon: BookOpen },
+      { to: '/assignments', label: isSwahili ? 'Kazi' : 'Tasks', icon: Sparkles },
+      { to: '/notifications', label: isSwahili ? 'Taarifa' : 'Alerts', icon: Bell },
+    ];
+  } else if (role === 'teacher') {
+    items = [
+      { to: '/dashboard', label: isSwahili ? 'Dashibodi' : 'Dashboard', icon: LayoutDashboard },
+      { to: '/attendance', label: isSwahili ? 'Mahudhurio' : 'Attendance', icon: CalendarCheck2 },
+      { to: '/academics', label: isSwahili ? 'Matokeo' : 'Academics', icon: GraduationCap },
+      { to: '/educator-portal', label: isSwahili ? 'Walimu' : 'Portal', icon: Sparkles },
+    ];
+  } else if (role === 'bursar') {
+    items = [
+      { to: '/dashboard', label: isSwahili ? 'Dashibodi' : 'Dashboard', icon: LayoutDashboard },
+      { to: '/finance', label: isSwahili ? 'Ada' : 'Fees', icon: DollarSign },
+      { to: '/students', label: isSwahili ? 'Wanafunzi' : 'Ledger', icon: Users },
+      { to: '/notifications', label: isSwahili ? 'Taarifa' : 'Alerts', icon: Bell },
+    ];
+  }
 
   return (
     <nav
