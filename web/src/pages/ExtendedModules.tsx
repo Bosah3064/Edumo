@@ -108,44 +108,52 @@ export const ExtendedModules: React.FC = () => {
   const [bookForm, setBookForm] = useState({ title: '', author: '', isbn: '', category: 'Fiction', totalCopies: '5' });
   const [loanForm, setLoanForm] = useState({ bookTitle: '', studentName: '', admissionNo: '', dueDate: '2026-02-25' });
   const [invForm, setInvForm] = useState({ itemName: '', category: 'uniform' as any, stockLevel: '50', reorderThreshold: '15', unitCost: '1200', location: 'Main Store Room' });
-  const [topupForm, setTopupForm] = useState({ studentName: 'Zawadi Achieng (ADM/2026/001)', amount: '2000' });
+  const [topupForm, setTopupForm] = useState({ studentName: '', amount: '2000' });
 
   const currency: string = (currentSchool?.settings?.currency as string) || 'KES';
 
-  // Seed sample data
+  // Live Firestore subscriptions
   useEffect(() => {
-    setBooks([
-      { id: 'bk-1', title: 'Things Fall Apart', author: 'Chinua Achebe', isbn: '978-0385474542', category: 'African Literature', totalCopies: 25, availableCopies: 19 },
-      { id: 'bk-2', title: 'The River and the Source', author: 'Margaret Ogola', isbn: '978-9966882059', category: 'Set Books', totalCopies: 40, availableCopies: 32 },
-      { id: 'bk-3', title: 'Integrated Science for CBC Grade 4', author: 'KIE Kenya', isbn: '978-9966221087', category: 'Curriculum Coursebooks', totalCopies: 60, availableCopies: 55 },
-      { id: 'bk-4', title: 'Kidagaa Kimemwozea', author: 'Ken Walibora', isbn: '978-9966100573', category: 'Fasihi ya Kiswahili', totalCopies: 30, availableCopies: 26 },
-    ]);
+    if (!organization || !currentSchool) return;
 
-    setLoans([
-      { id: 'ln-1', bookTitle: 'Things Fall Apart', studentName: 'Kevin Kiprono', admissionNo: 'ADM/2026/002', borrowedDate: '2026-01-20', dueDate: '2026-02-03', status: 'overdue' },
-      { id: 'ln-2', bookTitle: 'The River and the Source', studentName: 'Zawadi Achieng', admissionNo: 'ADM/2026/001', borrowedDate: '2026-01-28', dueDate: '2026-02-11', status: 'active' },
-    ]);
+    // 1. Books
+    const bRef = collection(db, 'organizations', organization.id, 'schools', currentSchool.id, 'library_books');
+    const unsubB = onSnapshot(bRef, (snap) => {
+      setBooks(snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })));
+    }, (err) => console.warn('Error fetching books:', err));
 
-    setInventory([
-      { id: 'inv-1', itemName: 'Official Campus Navy Blazer (Size 28-34)', category: 'uniform', stockLevel: 42, reorderThreshold: 15, unitCost: 2800, location: 'Uniform Depot Shelf A' },
-      { id: 'inv-2', itemName: 'Physical Education Tracksuit & Polo', category: 'uniform', stockLevel: 8, reorderThreshold: 20, unitCost: 1500, location: 'Uniform Depot Shelf B' },
-      { id: 'inv-3', itemName: 'CBC Practical Clay & Modelling Pastes', category: 'stationery', stockLevel: 120, reorderThreshold: 30, unitCost: 250, location: 'Art Studio Store' },
-      { id: 'inv-4', itemName: 'Science Laboratory Safety Goggles & Beakers', category: 'lab_equipment', stockLevel: 75, reorderThreshold: 25, unitCost: 650, location: 'Bio-Chem Prep Room' },
-    ]);
+    // 2. Loans
+    const lRef = collection(db, 'organizations', organization.id, 'schools', currentSchool.id, 'library_loans');
+    const unsubL = onSnapshot(lRef, (snap) => {
+      setLoans(snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })));
+    }, (err) => console.warn('Error fetching loans:', err));
 
-    setDorms([
-      { id: 'drm-1', name: 'Kilimanjaro House', gender: 'boys', housemaster: 'Mr. David Mutua', capacity: 64, occupied: 58, rollCallStatusToday: 'completed' },
-      { id: 'drm-2', name: 'Serengeti House', gender: 'girls', housemaster: 'Mrs. Florence Otieno', capacity: 64, occupied: 61, rollCallStatusToday: 'completed' },
-      { id: 'drm-3', name: 'Ruwenzori House', gender: 'boys', housemaster: 'Mr. Peter Kiprop', capacity: 48, occupied: 42, rollCallStatusToday: 'pending' },
-    ]);
+    // 3. Inventory
+    const iRef = collection(db, 'organizations', organization.id, 'schools', currentSchool.id, 'inventory');
+    const unsubI = onSnapshot(iRef, (snap) => {
+      setInventory(snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })));
+    }, (err) => console.warn('Error fetching inventory:', err));
 
-    setClubs([
-      { id: 'clb-1', name: 'STEM & Robotics Coding Club', patronTeacher: 'Mr. Alex Musau', category: 'Science & Technology', memberCount: 34, meetingTime: 'Wednesdays 3:30 PM' },
-      { id: 'clb-2', name: 'Kenya Red Cross & First Aid Society', patronTeacher: 'Nurse Jacinta Mwangi', category: 'Community Service', memberCount: 45, meetingTime: 'Thursdays 4:00 PM' },
-      { id: 'clb-3', name: 'Junior Debate & Model UN', patronTeacher: 'Ms. Linda Wekesa', category: 'Oratory & Leadership', memberCount: 28, meetingTime: 'Tuesdays 3:45 PM' },
-      { id: 'clb-4', name: 'Scouts & Girl Guides Movement', patronTeacher: 'Mr. Kennedy Omondi', category: 'Outdoor & Discipline', memberCount: 52, meetingTime: 'Fridays 3:30 PM' },
-    ]);
-  }, []);
+    // 4. Dorms
+    const dRef = collection(db, 'organizations', organization.id, 'schools', currentSchool.id, 'dorms');
+    const unsubD = onSnapshot(dRef, (snap) => {
+      setDorms(snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })));
+    }, (err) => console.warn('Error fetching dorms:', err));
+
+    // 5. Clubs
+    const cRef = collection(db, 'organizations', organization.id, 'schools', currentSchool.id, 'clubs');
+    const unsubC = onSnapshot(cRef, (snap) => {
+      setClubs(snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })));
+    }, (err) => console.warn('Error fetching clubs:', err));
+
+    return () => {
+      unsubB();
+      unsubL();
+      unsubI();
+      unsubD();
+      unsubC();
+    };
+  }, [organization, currentSchool]);
 
   const handleReturnBook = (loanId: string) => {
     setLoans((prev) =>

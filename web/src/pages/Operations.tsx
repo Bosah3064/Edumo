@@ -176,38 +176,7 @@ export const Operations: React.FC = () => {
         ...(d.data() as Omit<TransportRoute, 'id'>),
       }));
 
-      if (list.length === 0) {
-        setRoutes([
-          {
-            id: 'rt-1',
-            name: 'Route 1: Westlands & Spring Valley',
-            busRegistration: 'KDA 412B',
-            driverName: 'Musa Kipkoech',
-            driverPhone: '+254711334455',
-            conductorName: 'Grace Njeri',
-            conductorPhone: '+254722556677',
-            stops: ['Sarit Centre', 'Parklands Rd', 'Peponi Rd', 'School Main Gate'],
-            capacity: 33,
-            assignedLearnersCount: 28,
-            status: 'active',
-          },
-          {
-            id: 'rt-2',
-            name: 'Route 2: Kilimani & Ngong Road',
-            busRegistration: 'KDE 889C',
-            driverName: 'Harrison Otieno',
-            driverPhone: '+254733778899',
-            conductorName: 'Beatrice Akinyi',
-            conductorPhone: '+254744990011',
-            stops: ['Yaya Centre', 'Adams Arcade', 'Junction Mall', 'School Main Gate'],
-            capacity: 29,
-            assignedLearnersCount: 25,
-            status: 'active',
-          },
-        ]);
-      } else {
-        setRoutes(list);
-      }
+      setRoutes(list);
     });
 
     return () => unsub();
@@ -224,36 +193,7 @@ export const Operations: React.FC = () => {
         ...(d.data() as Omit<HealthVisit, 'id'>),
       }));
 
-      if (list.length === 0) {
-        setHealthVisits([
-          {
-            id: 'hv-1',
-            studentName: 'Faith Wanjiku',
-            admissionNo: 'ADM/2026/003',
-            className: 'Grade 4',
-            time: '09:45 AM',
-            complaint: 'Mild headache & light dizziness during morning numeracy class.',
-            temperature: '37.1 °C',
-            treatment: 'Oral Rehydration Salts (ORS) given, rested in clinic for 30 minutes. Restored and resumed class.',
-            nurseName: 'Nurse Jacinta Mwangi',
-            parentNotified: true,
-          },
-          {
-            id: 'hv-2',
-            studentName: 'Brian Omondi',
-            admissionNo: 'ADM/2026/004',
-            className: 'Grade 5',
-            time: '11:15 AM',
-            complaint: 'Scraped right knee on school playground field.',
-            temperature: '36.6 °C',
-            treatment: 'Antiseptic Savlon wash, wound dressing applied. Tetanus verification confirmed.',
-            nurseName: 'Nurse Jacinta Mwangi',
-            parentNotified: false,
-          },
-        ]);
-      } else {
-        setHealthVisits(list);
-      }
+      setHealthVisits(list);
     });
 
     return () => unsub();
@@ -270,35 +210,7 @@ export const Operations: React.FC = () => {
         ...(d.data() as Omit<VisitorEntry, 'id'>),
       }));
 
-      if (list.length === 0) {
-        setVisitors([
-          {
-            id: 'vis-1',
-            visitorName: 'Gladys Mutiso',
-            idNumber: '28491823',
-            phone: '+254712345678',
-            purpose: 'Inquire on Term 1 admissions for Grade 1',
-            personToSee: 'Admissions Officer / Registrar',
-            badgeNumber: 'V-04',
-            timeIn: '08:30 AM',
-            status: 'checked_out',
-            timeOut: '09:15 AM',
-          },
-          {
-            id: 'vis-2',
-            visitorName: 'David Koech (Educational Supplies)',
-            idNumber: '24183940',
-            phone: '+254722883311',
-            purpose: 'Delivery of Grade 4 science curriculum workbooks',
-            personToSee: 'Storekeeper & Head of Curriculum',
-            badgeNumber: 'V-09',
-            timeIn: '10:10 AM',
-            status: 'checked_in',
-          },
-        ]);
-      } else {
-        setVisitors(list);
-      }
+      setVisitors(list);
     });
 
     return () => unsub();
@@ -315,36 +227,7 @@ export const Operations: React.FC = () => {
         ...(d.data() as Omit<BehaviourRecord, 'id'>),
       }));
 
-      if (list.length === 0) {
-        setBehaviourList([
-          {
-            id: 'beh-1',
-            studentName: 'Zawadi Achieng',
-            admissionNo: 'ADM/2026/001',
-            className: 'Grade 4',
-            type: 'merit',
-            title: 'Exemplary Environmental Leadership',
-            description: 'Took initiative to organize campus tree seedlings planting project during club hours.',
-            points: 5,
-            recordedBy: 'Mr. James Oduor',
-            date: '2026-02-02',
-          },
-          {
-            id: 'beh-2',
-            studentName: 'Kevin Kiprono',
-            admissionNo: 'ADM/2026/002',
-            className: 'Grade 4',
-            type: 'incident',
-            title: 'Classroom Distraction during Assessment',
-            description: 'Repeated talking during silent individual test. Verbal counseling provided.',
-            severity: 'low',
-            recordedBy: 'Ms. Sarah Kamau',
-            date: '2026-02-01',
-          },
-        ]);
-      } else {
-        setBehaviourList(list);
-      }
+      setBehaviourList(list);
     });
 
     return () => unsub();
@@ -573,28 +456,8 @@ export const Operations: React.FC = () => {
           authorizedAdults: adults,
         });
       } else {
-        // Fallback demo sample if no matching database record found
-        setMatchedPickupLearner({
-          name: clean.length > 2 ? clean.charAt(0).toUpperCase() + clean.slice(1) : 'Zawadi Achieng',
-          admissionNo: 'ADM/2026/001',
-          className: 'Grade 4 East',
-          authorizedAdults: [
-            {
-              name: 'Agnes Makena (Mother)',
-              relation: 'Mother / Primary Guardian',
-              phone: '+254711889900',
-              idNo: 'ID: 24918231',
-              notes: 'Full daily pickup authorization.',
-            },
-            {
-              name: 'Bernard Otieno (Uncle)',
-              relation: 'Paternal Uncle',
-              phone: '+254722445566',
-              idNo: 'ID: 29841029',
-              notes: 'Authorized for emergency pickup with prior telephone confirmation.',
-            },
-          ],
-        });
+        setMatchedPickupLearner(null);
+        toast.error('No enrolled student found matching that admission number or name.');
       }
     } catch {
       // Non-fatal
@@ -1123,7 +986,7 @@ export const Operations: React.FC = () => {
       <Modal isOpen={isBehaviourModalOpen} onClose={() => setIsBehaviourModalOpen(false)} title="Log Pastoral Behaviour Record" maxWidth="md">
         <form onSubmit={handleCreateBehaviour} className="space-y-4 text-xs">
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Learner Full Name" placeholder="e.g. Kevin Kiprono" value={behaviourForm.studentName} onChange={(e) => setBehaviourForm({ ...behaviourForm, studentName: e.target.value })} required />
+            <Input label="Learner Full Name" placeholder="e.g. Student Full Name" value={behaviourForm.studentName} onChange={(e) => setBehaviourForm({ ...behaviourForm, studentName: e.target.value })} required />
             <Input label="Admission Number" placeholder="ADM/..." value={behaviourForm.admissionNo} onChange={(e) => setBehaviourForm({ ...behaviourForm, admissionNo: e.target.value })} required />
           </div>
           <div className="grid grid-cols-2 gap-3">

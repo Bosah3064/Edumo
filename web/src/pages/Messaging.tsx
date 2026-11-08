@@ -6,9 +6,11 @@ import {
   onSnapshot,
   doc,
   addDoc,
+  setDoc,
   serverTimestamp,
   query,
   orderBy,
+  limit,
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Card } from '../components/ui/Card';
@@ -130,139 +132,141 @@ export const Messaging: React.FC = () => {
   const smsCredits = 4850;
   const currency: string = (currentSchool?.settings?.currency as string) || 'KES';
 
-  // Seed sample data for messaging threads
+  // Live Firestore subscriptions
   useEffect(() => {
-    const sampleThreads: ChatThread[] = [
-      {
-        id: 'thr-1',
-        participantName: 'Agnes Makena (Mother)',
-        participantRole: 'Guardian',
-        participantPhone: '+254 712 345 678',
-        studentName: 'Zawadi Achieng',
-        studentClass: 'Grade 4 East',
-        lastMessage: 'Good afternoon, is tomorrow’s science practical project requiring extra materials?',
-        lastMessageTime: '10:42 AM',
-        unreadCount: 1,
-      },
-      {
-        id: 'thr-2',
-        participantName: 'Peter Wanjala (Father)',
-        participantRole: 'Guardian',
-        participantPhone: '+254 722 890 123',
-        studentName: 'Precious Wanjala',
-        studentClass: 'Grade 3 North',
-        lastMessage: 'Thank you teacher for sending the remedial reading list. We are practicing daily.',
-        lastMessageTime: 'Yesterday',
-        unreadCount: 0,
-      },
-      {
-        id: 'thr-3',
-        participantName: 'David Ochieng (Guardian)',
-        participantRole: 'Guardian',
-        participantPhone: '+254 733 456 789',
-        studentName: 'Grace Atieno',
-        studentClass: 'Grade 4 West',
-        lastMessage: 'Confirming receipt of the Term 1 report card. Outstanding improvement in CBC arts!',
-        lastMessageTime: 'Monday',
-        unreadCount: 0,
-      },
-    ];
-    setThreads(sampleThreads);
+    if (!organization?.id || !currentSchool?.id) return;
 
-    // Initial messages for thread 1
-    setMessages([
-      {
-        id: 'msg-1',
-        threadId: 'thr-1',
-        senderId: 'parent-1',
-        senderName: 'Agnes Makena',
-        senderRole: 'guardian',
-        text: 'Good morning Teacher, hope you are well. Just wanted to follow up on Zawadi’s progress in Social Studies this week.',
-        timestamp: '08:30 AM',
-        isRead: true,
+    // 1. Announcements (Broadcasts)
+    const annRef = collection(
+      db,
+      'organizations',
+      organization.id,
+      'schools',
+      currentSchool.id,
+      'announcements'
+    );
+    const qAnn = query(annRef, orderBy('createdAt', 'desc'), limit(50));
+    const unsubAnn = onSnapshot(
+      qAnn,
+      (snap) => {
+        const records: BroadcastRecord[] = snap.docs.map((d) => {
+          const data = d.data();
+          const dateObj = data.createdAt?.toDate ? data.createdAt.toDate() : new Date();
+          return {
+            id: d.id,
+            title: data.title || 'Broadcast Announcement',
+            body: data.body || '',
+            audience: (data.audience || 'All Parents').replace(/_/g, ' ').toUpperCase(),
+            channels: data.channels || ['SMS', 'In-App'],
+            priority: data.priority || 'normal',
+            recipientCount: data.recipientCount || (data.audience === 'all_parents' ? 480 : 85),
+            status: 'delivered',
+            sentAt: dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
+            senderName: data.senderName || 'School Administration',
+          };
+        });
+        setBroadcastRecords(records);
       },
-      {
-        id: 'msg-2',
-        threadId: 'thr-1',
-        senderId: 'teacher-1',
-        senderName: currentUser?.displayName || 'Class Educator',
-        senderRole: 'teacher',
-        text: 'Good morning Mrs. Makena. Zawadi is performing exceptionally well! She led her peer group presentation on community resources yesterday.',
-        timestamp: '09:15 AM',
-        isRead: true,
-      },
-      {
-        id: 'msg-3',
-        threadId: 'thr-1',
-        senderId: 'parent-1',
-        senderName: 'Agnes Makena',
-        senderRole: 'guardian',
-        text: 'Good afternoon, is tomorrow’s science practical project requiring extra materials from home?',
-        timestamp: '10:42 AM',
-        isRead: false,
-      },
-    ]);
+      (err) => console.warn('Broadcasts listener error:', err)
+    );
 
-    // Initial permission slips
-    setSlips([
-      {
-        id: 'slip-1',
-        title: 'National Museums of Kenya & Snake Park Educational Tour',
-        destination: 'Museum Hill, Nairobi',
-        date: '2026-03-27',
-        targetClass: 'Grade 4',
-        cost: 1800,
-        totalStudents: 42,
-        signedCount: 36,
-        declinedCount: 2,
-        deadline: '2026-03-20',
+    // 2. Permission slips
+    const slipsRef = collection(
+      db,
+      'organizations',
+      organization.id,
+      'schools',
+      currentSchool.id,
+      'permission_slips'
+    );
+    const unsubSlips = onSnapshot(
+      slipsRef,
+      (snap) => {
+        const list: PermissionSlip[] = snap.docs.map((d) => ({
+          id: d.id,
+          ...(d.data() as Omit<PermissionSlip, 'id'>),
+        }));
+        setSlips(list);
       },
-      {
-        id: 'slip-2',
-        title: 'Ololua Nature Trail & CBC Environmental Fieldwork',
-        destination: 'Karen, Nairobi',
-        date: '2026-04-14',
-        targetClass: 'Grade 5 & 6',
-        cost: 2200,
-        totalStudents: 68,
-        signedCount: 45,
-        declinedCount: 3,
-        deadline: '2026-04-05',
-      },
-    ]);
+      (err) => console.warn('Slips listener error:', err)
+    );
 
-    // Initial Broadcast Records
-    setBroadcastRecords([
-      {
-        id: 'bc-1',
-        title: 'Mid-Term Break Departure & Return Schedule',
-        body: 'Dear Parents & Guardians, mid-term break begins on Friday 20th Feb at 12:30 PM. Normal classes resume on Tuesday 24th Feb at 07:30 AM.',
-        audience: 'All Parents',
-        channels: ['SMS', 'In-App'],
-        priority: 'normal',
-        recipientCount: 480,
-        status: 'delivered',
-        sentAt: 'Yesterday, 03:15 PM',
-        senderName: 'Principal Office',
+    // 3. Chat threads
+    const threadsRef = collection(
+      db,
+      'organizations',
+      organization.id,
+      'schools',
+      currentSchool.id,
+      'chat_threads'
+    );
+    const unsubThreads = onSnapshot(
+      threadsRef,
+      (snap) => {
+        const list: ChatThread[] = snap.docs.map((d) => ({
+          id: d.id,
+          ...(d.data() as Omit<ChatThread, 'id'>),
+        }));
+        setThreads(list);
+        if (list.length > 0 && !selectedThreadId) {
+          setSelectedThreadId(list[0].id);
+        }
       },
-      {
-        id: 'bc-2',
-        title: 'CBC Grade 6 KPSEA Assessment Material Verification',
-        body: 'Please ensure all Grade 6 candidates bring their approved scientific calculators and geometrical sets for the county cluster rehearsals tomorrow.',
-        audience: 'Grade 6 Parents',
-        channels: ['SMS', 'In-App'],
-        priority: 'urgent',
-        recipientCount: 86,
-        status: 'delivered',
-        sentAt: 'Monday, 09:30 AM',
-        senderName: 'Academic Directorate',
-      },
-    ]);
-  }, [currentUser]);
+      (err) => console.warn('Chat threads listener error:', err)
+    );
+
+    return () => {
+      unsubAnn();
+      unsubSlips();
+      unsubThreads();
+    };
+  }, [organization, currentSchool, selectedThreadId]);
 
   const activeThread = useMemo(() => {
-    return threads.find((t) => t.id === selectedThreadId) || threads[0];
+    return threads.find((t) => t.id === selectedThreadId) || (threads.length > 0 ? threads[0] : null);
   }, [threads, selectedThreadId]);
+
+  // Listen to messages for active thread
+  useEffect(() => {
+    if (!organization?.id || !currentSchool?.id || !activeThread?.id) {
+      setMessages([]);
+      return;
+    }
+    const msgsRef = collection(
+      db,
+      'organizations',
+      organization.id,
+      'schools',
+      currentSchool.id,
+      'chat_threads',
+      activeThread.id,
+      'messages'
+    );
+    const qMsgs = query(msgsRef, orderBy('createdAt', 'asc'), limit(100));
+    const unsubMsgs = onSnapshot(
+      qMsgs,
+      (snap) => {
+        const list: ChatMessage[] = snap.docs.map((d) => {
+          const data = d.data();
+          const dateObj = data.createdAt?.toDate ? data.createdAt.toDate() : new Date();
+          return {
+            id: d.id,
+            threadId: activeThread.id,
+            senderId: data.senderId || '',
+            senderName: data.senderName || '',
+            senderRole: data.senderRole || 'teacher',
+            text: data.text || '',
+            timestamp: dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            isRead: data.isRead ?? true,
+          };
+        });
+        setMessages(list);
+      },
+      (err) => console.warn('Messages listener error:', err)
+    );
+
+    return () => unsubMsgs();
+  }, [organization, currentSchool, activeThread?.id]);
 
   const filteredThreads = useMemo(() => {
     if (!searchQuery.trim()) return threads;
@@ -275,9 +279,12 @@ export const Messaging: React.FC = () => {
     );
   }, [threads, searchQuery]);
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputText.trim()) return;
+    if (!inputText.trim() || !activeThread) return;
+
+    const messageText = inputText.trim();
+    setInputText('');
 
     const newMsg: ChatMessage = {
       id: `msg-${Date.now()}`,
@@ -285,22 +292,53 @@ export const Messaging: React.FC = () => {
       senderId: currentUser?.uid || 'staff-uid',
       senderName: currentUser?.displayName || 'Class Educator',
       senderRole: 'teacher',
-      text: inputText.trim(),
+      text: messageText,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       isRead: false,
     };
 
     setMessages((prev) => [...prev, newMsg]);
-    setInputText('');
 
-    // Update last message in thread
-    setThreads((prev) =>
-      prev.map((t) =>
-        t.id === activeThread.id
-          ? { ...t, lastMessage: newMsg.text, lastMessageTime: newMsg.timestamp, unreadCount: 0 }
-          : t
-      )
-    );
+    if (organization?.id && currentSchool?.id) {
+      try {
+        const msgsRef = collection(
+          db,
+          'organizations',
+          organization.id,
+          'schools',
+          currentSchool.id,
+          'chat_threads',
+          activeThread.id,
+          'messages'
+        );
+        await addDoc(msgsRef, {
+          threadId: activeThread.id,
+          senderId: currentUser?.uid || 'staff-uid',
+          senderName: currentUser?.displayName || 'Class Educator',
+          senderRole: 'teacher',
+          text: messageText,
+          isRead: false,
+          createdAt: serverTimestamp(),
+        });
+
+        const threadRef = doc(
+          db,
+          'organizations',
+          organization.id,
+          'schools',
+          currentSchool.id,
+          'chat_threads',
+          activeThread.id
+        );
+        await setDoc(threadRef, {
+          lastMessage: messageText,
+          lastMessageTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      } catch (err) {
+        console.warn('Error saving message to Firestore:', err);
+      }
+    }
 
     toast.success('Message sent directly to guardian!', { icon: '💬' });
   };
@@ -373,7 +411,7 @@ export const Messaging: React.FC = () => {
     }
   };
 
-  const handleCreateSlip = (e: React.FormEvent) => {
+  const handleCreateSlip = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!slipTitle.trim()) {
       toast.error('Please provide an excursion title');
@@ -394,6 +432,34 @@ export const Messaging: React.FC = () => {
     };
 
     setSlips((prev) => [newSlip, ...prev]);
+
+    if (organization?.id && currentSchool?.id) {
+      try {
+        const slipsRef = collection(
+          db,
+          'organizations',
+          organization.id,
+          'schools',
+          currentSchool.id,
+          'permission_slips'
+        );
+        await addDoc(slipsRef, {
+          title: newSlip.title,
+          destination: newSlip.destination,
+          date: newSlip.date,
+          targetClass: newSlip.targetClass,
+          cost: newSlip.cost,
+          totalStudents: newSlip.totalStudents,
+          signedCount: 0,
+          declinedCount: 0,
+          deadline: newSlip.deadline,
+          createdAt: serverTimestamp(),
+        });
+      } catch (err) {
+        console.warn('Error saving permission slip to Firestore:', err);
+      }
+    }
+
     toast.success('Digital permission slip created & dispatched to parent portal accounts!');
     setIsSlipModalOpen(false);
     setSlipTitle('');
@@ -535,45 +601,53 @@ export const Messaging: React.FC = () => {
               </div>
 
               <div className="flex-1 overflow-y-auto space-y-2 pr-1 scrollbar-none">
-                {filteredThreads.map((thr) => {
-                  const isSelected = thr.id === activeThread?.id;
-                  return (
-                    <button
-                      key={thr.id}
-                      onClick={() => {
-                        setSelectedThreadId(thr.id);
-                        setMobileView('chat');
-                      }}
-                      className={`w-full text-left p-3 rounded-2xl border transition-all cursor-pointer ${
-                        isSelected
-                          ? 'bg-blue-50/80 border-[#1d5f99] shadow-xs'
-                          : 'bg-white hover:bg-slate-50 border-slate-200'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#1d5f99] to-[#683669] text-white font-bold flex items-center justify-center text-xs shrink-0 shadow-2xs">
-                            {thr.participantName.charAt(0)}
+                {filteredThreads.length === 0 ? (
+                  <div className="text-center py-16 px-4 space-y-2">
+                    <MessageSquare className="w-10 h-10 text-slate-300 mx-auto" />
+                    <p className="text-xs font-bold text-slate-700">No active conversations</p>
+                    <p className="text-2xs text-slate-400">Incoming guardian inquiries will appear here.</p>
+                  </div>
+                ) : (
+                  filteredThreads.map((thr) => {
+                    const isSelected = thr.id === activeThread?.id;
+                    return (
+                      <button
+                        key={thr.id}
+                        onClick={() => {
+                          setSelectedThreadId(thr.id);
+                          setMobileView('chat');
+                        }}
+                        className={`w-full text-left p-3 rounded-2xl border transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-blue-50/80 border-[#1d5f99] shadow-xs'
+                            : 'bg-white hover:bg-slate-50 border-slate-200'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#1d5f99] to-[#683669] text-white font-bold flex items-center justify-center text-xs shrink-0 shadow-2xs">
+                              {thr.participantName.charAt(0)}
+                            </div>
+                            <div className="min-w-0">
+                              <h4 className="font-bold text-slate-900 text-xs truncate">
+                                {thr.participantName}
+                              </h4>
+                              <p className="text-[11px] text-slate-500 truncate">
+                                {thr.studentName} • <span className="font-semibold text-slate-700">{thr.studentClass}</span>
+                              </p>
+                            </div>
                           </div>
-                          <div className="min-w-0">
-                            <h4 className="font-bold text-slate-900 text-xs truncate">
-                              {thr.participantName}
-                            </h4>
-                            <p className="text-[11px] text-slate-500 truncate">
-                              {thr.studentName} • <span className="font-semibold text-slate-700">{thr.studentClass}</span>
-                            </p>
-                          </div>
+                          <span className="text-[10px] font-mono text-slate-400 shrink-0 mt-0.5">
+                            {thr.lastMessageTime}
+                          </span>
                         </div>
-                        <span className="text-[10px] font-mono text-slate-400 shrink-0 mt-0.5">
-                          {thr.lastMessageTime}
-                        </span>
-                      </div>
-                      <p className="text-2xs text-slate-600 line-clamp-1 mt-2 pl-11">
-                        {thr.lastMessage}
-                      </p>
-                    </button>
-                  );
-                })}
+                        <p className="text-2xs text-slate-600 line-clamp-1 mt-2 pl-11">
+                          {thr.lastMessage}
+                        </p>
+                      </button>
+                    );
+                  })
+                )}
               </div>
             </Card>
           </div>
@@ -585,95 +659,115 @@ export const Messaging: React.FC = () => {
             }`}
           >
             <Card className="p-0 flex flex-col h-[560px] border border-slate-200 shadow-sm overflow-hidden">
-              {/* Thread Header with Mobile Back Button */}
-              <div className="p-3.5 sm:p-4 bg-white border-b border-slate-200 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  {/* Mobile Back to Threads Button */}
-                  <button
-                    onClick={() => setMobileView('threads')}
-                    className="lg:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100 transition-colors shrink-0"
-                    title="Back to conversation list"
-                  >
-                    <ArrowLeft className="w-5 h-5 text-slate-800" />
-                  </button>
-
-                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#1d5f99] to-[#683669] text-white font-bold flex items-center justify-center text-sm shrink-0 shadow-2xs">
-                    {activeThread?.participantName.charAt(0)}
+              {!activeThread ? (
+                <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-3 bg-slate-50/50">
+                  <div className="w-14 h-14 rounded-2xl bg-blue-100 text-[#1d5f99] flex items-center justify-center mx-auto">
+                    <MessageSquare className="w-7 h-7" />
                   </div>
-                  <div className="min-w-0">
-                    <h3 className="font-black text-slate-900 text-xs sm:text-sm truncate">
-                      {activeThread?.participantName}
-                    </h3>
-                    <p className="text-2xs text-slate-500 truncate">
-                      Learner: <strong>{activeThread?.studentName}</strong> ({activeThread?.studentClass}) • Phone: {activeThread?.participantPhone}
-                    </p>
-                  </div>
+                  <h4 className="font-black text-slate-900 text-sm">Select a Conversation</h4>
+                  <p className="text-xs text-slate-500 max-w-sm">Choose a chat thread from the left or wait for incoming parent inquiries.</p>
                 </div>
-
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => toast.success(`Dialing ${activeThread?.participantPhone}...`, { icon: '📞' })}
-                    leftIcon={<Phone className="w-3.5 h-3.5 text-emerald-600" />}
-                    className="text-xs font-bold"
-                  >
-                    <span className="hidden sm:inline">Call Guardian</span>
-                  </Button>
-                </div>
-              </div>
-
-              {/* Messages Area */}
-              <div className="flex-1 p-4 sm:p-5 overflow-y-auto space-y-3.5 bg-slate-50/70">
-                {messages.map((msg) => {
-                  const isMe = msg.senderRole === 'teacher';
-                  return (
-                    <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                      <div
-                        className={`max-w-md p-3.5 rounded-2xl text-xs space-y-1 shadow-2xs leading-relaxed ${
-                          isMe
-                            ? 'bg-[#1d5f99] text-white rounded-br-none'
-                            : 'bg-white text-slate-800 border border-slate-200 rounded-bl-none'
-                        }`}
+              ) : (
+                <>
+                  {/* Thread Header with Mobile Back Button */}
+                  <div className="p-3.5 sm:p-4 bg-white border-b border-slate-200 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {/* Mobile Back to Threads Button */}
+                      <button
+                        onClick={() => setMobileView('threads')}
+                        className="lg:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100 transition-colors shrink-0"
+                        title="Back to conversation list"
                       >
-                        <div className="flex items-center justify-between gap-4 text-2xs opacity-80 pb-0.5">
-                          <span className="font-bold">{msg.senderName}</span>
-                          <span className="font-mono text-[10px]">{msg.timestamp}</span>
-                        </div>
-                        <p>{msg.text}</p>
-                        {isMe && (
-                          <div className="flex justify-end pt-0.5">
-                            <CheckCheck className="w-3.5 h-3.5 opacity-80" />
-                          </div>
-                        )}
+                        <ArrowLeft className="w-5 h-5 text-slate-800" />
+                      </button>
+
+                      <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#1d5f99] to-[#683669] text-white font-bold flex items-center justify-center text-sm shrink-0 shadow-2xs">
+                        {activeThread.participantName.charAt(0)}
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="font-black text-slate-900 text-xs sm:text-sm truncate">
+                          {activeThread.participantName}
+                        </h3>
+                        <p className="text-2xs text-slate-500 truncate">
+                          Learner: <strong>{activeThread.studentName}</strong> ({activeThread.studentClass}) • Phone: {activeThread.participantPhone}
+                        </p>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
 
-              {/* Message Composer Bar */}
-              <form
-                onSubmit={handleSendMessage}
-                className="p-3 bg-white border-t border-slate-200 flex items-center gap-2"
-              >
-                <input
-                  type="text"
-                  placeholder="Type message to guardian (moderated by administration)..."
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  className="flex-1 px-4 py-2.5 rounded-xl border border-slate-300 text-xs font-medium focus:ring-2 focus:ring-[#1d5f99] focus:outline-none"
-                />
-                <Button
-                  type="submit"
-                  variant="primary"
-                  size="sm"
-                  leftIcon={<Send className="w-4 h-4" />}
-                  className="bg-[#1d5f99] hover:bg-[#164a78] font-bold text-xs shrink-0"
-                >
-                  Send
-                </Button>
-              </form>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => toast.success(`Dialing ${activeThread.participantPhone}...`, { icon: '📞' })}
+                        leftIcon={<Phone className="w-3.5 h-3.5 text-emerald-600" />}
+                        className="text-xs font-bold"
+                      >
+                        <span className="hidden sm:inline">Call Guardian</span>
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Messages Area */}
+                  <div className="flex-1 p-4 sm:p-5 overflow-y-auto space-y-3.5 bg-slate-50/70">
+                    {messages.length === 0 ? (
+                      <div className="text-center py-16 px-4 space-y-2">
+                        <MessageSquare className="w-8 h-8 text-slate-300 mx-auto" />
+                        <p className="text-xs font-bold text-slate-700">No messages in this conversation yet</p>
+                        <p className="text-2xs text-slate-400">Type a message below to reach out to this guardian directly.</p>
+                      </div>
+                    ) : (
+                      messages.map((msg) => {
+                        const isMe = msg.senderRole === 'teacher';
+                        return (
+                          <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                            <div
+                              className={`max-w-md p-3.5 rounded-2xl text-xs space-y-1 shadow-2xs leading-relaxed ${
+                                isMe
+                                  ? 'bg-[#1d5f99] text-white rounded-br-none'
+                                  : 'bg-white text-slate-800 border border-slate-200 rounded-bl-none'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between gap-4 text-2xs opacity-80 pb-0.5">
+                                <span className="font-bold">{msg.senderName}</span>
+                                <span className="font-mono text-[10px]">{msg.timestamp}</span>
+                              </div>
+                              <p>{msg.text}</p>
+                              {isMe && (
+                                <div className="flex justify-end pt-0.5">
+                                  <CheckCheck className="w-3.5 h-3.5 opacity-80" />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  {/* Message Composer Bar */}
+                  <form
+                    onSubmit={handleSendMessage}
+                    className="p-3 bg-white border-t border-slate-200 flex items-center gap-2"
+                  >
+                    <input
+                      type="text"
+                      placeholder="Type message to guardian (moderated by administration)..."
+                      value={inputText}
+                      onChange={(e) => setInputText(e.target.value)}
+                      className="flex-1 px-4 py-2.5 rounded-xl border border-slate-300 text-xs font-medium focus:ring-2 focus:ring-[#1d5f99] focus:outline-none"
+                    />
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      size="sm"
+                      leftIcon={<Send className="w-4 h-4" />}
+                      className="bg-[#1d5f99] hover:bg-[#164a78] font-bold text-xs shrink-0"
+                    >
+                      Send
+                    </Button>
+                  </form>
+                </>
+              )}
             </Card>
           </div>
         </div>
@@ -813,34 +907,42 @@ export const Messaging: React.FC = () => {
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {broadcastRecords.map((bc) => (
-                <Card key={bc.id} className="p-4 border border-slate-200 shadow-xs space-y-2.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded-full text-2xs font-extrabold bg-blue-100 text-[#1d5f99]">
-                        {bc.audience}
-                      </span>
-                      {bc.priority === 'urgent' && (
-                        <span className="px-2 py-0.5 rounded-full text-2xs font-extrabold bg-red-100 text-red-700">
-                          Urgent
+              {broadcastRecords.length === 0 ? (
+                <div className="col-span-full text-center py-12 bg-white rounded-2xl border border-slate-200 p-8 space-y-2">
+                  <Radio className="w-10 h-10 text-slate-300 mx-auto" />
+                  <p className="text-xs font-bold text-slate-700">No broadcasts dispatched yet</p>
+                  <p className="text-2xs text-slate-400">Use the dispatcher above to send official announcements across SMS and in-app channels.</p>
+                </div>
+              ) : (
+                broadcastRecords.map((bc) => (
+                  <Card key={bc.id} className="p-4 border border-slate-200 shadow-xs space-y-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded-full text-2xs font-extrabold bg-blue-100 text-[#1d5f99]">
+                          {bc.audience}
                         </span>
-                      )}
+                        {bc.priority === 'urgent' && (
+                          <span className="px-2 py-0.5 rounded-full text-2xs font-extrabold bg-red-100 text-red-700">
+                            Urgent
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-2xs font-mono text-slate-400">{bc.sentAt}</span>
                     </div>
-                    <span className="text-2xs font-mono text-slate-400">{bc.sentAt}</span>
-                  </div>
 
-                  <h4 className="font-black text-xs text-slate-900 leading-snug">{bc.title}</h4>
-                  <p className="text-2xs text-slate-600 leading-relaxed line-clamp-2">{bc.body}</p>
+                    <h4 className="font-black text-xs text-slate-900 leading-snug">{bc.title}</h4>
+                    <p className="text-2xs text-slate-600 leading-relaxed line-clamp-2">{bc.body}</p>
 
-                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-2xs text-slate-500 font-medium">
-                    <span className="flex items-center gap-1 text-emerald-700 font-bold">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                      Delivered to {bc.recipientCount} guardians
-                    </span>
-                    <span>Channels: {bc.channels.join(', ')}</span>
-                  </div>
-                </Card>
-              ))}
+                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-2xs text-slate-500 font-medium">
+                      <span className="flex items-center gap-1 text-emerald-700 font-bold">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        Delivered to {bc.recipientCount} guardians
+                      </span>
+                      <span>Channels: {bc.channels.join(', ')}</span>
+                    </div>
+                  </Card>
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -879,33 +981,43 @@ export const Messaging: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {slips.map((s) => {
-                    const percentSigned = Math.round((s.signedCount / s.totalStudents) * 100);
-                    return (
-                      <tr key={s.id} className="hover:bg-slate-50/70">
-                        <td className="py-3 px-4">
-                          <span className="font-bold text-slate-900 block">{s.title}</span>
-                          <span className="text-2xs text-slate-500">Destination: {s.destination}</span>
-                        </td>
-                        <td className="py-3 px-4 font-semibold text-slate-700">{s.targetClass}</td>
-                        <td className="py-3 px-4 font-mono text-slate-600 text-2xs">{s.date}</td>
-                        <td className="py-3 px-4 text-right font-mono font-bold text-slate-900">
-                          {currency} {s.cost.toLocaleString()}
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          <div className="flex items-center justify-center gap-1.5">
-                            <span className="font-extrabold font-mono text-emerald-700">{s.signedCount}/{s.totalStudents}</span>
-                            <span className="text-2xs text-slate-400">({percentSigned}%)</span>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          <Badge variant={percentSigned >= 80 ? 'accent' : 'brand'} size="sm">
-                            {percentSigned >= 80 ? 'Ready for Tour' : 'Awaiting Consents'}
-                          </Badge>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {slips.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-12 text-center text-slate-400">
+                        <FileCheck2 className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                        <p className="text-xs font-bold text-slate-700">No active permission slips</p>
+                        <p className="text-2xs text-slate-400">Click &ldquo;New Permission Slip&rdquo; to create excursion authorisations and collect digital parent signatures.</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    slips.map((s) => {
+                      const percentSigned = Math.round((s.signedCount / s.totalStudents) * 100);
+                      return (
+                        <tr key={s.id} className="hover:bg-slate-50/70">
+                          <td className="py-3 px-4">
+                            <span className="font-bold text-slate-900 block">{s.title}</span>
+                            <span className="text-2xs text-slate-500">Destination: {s.destination}</span>
+                          </td>
+                          <td className="py-3 px-4 font-semibold text-slate-700">{s.targetClass}</td>
+                          <td className="py-3 px-4 font-mono text-slate-600 text-2xs">{s.date}</td>
+                          <td className="py-3 px-4 text-right font-mono font-bold text-slate-900">
+                            {currency} {s.cost.toLocaleString()}
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <span className="font-extrabold font-mono text-emerald-700">{s.signedCount}/{s.totalStudents}</span>
+                              <span className="text-2xs text-slate-400">({percentSigned}%)</span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <Badge variant={percentSigned >= 80 ? 'accent' : 'brand'} size="sm">
+                              {percentSigned >= 80 ? 'Ready for Tour' : 'Awaiting Consents'}
+                            </Badge>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>

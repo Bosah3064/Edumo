@@ -147,20 +147,7 @@ export const Library: React.FC = () => {
           };
         });
 
-        // If collection is completely empty, provide standard initial catalog
-        if (list.length === 0 && !snap.metadata.hasPendingWrites) {
-          const initialCatalog: BookItem[] = [
-            { id: 'bk-1', title: 'Things Fall Apart', author: 'Chinua Achebe', isbn: '978-0385474542', category: 'African Literature', shelfLocation: 'Section Lit-A', totalCopies: 25, availableCopies: 21 },
-            { id: 'bk-2', title: 'The River and the Source', author: 'Margaret Ogola', isbn: '978-9966882059', category: 'Secondary Set Books', shelfLocation: 'Section Set-B', totalCopies: 40, availableCopies: 34 },
-            { id: 'bk-3', title: 'Integrated Science for CBC Grade 7', author: 'KICD Kenya', isbn: '978-9966221087', category: 'CBC Curriculum', shelfLocation: 'Section CBC-7', totalCopies: 50, availableCopies: 47 },
-            { id: 'bk-4', title: 'Kidagaa Kimemwozea', author: 'Ken Walibora', isbn: '978-9966100573', category: 'Fasihi ya Kiswahili', shelfLocation: 'Section Swa-1', totalCopies: 30, availableCopies: 28 },
-            { id: 'bk-5', title: 'A Doll\'s House', author: 'Henrik Ibsen', isbn: '978-0486270623', category: 'Literature in English', shelfLocation: 'Section Drama-3', totalCopies: 35, availableCopies: 30 },
-            { id: 'bk-6', title: 'Foundations of Pure Mathematics', author: 'J. K. Backhouse', isbn: '978-0582093553', category: 'STEM & Mathematics', shelfLocation: 'Section Sci-M', totalCopies: 20, availableCopies: 16 },
-          ];
-          setBooks(initialCatalog);
-        } else {
-          setBooks(list);
-        }
+        setBooks(list);
         setLoadingBooks(false);
       },
       (err) => {
@@ -208,15 +195,7 @@ export const Library: React.FC = () => {
           };
         });
 
-        if (list.length === 0 && !snap.metadata.hasPendingWrites) {
-          const initialLoans: BookLoan[] = [
-            { id: 'ln-1', bookTitle: 'Things Fall Apart', studentName: 'Kevin Kiprono', admissionNo: 'ADM/2026/002', borrowedDate: '2026-01-20', dueDate: '2026-02-03', status: 'overdue' },
-            { id: 'ln-2', bookTitle: 'The River and the Source', studentName: 'Zawadi Achieng', admissionNo: 'ADM/2026/001', borrowedDate: '2026-02-01', dueDate: '2026-02-15', status: 'active' },
-          ];
-          setLoans(initialLoans);
-        } else {
-          setLoans(list);
-        }
+        setLoans(list);
         setLoadingLoans(false);
       },
       (err) => {

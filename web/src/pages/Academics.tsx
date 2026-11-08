@@ -194,53 +194,119 @@ export const Academics: React.FC = () => {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
 
-  // Exam Series State
-  const [examSeriesList, setExamSeriesList] = useState<ExamSeries[]>([
-    {
-      id: 'series-01',
-      name: '2026 Term 1 Opening Assessment',
-      academicYearId: '2026',
-      termId: 'term1',
-      weightPercentage: 20,
-      startDate: '2026-01-15',
-      endDate: '2026-01-20',
-      status: 'locked',
-      targetClasses: ['Grade 4', 'Grade 5', 'Grade 6'],
-      createdAt: '2026-01-10T00:00:00Z',
-      createdBy: 'Academic Dean',
-    },
-    {
-      id: 'series-02',
-      name: '2026 Term 1 Mid-Term Assessment',
-      academicYearId: '2026',
-      termId: 'term1',
-      weightPercentage: 30,
-      startDate: '2026-02-24',
-      endDate: '2026-02-28',
-      status: 'active',
-      targetClasses: ['Grade 4', 'Grade 5', 'Grade 6'],
-      createdAt: '2026-02-15T00:00:00Z',
-      createdBy: 'Academic Dean',
-    },
-    {
-      id: 'series-03',
-      name: '2026 Term 1 End-Term Examination',
-      academicYearId: '2026',
-      termId: 'term1',
-      weightPercentage: 50,
-      startDate: '2026-04-01',
-      endDate: '2026-04-08',
-      status: 'draft',
-      targetClasses: ['Grade 4', 'Grade 5', 'Grade 6'],
-      createdAt: '2026-03-01T00:00:00Z',
-      createdBy: 'Academic Dean',
-    },
-  ]);
+  // Exam Series State - loaded dynamically from Firestore (no hardcoded records)
+  const [examSeriesList, setExamSeriesList] = useState<ExamSeries[]>([]);
+  const [loadingSeries, setLoadingSeries] = useState(true);
+
+  // Dynamic real-time exam series listener from Firestore
+  useEffect(() => {
+    if (!organization || !currentSchool) return;
+
+    const seriesRef = collection(
+      db,
+      'organizations',
+      organization.id,
+      'schools',
+      currentSchool.id,
+      'examSeries'
+    );
+
+    const unsubSeries = onSnapshot(seriesRef, (snap) => {
+      const list: ExamSeries[] = snap.docs.map((d) => {
+        const data = d.data();
+        return {
+          id: d.id,
+          name: data.name || 'Assessment Series',
+          academicYearId: data.academicYearId || '2026',
+          termId: data.termId || 'term1',
+          weightPercentage: Number(data.weightPercentage) || 30,
+          startDate: data.startDate || '2026-01-15',
+          endDate: data.endDate || '2026-04-10',
+          status: data.status || 'active',
+          targetClasses: Array.isArray(data.targetClasses) ? data.targetClasses : [],
+          createdAt: data.createdAt || new Date().toISOString(),
+          createdBy: data.createdBy || 'Academic Dean',
+        };
+      });
+
+      list.sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
+      setExamSeriesList(list);
+      setLoadingSeries(false);
+
+      if (list.length > 0) {
+        if (!list.some((s) => s.id === selectedSeriesId)) {
+          setSelectedSeriesId(list[0].id || '');
+          setAssessmentTitle(list[0].name);
+        }
+      }
+    });
+
+    return () => unsubSeries();
+  }, [organization?.id, currentSchool?.id]);
 
   const [isNewSeriesModalOpen, setIsNewSeriesModalOpen] = useState(false);
   const [newSeriesName, setNewSeriesName] = useState('');
   const [newSeriesWeight, setNewSeriesWeight] = useState('30');
   const [newSeriesTerm, setNewSeriesTerm] = useState('term1');
+
+  // Helper to initialize standard academic year exam series in Firestore
+  const handleSeedStandardExamSeries = async () => {
+    if (!organization?.id || !currentSchool?.id) return;
+    const toastId = toast.loading('Initializing standard exam series...');
+    try {
+      const defaultSeries: ExamSeries[] = [
+        {
+          id: 'series-term1-opener',
+          name: '2026 Term 1 Opening Assessment',
+          academicYearId: '2026',
+          termId: 'term1',
+          weightPercentage: 20,
+          startDate: '2026-01-15',
+          endDate: '2026-01-20',
+          status: 'locked',
+          targetClasses: ['all'],
+          createdAt: new Date().toISOString(),
+          createdBy: currentUser?.displayName || 'Academic Dean',
+        },
+        {
+          id: 'series-term1-midterm',
+          name: '2026 Term 1 Mid-Term Assessment',
+          academicYearId: '2026',
+          termId: 'term1',
+          weightPercentage: 30,
+          startDate: '2026-02-24',
+          endDate: '2026-02-28',
+          status: 'active',
+          targetClasses: ['all'],
+          createdAt: new Date().toISOString(),
+          createdBy: currentUser?.displayName || 'Academic Dean',
+        },
+        {
+          id: 'series-term1-endterm',
+          name: '2026 Term 1 End-Term Examination',
+          academicYearId: '2026',
+          termId: 'term1',
+          weightPercentage: 50,
+          startDate: '2026-04-01',
+          endDate: '2026-04-08',
+          status: 'draft',
+          targetClasses: ['all'],
+          createdAt: new Date().toISOString(),
+          createdBy: currentUser?.displayName || 'Academic Dean',
+        },
+      ];
+
+      for (const s of defaultSeries) {
+        if (!s.id) continue;
+        const ref = doc(db, 'organizations', organization.id, 'schools', currentSchool.id, 'examSeries', s.id);
+        await setDoc(ref, s, { merge: true });
+      }
+      toast.success('Initialized 3 standard exam series in database!', { id: toastId });
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to initialize exam series', { id: toastId });
+    }
+  };
 
   // Report Card Modal
   const [selectedReportCard, setSelectedReportCard] = useState<StudentAssessmentAggregate | null>(null);
@@ -633,19 +699,30 @@ export const Academics: React.FC = () => {
         termTitle: 'Term 1',
         academicYear: '2026',
         totalStudents: roster.length,
-        subjectSummaries: [
-          { subjectName: 'Mathematics', teacherName: 'Mr. Patrick Ochieng', entries: roster.length, meanScore: 74.2, highestScore: 48, lowestScore: 24, passRate: 91.5 },
-          { subjectName: 'English Language', teacherName: 'Ms. Beatrice Wairimu', entries: roster.length, meanScore: 81.6, highestScore: 50, lowestScore: 32, passRate: 96.0 },
-          { subjectName: 'Kiswahili', teacherName: 'Mwalimu Juma Omari', entries: roster.length, meanScore: 78.4, highestScore: 49, lowestScore: 28, passRate: 93.8 },
-          { subjectName: 'Integrated Science', teacherName: 'Dr. Evans Kiprotich', entries: roster.length, meanScore: 83.1, highestScore: 50, lowestScore: 30, passRate: 97.2 },
-          { subjectName: 'Social Studies', teacherName: 'Mrs. Maryanne Mutua', entries: roster.length, meanScore: 76.8, highestScore: 47, lowestScore: 26, passRate: 90.0 },
-          { subjectName: 'Creative Arts & Sports', teacherName: 'Coach Kevin Barasa', entries: roster.length, meanScore: 88.5, highestScore: 50, lowestScore: 38, passRate: 100.0 },
-        ],
-        streamSummaries: [
-          { streamName: `${selectedClass} East`, studentCount: 28, meanScore: 81.4, attendanceRate: 97.2 },
-          { streamName: `${selectedClass} West`, studentCount: 26, meanScore: 78.9, attendanceRate: 96.5 },
-          { streamName: `${selectedClass} North`, studentCount: 27, meanScore: 80.2, attendanceRate: 98.1 },
-        ],
+        subjectSummaries: availableSubjectOptions.map((subName) => {
+          const isSelected = subName.toLowerCase() === selectedSubject.toLowerCase();
+          const assignedTeacher = (schoolSubjects.find((s) => s.name.toLowerCase() === subName.toLowerCase()) as any)?.teacher || 'Subject Teacher';
+          return {
+            subjectName: subName,
+            teacherName: assignedTeacher,
+            entries: isSelected ? enteredScores.length : 0,
+            meanScore: isSelected ? classMeanPct : 0,
+            highestScore: isSelected && enteredScores.length > 0 ? Math.max(...enteredScores) : 0,
+            lowestScore: isSelected && enteredScores.length > 0 ? Math.min(...enteredScores) : 0,
+            passRate: isSelected ? classPassRate : 0,
+          };
+        }),
+        streamSummaries: availableStreams.map((strName) => {
+          const streamLearners = roster.filter((r) => (r.stream || '').toLowerCase().trim() === strName.toLowerCase().trim());
+          const streamScores = streamLearners.map((r) => r.score).filter((s): s is number => s !== '' && !isNaN(Number(s)));
+          const mean = streamScores.length > 0 ? Math.round((streamScores.reduce((a, b) => a + b, 0) / (streamScores.length * maxScore)) * 1000) / 10 : 0;
+          return {
+            streamName: `${selectedClass} ${strName}`,
+            studentCount: streamLearners.length,
+            meanScore: mean,
+            attendanceRate: 100,
+          };
+        }),
       });
       toast.success('Exam Analysis Workbook (.xlsx) generated successfully!', { id: toastId });
     } catch (err) {
@@ -666,35 +743,7 @@ export const Academics: React.FC = () => {
           subjectName: selectedSubject,
           rawScore,
           maxScore,
-          comments: row.comments,
-        },
-        {
-          subjectId: 'kiswahili',
-          subjectName: 'Kiswahili',
-          rawScore: Math.round(maxScore * 0.78),
-          maxScore,
-          comments: 'Kuonyesha ustadi mkubwa katika mazungumzo na insha.',
-        },
-        {
-          subjectId: 'english',
-          subjectName: 'English Language',
-          rawScore: Math.round(maxScore * 0.84),
-          maxScore,
-          comments: 'Exceeding expectation in grammar and descriptive composition.',
-        },
-        {
-          subjectId: 'science',
-          subjectName: 'Integrated Science',
-          rawScore: Math.round(maxScore * 0.82),
-          maxScore,
-          comments: 'Active scientific investigation and accurate recording.',
-        },
-        {
-          subjectId: 'social_studies',
-          subjectName: 'Social Studies',
-          rawScore: Math.round(maxScore * 0.75),
-          maxScore,
-          comments: 'Demonstrates deep understanding of physical environment and culture.',
+          comments: row.comments || (rawScore > 0 ? 'Assessed for current examination period.' : 'Assessment score recorded.'),
         },
       ],
       activeScale
@@ -750,84 +799,97 @@ export const Academics: React.FC = () => {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto animate-fade-in pb-12">
-      {/* Top Header */}
-      <div className="flex flex-col lg:flex-row lg:items-start xl:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-gray-200 shadow-2xs">
-        <div className="min-w-0 flex-1 space-y-1.5">
+      {/* Top Header - Spacious, Full-Width Structured Layout */}
+      <div className="bg-white p-5 sm:p-6 rounded-3xl border border-gray-200/80 shadow-xs space-y-4">
+        {/* Row 1: Institution Context & Academic Badges */}
+        <div className="flex flex-wrap items-center justify-between gap-2.5 pb-3 border-b border-gray-100">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="brand" dot className="shrink-0">
-              {cleanScaleName}
-            </Badge>
-            <span className="text-2xs text-gray-600 font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 shrink-0">
-              {currentSchool?.name || 'Main Campus'} • Academic Year 2026
+            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 text-slate-800 font-bold text-xs border border-slate-200">
+              <span className="w-2 h-2 rounded-full bg-[#1d5f99]" />
+              {currentSchool?.name || 'Main Campus'}
+            </span>
+            <span className="px-2.5 py-1 rounded-full bg-slate-50 text-slate-500 font-semibold text-2xs border border-slate-200">
+              Academic Year 2026
             </span>
           </div>
-          <h1 className="text-2xl font-display font-black text-gray-900 tracking-tight">
-            Academics &amp; Assessment Engine
-          </h1>
-          <p className="text-xs text-gray-500">
-            Real marks entry, stream performance diagnostics, and CBC competency tracking
-          </p>
+
+          <Badge variant="brand" dot className="text-xs font-bold shrink-0">
+            {cleanScaleName}
+          </Badge>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 shrink-0 pt-2 lg:pt-0">
-          {activeTab === 'gradebook' && (
-            <>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={handleDownloadExcelTemplate}
-                leftIcon={<Download className="w-4 h-4" />}
-                className="font-bold"
-              >
-                Export Sheet (.xlsx)
-              </Button>
+        {/* Row 2: Page Title & Action Buttons */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
+              Academics &amp; Assessment Engine
+            </h1>
+            <p className="text-xs text-gray-500">
+              Real marks entry, stream performance diagnostics, and CBC competency tracking
+            </p>
+          </div>
 
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setIsUploadModalOpen(true)}
-                leftIcon={<UploadCloud className="w-4 h-4" />}
-                className="font-bold"
-              >
-                Import Marks (.xlsx)
-              </Button>
+          {/* Action Toolbar */}
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            {activeTab === 'gradebook' && (
+              <>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleDownloadExcelTemplate}
+                  leftIcon={<Download className="w-4 h-4" />}
+                  className="font-bold text-xs"
+                >
+                  Export Sheet (.xlsx)
+                </Button>
 
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setIsUploadModalOpen(true)}
+                  leftIcon={<UploadCloud className="w-4 h-4" />}
+                  className="font-bold text-xs"
+                >
+                  Import Marks (.xlsx)
+                </Button>
+
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={handleSaveMarks}
+                  isLoading={saving}
+                  leftIcon={<Save className="w-4 h-4" />}
+                  className="shadow-sm font-bold text-xs"
+                >
+                  Save Register
+                </Button>
+              </>
+            )}
+
+            {activeTab === 'diagnostics' && (
               <Button
                 variant="primary"
                 size="sm"
-                onClick={handleSaveMarks}
-                isLoading={saving}
-                leftIcon={<Save className="w-4 h-4" />}
-                className="shadow-sm font-bold"
+                onClick={handleExportFullExamAnalysis}
+                leftIcon={<Download className="w-4 h-4" />}
+                className="shadow-sm font-bold text-xs"
               >
-                Save Register
+                Export Exam Analysis (.xlsx)
               </Button>
-            </>
-          )}
+            )}
 
-          {activeTab === 'diagnostics' && (
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={handleExportFullExamAnalysis}
-              leftIcon={<Download className="w-4 h-4" />}
-              className="shadow-sm font-bold"
-            >
-              Export Exam Analysis (.xlsx)
-            </Button>
-          )}
-
-          {activeTab === 'series' && (
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => setIsNewSeriesModalOpen(true)}
-              leftIcon={<Plus className="w-4 h-4" />}
-              className="shadow-sm font-bold"
-            >
-              New Exam Series
-            </Button>
-          )}
+            {activeTab === 'series' && (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setIsNewSeriesModalOpen(true)}
+                leftIcon={<Plus className="w-4 h-4" />}
+                className="shadow-sm font-bold text-xs"
+              >
+                New Exam Series
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1280,78 +1342,114 @@ export const Academics: React.FC = () => {
             </p>
           </Card>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {examSeriesList.map((series) => {
-              const isLocked = series.status === 'locked';
-              const isPublished = series.status === 'published';
-              const isActive = series.status === 'active';
+          {examSeriesList.length === 0 ? (
+            <Card className="p-10 text-center space-y-4 border border-gray-200">
+              <div className="w-12 h-12 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center mx-auto">
+                <Calendar className="w-6 h-6" />
+              </div>
+              <div className="max-w-md mx-auto">
+                <h4 className="font-bold text-gray-900 text-sm">No Examination Series Defined</h4>
+                <p className="text-xs text-gray-500 mt-1">
+                  Create termly assessment series to track pupil competencies or initialize the standard 2026 academic calendar.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={handleSeedStandardExamSeries}
+                  leftIcon={<Sparkles className="w-4 h-4" />}
+                  className="font-bold text-xs"
+                >
+                  Initialize Standard Term Series (Firestore)
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setIsNewSeriesModalOpen(true)}
+                  leftIcon={<Plus className="w-4 h-4" />}
+                  className="font-bold text-xs"
+                >
+                  Create Custom Series
+                </Button>
+              </div>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {examSeriesList.map((series) => {
+                const isLocked = series.status === 'locked';
+                const isPublished = series.status === 'published';
+                const isActive = series.status === 'active';
 
-              return (
-                <Card key={series.id} className="p-5 flex flex-col justify-between space-y-4 border border-gray-200">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <Badge
-                        variant={isActive ? 'accent' : isLocked ? 'neutral' : isPublished ? 'brand' : 'warning'}
+                return (
+                  <Card key={series.id} className="p-5 flex flex-col justify-between space-y-4 border border-gray-200">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Badge
+                          variant={isActive ? 'accent' : isLocked ? 'neutral' : isPublished ? 'brand' : 'warning'}
+                          size="sm"
+                        >
+                          {series.status.toUpperCase()}
+                        </Badge>
+                        <span className="font-mono text-xs font-bold text-brand-700 bg-brand-50 px-2 py-0.5 rounded-lg">
+                          Weight: {series.weightPercentage}%
+                        </span>
+                      </div>
+
+                      <h4 className="font-bold text-gray-900 text-sm leading-tight">{series.name}</h4>
+                      <p className="text-2xs text-gray-500">
+                        Window: {series.startDate} to {series.endDate}
+                      </p>
+
+                      <div className="text-2xs text-gray-600 bg-gray-50 p-2.5 rounded-xl border space-y-1">
+                        <div className="flex justify-between">
+                          <span>Target Grade Levels:</span>
+                          <span className="font-semibold text-gray-900">{series.targetClasses?.join(', ')}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Academic Session:</span>
+                          <span className="font-semibold text-gray-900">Term 1 • 2026</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="pt-3 border-t border-gray-100 flex items-center justify-between gap-2">
+                      <Button
                         size="sm"
+                        variant="ghost"
+                        onClick={async () => {
+                          const newStatus = isLocked ? 'active' : 'locked';
+                          if (organization?.id && currentSchool?.id && series.id) {
+                            const ref = doc(db, 'organizations', organization.id, 'schools', currentSchool.id, 'examSeries', series.id);
+                            await setDoc(ref, { status: newStatus }, { merge: true });
+                          }
+                          toast.success(`Exam series "${series.name}" is now ${newStatus}`);
+                        }}
+                        leftIcon={isLocked ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
                       >
-                        {series.status.toUpperCase()}
-                      </Badge>
-                      <span className="font-mono text-xs font-bold text-brand-700 bg-brand-50 px-2 py-0.5 rounded-lg">
-                        Weight: {series.weightPercentage}%
-                      </span>
+                        {isLocked ? 'Unlock' : 'Lock Marks'}
+                      </Button>
+
+                      <Button
+                        size="sm"
+                        variant={isPublished ? 'ghost' : 'primary'}
+                        onClick={async () => {
+                          if (organization?.id && currentSchool?.id && series.id) {
+                            const ref = doc(db, 'organizations', organization.id, 'schools', currentSchool.id, 'examSeries', series.id);
+                            await setDoc(ref, { status: 'published' }, { merge: true });
+                          }
+                          toast.success(`Published results for ${series.name}! Parents can now view report cards.`);
+                        }}
+                        leftIcon={<Send className="w-3.5 h-3.5" />}
+                      >
+                        {isPublished ? 'Published' : 'Publish'}
+                      </Button>
                     </div>
-
-                    <h4 className="font-bold text-gray-900 text-sm leading-tight">{series.name}</h4>
-                    <p className="text-2xs text-gray-500">
-                      Window: {series.startDate} to {series.endDate}
-                    </p>
-
-                    <div className="text-2xs text-gray-600 bg-gray-50 p-2.5 rounded-xl border space-y-1">
-                      <div className="flex justify-between">
-                        <span>Target Grade Levels:</span>
-                        <span className="font-semibold text-gray-900">{series.targetClasses?.join(', ')}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Academic Session:</span>
-                        <span className="font-semibold text-gray-900">Term 1 • 2026</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="pt-3 border-t border-gray-100 flex items-center justify-between gap-2">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        const newStatus = isLocked ? 'active' : 'locked';
-                        setExamSeriesList((prev) =>
-                          prev.map((s) => (s.id === series.id ? { ...s, status: newStatus } : s))
-                        );
-                        toast.success(`Exam series "${series.name}" is now ${newStatus}`);
-                      }}
-                      leftIcon={isLocked ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
-                    >
-                      {isLocked ? 'Unlock' : 'Lock Marks'}
-                    </Button>
-
-                    <Button
-                      size="sm"
-                      variant={isPublished ? 'ghost' : 'primary'}
-                      onClick={() => {
-                        setExamSeriesList((prev) =>
-                          prev.map((s) => (s.id === series.id ? { ...s, status: 'published' } : s))
-                        );
-                        toast.success(`Published results for ${series.name}! Parents can now view report cards.`);
-                      }}
-                      leftIcon={<Send className="w-3.5 h-3.5" />}
-                    >
-                      {isPublished ? 'Published' : 'Publish'}
-                    </Button>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -1368,89 +1466,71 @@ export const Academics: React.FC = () => {
             </div>
           )}
 
-          {/* Stream Comparison Cards */}
+          {/* Dynamic Stream Comparison Cards (Computed from Real Live Database Roster) */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="p-5 space-y-3 border-l-4 border-l-blue-600">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h4 className="font-bold text-gray-900 text-sm">{selectedClass} East Stream</h4>
-                  <span className="text-2xs text-gray-500">Educator: Ms. Beatrice Wairimu</span>
-                </div>
-                <Badge variant="brand" size="sm">28 Learners</Badge>
-              </div>
-              <div className="space-y-1.5 pt-2">
-                <div className="flex justify-between text-xs">
-                  <span className="text-gray-500">Mean Competency Score:</span>
-                  <span className="font-bold font-mono text-gray-900">81.4% (ME1)</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-gray-500">Meeting / Exceeding Rate:</span>
-                  <span className="font-bold font-mono text-emerald-600">92.8%</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-gray-500">Attendance Roll Call Rate:</span>
-                  <span className="font-bold font-mono text-gray-700">97.2%</span>
-                </div>
-              </div>
-            </Card>
+            {availableStreams.map((strName, idx) => {
+              const streamLearners = roster.filter(
+                (r) => (r.stream || '').toLowerCase().trim() === strName.toLowerCase().trim()
+              );
+              const streamScores = streamLearners
+                .map((r) => r.score)
+                .filter((s): s is number => s !== '' && !isNaN(Number(s)));
+              const streamMean = streamScores.length > 0
+                ? Math.round((streamScores.reduce((a, b) => a + b, 0) / (streamScores.length * maxScore)) * 1000) / 10
+                : 0;
+              const streamPass = streamScores.length > 0
+                ? Math.round((streamScores.filter((s) => (s / maxScore) * 100 >= 50).length / streamScores.length) * 100)
+                : 0;
+              const streamTeacher =
+                (activeClassObj as any)?.streamDetails?.find((d: any) => d.name?.toLowerCase() === strName.toLowerCase())?.classTeacher ||
+                (activeClassObj as any)?.classTeacher ||
+                'Unassigned';
+              const borderColors = ['border-l-blue-600', 'border-l-emerald-600', 'border-l-purple-600', 'border-l-amber-600'];
 
-            <Card className="p-5 space-y-3 border-l-4 border-l-emerald-600">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h4 className="font-bold text-gray-900 text-sm">{selectedClass} West Stream</h4>
-                  <span className="text-2xs text-gray-500">Educator: Mr. Patrick Ochieng</span>
-                </div>
-                <Badge variant="accent" size="sm">26 Learners</Badge>
-              </div>
-              <div className="space-y-1.5 pt-2">
-                <div className="flex justify-between text-xs">
-                  <span className="text-gray-500">Mean Competency Score:</span>
-                  <span className="font-bold font-mono text-gray-900">78.9% (ME2)</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-gray-500">Meeting / Exceeding Rate:</span>
-                  <span className="font-bold font-mono text-emerald-600">88.5%</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-gray-500">Attendance Roll Call Rate:</span>
-                  <span className="font-bold font-mono text-gray-700">96.5%</span>
-                </div>
-              </div>
-            </Card>
-
-            <Card className="p-5 space-y-3 border-l-4 border-l-purple-600">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h4 className="font-bold text-gray-900 text-sm">{selectedClass} North Stream</h4>
-                  <span className="text-2xs text-gray-500">Educator: Dr. Evans Kiprotich</span>
-                </div>
-                <Badge variant="neutral" size="sm">27 Learners</Badge>
-              </div>
-              <div className="space-y-1.5 pt-2">
-                <div className="flex justify-between text-xs">
-                  <span className="text-gray-500">Mean Competency Score:</span>
-                  <span className="font-bold font-mono text-gray-900">80.2% (ME1)</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-gray-500">Meeting / Exceeding Rate:</span>
-                  <span className="font-bold font-mono text-emerald-600">91.0%</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-gray-500">Attendance Roll Call Rate:</span>
-                  <span className="font-bold font-mono text-gray-700">98.1%</span>
-                </div>
-              </div>
-            </Card>
+              return (
+                <Card key={strName} className={`p-5 space-y-3 border-l-4 ${borderColors[idx % borderColors.length]}`}>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="font-bold text-gray-900 text-sm">{selectedClass} — {strName} Stream</h4>
+                      <span className="text-2xs text-gray-500">Class Teacher: {streamTeacher}</span>
+                    </div>
+                    <Badge variant={streamLearners.length > 0 ? 'brand' : 'neutral'} size="sm">
+                      {streamLearners.length} {streamLearners.length === 1 ? 'Learner' : 'Learners'}
+                    </Badge>
+                  </div>
+                  <div className="space-y-1.5 pt-2">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-500">Mean Competency Score:</span>
+                      <span className="font-bold font-mono text-gray-900">
+                        {streamScores.length > 0 ? `${streamMean}%` : '—'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-500">Meeting / Exceeding Rate:</span>
+                      <span className="font-bold font-mono text-emerald-600">
+                        {streamScores.length > 0 ? `${streamPass}%` : '—'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-500">Recorded Scores:</span>
+                      <span className="font-bold font-mono text-gray-700">
+                        {streamScores.length} of {streamLearners.length}
+                      </span>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
           </div>
 
-          {/* Subject Performance & Teacher Analysis Matrix */}
+          {/* Subject Performance & Teacher Analysis Matrix - Live Database Records */}
           <Card className="p-0 overflow-hidden border border-gray-200">
             <div className="p-4 bg-gray-50/70 border-b border-gray-200 flex items-center justify-between">
               <div>
-                <h3 className="font-bold text-gray-900 text-sm">Subject Diagnostics &amp; Educator Analysis</h3>
+                <h3 className="font-bold text-gray-900 text-sm">Learning Area Diagnostics &amp; Educator Analysis</h3>
                 <p className="text-2xs text-gray-500">Comparative mastery levels across subjects for {selectedClass}</p>
               </div>
-              <Badge variant="brand" size="sm">All Learning Areas</Badge>
+              <Badge variant="brand" size="sm">Active Learning Areas</Badge>
             </div>
 
             <div className="overflow-x-auto">
@@ -1467,28 +1547,39 @@ export const Academics: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 font-medium">
-                  {[
-                    { name: 'Mathematics', teacher: 'Mr. Patrick Ochieng', count: 81, mean: 74.2, top: 'EE1 (48/50)', pass: 91.5, bar: 'w-3/4 bg-blue-500' },
-                    { name: 'English Language', teacher: 'Ms. Beatrice Wairimu', count: 81, mean: 81.6, top: 'EE1 (50/50)', pass: 96.0, bar: 'w-4/5 bg-emerald-500' },
-                    { name: 'Kiswahili', teacher: 'Mwalimu Juma Omari', count: 81, mean: 78.4, top: 'EE1 (49/50)', pass: 93.8, bar: 'w-3/4 bg-indigo-500' },
-                    { name: 'Integrated Science', teacher: 'Dr. Evans Kiprotich', count: 81, mean: 83.1, top: 'EE1 (50/50)', pass: 97.2, bar: 'w-5/6 bg-purple-500' },
-                    { name: 'Social Studies', teacher: 'Mrs. Maryanne Mutua', count: 81, mean: 76.8, top: 'EE1 (47/50)', pass: 90.0, bar: 'w-3/4 bg-amber-500' },
-                    { name: 'Creative Arts & Sports', teacher: 'Coach Kevin Barasa', count: 81, mean: 88.5, top: 'EE1 (50/50)', pass: 100.0, bar: 'w-11/12 bg-pink-500' },
-                  ].map((sub, idx) => (
-                    <tr key={idx} className="hover:bg-gray-50/70 transition">
-                      <td className="py-3.5 px-4 font-bold text-gray-900">{sub.name}</td>
-                      <td className="py-3.5 px-4 text-gray-600">{sub.teacher}</td>
-                      <td className="py-3.5 px-4 text-center font-mono">{sub.count}</td>
-                      <td className="py-3.5 px-4 text-center font-mono font-bold text-gray-900">{sub.mean}%</td>
-                      <td className="py-3.5 px-4 text-center font-mono text-emerald-700">{sub.top}</td>
-                      <td className="py-3.5 px-4 text-center font-mono font-bold text-emerald-600">{sub.pass}%</td>
-                      <td className="py-3.5 px-4">
-                        <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                          <div className={`h-2.5 rounded-full ${sub.bar}`} />
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {availableSubjectOptions.map((subName) => {
+                    const isSelected = subName.toLowerCase() === selectedSubject.toLowerCase();
+                    const liveSubject = schoolSubjects.find((s) => s.name.toLowerCase() === subName.toLowerCase());
+                    const educator = (liveSubject as any)?.teacher || liveSubject?.teacherId || 'Subject Teacher';
+                    const candCount = isSelected ? enteredScores.length : 0;
+                    const meanVal = isSelected && enteredScores.length > 0 ? `${classMeanPct}%` : '—';
+                    const passVal = isSelected && enteredScores.length > 0 ? `${classPassRate}%` : '—';
+                    const topScore = isSelected && enteredScores.length > 0 ? Math.max(...enteredScores) : null;
+                    const topGradeCode = topScore !== null ? calculateGradeBand((topScore / maxScore) * 100, activeScale)?.code || '—' : '—';
+
+                    return (
+                      <tr key={subName} className="hover:bg-gray-50/70 transition">
+                        <td className="py-3.5 px-4 font-bold text-gray-900">
+                          {subName} {isSelected && <span className="text-[10px] text-brand-600 font-normal ml-1">(Active)</span>}
+                        </td>
+                        <td className="py-3.5 px-4 text-gray-600">{educator}</td>
+                        <td className="py-3.5 px-4 text-center font-mono">{candCount}</td>
+                        <td className="py-3.5 px-4 text-center font-mono font-bold text-gray-900">{meanVal}</td>
+                        <td className="py-3.5 px-4 text-center font-mono text-emerald-700">
+                          {topScore !== null ? `${topGradeCode} (${topScore}/${maxScore})` : '—'}
+                        </td>
+                        <td className="py-3.5 px-4 text-center font-mono font-bold text-emerald-600">{passVal}</td>
+                        <td className="py-3.5 px-4">
+                          <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                            <div
+                              className={`h-2.5 rounded-full ${classPassRate >= 70 ? 'bg-emerald-500' : classPassRate >= 50 ? 'bg-amber-500' : 'bg-blue-500'}`}
+                              style={{ width: `${isSelected && enteredScores.length > 0 ? classMeanPct : 0}%` }}
+                            />
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1619,58 +1710,118 @@ export const Academics: React.FC = () => {
 
           {selectedLearnerId && (
             <div className="space-y-6">
-              {/* Multi-Term Progress Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                {[
-                  { term: '2025 Term 1', score: 68, band: 'ME2', status: 'Passed', delta: '+4%' },
-                  { term: '2025 Term 2', score: 72, band: 'ME1', status: 'Passed', delta: '+6%' },
-                  { term: '2025 Term 3', score: 76, band: 'ME1', status: 'Passed', delta: '+5%' },
-                  { term: '2026 Term 1 (Current)', score: 82, band: 'EE2', status: 'Exceeding Expectation', delta: '+8%' },
-                ].map((t, idx) => (
-                  <Card key={idx} className="p-4 space-y-2 border border-gray-200">
-                    <span className="text-2xs font-bold text-gray-400 block">{t.term}</span>
-                    <div className="flex items-baseline justify-between">
-                      <span className="text-2xl font-bold font-mono text-gray-900">{t.score}%</span>
-                      <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">
-                        {t.band}
-                      </span>
-                    </div>
-                    <div className="text-2xs text-gray-500 flex justify-between pt-1 border-t">
-                      <span>Progression:</span>
-                      <span className="font-bold text-emerald-600">{t.delta}</span>
-                    </div>
-                  </Card>
-                ))}
-              </div>
+              {/* Multi-Term Progress Cards (Live Recorded Performance) */}
+              {(() => {
+                const activeLearner = roster.find((r) => r.studentId === selectedLearnerId);
+                const scoreNum = activeLearner?.score !== '' && activeLearner?.score !== undefined ? Number(activeLearner.score) : null;
+                const pct = scoreNum !== null ? Math.round((scoreNum / maxScore) * 100) : null;
+                const band = pct !== null ? calculateGradeBand(pct, activeScale) : null;
+                const prev = activeLearner?.previousScore || 0;
+                const delta = scoreNum !== null && prev > 0 ? `${scoreNum >= prev ? '+' : ''}${scoreNum - prev}` : 'Baseline';
 
-              {/* Subject Breakdown for Selected Learner */}
+                return (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <Card className="p-4 space-y-2 border border-gray-200">
+                      <span className="text-2xs font-bold text-gray-400 block">{assessmentTitle}</span>
+                      <div className="flex items-baseline justify-between">
+                        <span className="text-2xl font-bold font-mono text-gray-900">
+                          {scoreNum !== null ? `${scoreNum}/${maxScore}` : '—'}
+                        </span>
+                        <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">
+                          {band?.code || 'Pending'}
+                        </span>
+                      </div>
+                      <div className="text-2xs text-gray-500 flex justify-between pt-1 border-t">
+                        <span>Mastery:</span>
+                        <span className="font-bold text-gray-900">{pct !== null ? `${pct}%` : 'Not recorded'}</span>
+                      </div>
+                    </Card>
+
+                    <Card className="p-4 space-y-2 border border-gray-200">
+                      <span className="text-2xs font-bold text-gray-400 block">Performance Delta</span>
+                      <div className="flex items-baseline justify-between">
+                        <span className="text-2xl font-bold font-mono text-blue-600">{delta}</span>
+                        <Badge variant="brand" size="sm">{(band as any)?.descriptor || band?.name || 'CBC Track'}</Badge>
+                      </div>
+                      <div className="text-2xs text-gray-500 flex justify-between pt-1 border-t">
+                        <span>Teacher Comment:</span>
+                        <span className="truncate max-w-[150px] font-medium text-gray-800">
+                          {activeLearner?.comments || 'Regular progress'}
+                        </span>
+                      </div>
+                    </Card>
+
+                    <Card className="p-4 space-y-2 border border-gray-200 bg-slate-50/50">
+                      <span className="text-2xs font-bold text-gray-400 block">Term 2 Projection</span>
+                      <div className="flex items-baseline justify-between">
+                        <span className="text-xl font-bold font-mono text-gray-500">—</span>
+                        <span className="text-2xs font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                          Scheduled
+                        </span>
+                      </div>
+                      <div className="text-2xs text-gray-500 pt-1 border-t">
+                        Pending Term 2 assessment entry
+                      </div>
+                    </Card>
+
+                    <Card className="p-4 space-y-2 border border-gray-200 bg-slate-50/50">
+                      <span className="text-2xs font-bold text-gray-400 block">Term 3 Summative</span>
+                      <div className="flex items-baseline justify-between">
+                        <span className="text-xl font-bold font-mono text-gray-500">—</span>
+                        <span className="text-2xs font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                          Scheduled
+                        </span>
+                      </div>
+                      <div className="text-2xs text-gray-500 pt-1 border-t">
+                        Pending Term 3 assessment entry
+                      </div>
+                    </Card>
+                  </div>
+                );
+              })()}
+
+              {/* Subject Breakdown for Selected Learner - Dynamic Live Subjects */}
               <Card className="p-6 space-y-5">
-                <h4 className="font-bold text-gray-900 text-sm">Longitudinal Subject Mastery Profile</h4>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-bold text-gray-900 text-sm">Longitudinal Subject Mastery Profile</h4>
+                    <p className="text-2xs text-gray-500">Live learning area records for selected learner</p>
+                  </div>
+                  <Badge variant="brand" size="sm">Academic Year 2026</Badge>
+                </div>
                 <div className="space-y-4">
-                  {[
-                    { subject: 'Mathematics', mastery: 84, band: 'EE2', teacher: 'Mr. Patrick Ochieng', trend: 'Consistently Strong' },
-                    { subject: 'English Language', mastery: 88, band: 'EE1', teacher: 'Ms. Beatrice Wairimu', trend: 'Exemplary Vocabulary' },
-                    { subject: 'Kiswahili', mastery: 78, band: 'ME1', teacher: 'Mwalimu Juma Omari', trend: 'Improved Oral Delivery' },
-                    { subject: 'Integrated Science', mastery: 82, band: 'ME1', teacher: 'Dr. Evans Kiprotich', trend: 'Active in Practical Lab' },
-                    { subject: 'Social Studies', mastery: 76, band: 'ME2', teacher: 'Mrs. Maryanne Mutua', trend: 'Good Environmental Inquiry' },
-                  ].map((sub, idx) => (
-                    <div key={idx} className="p-3 rounded-xl bg-gray-50 border border-gray-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                      <div className="space-y-0.5 min-w-[200px]">
-                        <span className="font-bold text-gray-900">{sub.subject}</span>
-                        <p className="text-2xs text-gray-500">{sub.teacher}</p>
-                      </div>
+                  {availableSubjectOptions.map((subName) => {
+                    const isSelected = subName.toLowerCase() === selectedSubject.toLowerCase();
+                    const activeLearner = roster.find((r) => r.studentId === selectedLearnerId);
+                    const scoreNum = isSelected && activeLearner?.score !== '' && activeLearner?.score !== undefined
+                      ? Number(activeLearner.score)
+                      : null;
+                    const pct = scoreNum !== null ? Math.round((scoreNum / maxScore) * 100) : 0;
+                    const bandCode = scoreNum !== null ? calculateGradeBand(pct, activeScale)?.code || '—' : '—';
+                    const teacher = (schoolSubjects.find((s) => s.name.toLowerCase() === subName.toLowerCase()) as any)?.teacher || 'Subject Teacher';
 
-                      <div className="w-full sm:w-1/3 bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                        <div className="h-2.5 rounded-full bg-brand-600" style={{ width: `${sub.mastery}%` }} />
-                      </div>
+                    return (
+                      <div key={subName} className="p-3 rounded-xl bg-gray-50 border border-gray-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                        <div className="space-y-0.5 min-w-[200px]">
+                          <span className="font-bold text-gray-900">{subName}</span>
+                          <p className="text-2xs text-gray-500">Teacher: {teacher}</p>
+                        </div>
 
-                      <div className="flex items-center gap-3">
-                        <span className="font-mono font-bold text-gray-900">{sub.mastery}%</span>
-                        <Badge variant="brand" size="sm">{sub.band}</Badge>
-                        <span className="text-2xs text-gray-500 italic hidden sm:inline">{sub.trend}</span>
+                        <div className="w-full sm:w-1/3 bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                          <div className="h-2.5 rounded-full bg-brand-600" style={{ width: `${pct}%` }} />
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <span className="font-mono font-bold text-gray-900">
+                            {scoreNum !== null ? `${scoreNum}/${maxScore} (${pct}%)` : 'Not recorded'}
+                          </span>
+                          <Badge variant={scoreNum !== null ? 'brand' : 'neutral'} size="sm">
+                            {bandCode}
+                          </Badge>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </Card>
             </div>
@@ -1965,12 +2116,12 @@ export const Academics: React.FC = () => {
         maxWidth="md"
       >
         <form
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
-            if (!newSeriesName.trim()) return;
+            if (!newSeriesName.trim() || !organization?.id || !currentSchool?.id) return;
 
             const newSeries: ExamSeries = {
-              id: `series-${Date.now().toString().slice(-4)}`,
+              id: `series-${Date.now().toString().slice(-6)}`,
               name: newSeriesName.trim(),
               academicYearId: '2026',
               termId: newSeriesTerm,
@@ -1978,17 +2129,31 @@ export const Academics: React.FC = () => {
               startDate: '2026-03-10',
               endDate: '2026-03-15',
               status: 'active',
-              targetClasses: ['Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8'],
+              targetClasses: ['all'],
               createdAt: new Date().toISOString(),
               createdBy: currentUser?.displayName || 'Educator',
             };
 
-            setExamSeriesList((prev) => [...prev, newSeries]);
-            setSelectedSeriesId(newSeries.id || '');
-            setAssessmentTitle(newSeries.name);
-            setIsNewSeriesModalOpen(false);
-            setNewSeriesName('');
-            toast.success(`Created exam series "${newSeries.name}"!`);
+            try {
+              const seriesDocRef = doc(
+                db,
+                'organizations',
+                organization.id,
+                'schools',
+                currentSchool.id,
+                'examSeries',
+                newSeries.id!
+              );
+              await setDoc(seriesDocRef, newSeries);
+              setSelectedSeriesId(newSeries.id || '');
+              setAssessmentTitle(newSeries.name);
+              setIsNewSeriesModalOpen(false);
+              setNewSeriesName('');
+              toast.success(`Created exam series "${newSeries.name}" in database!`);
+            } catch (err) {
+              console.error(err);
+              toast.error('Failed to save exam series');
+            }
           }}
           className="space-y-4 text-xs"
         >

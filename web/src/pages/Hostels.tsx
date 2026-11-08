@@ -160,17 +160,7 @@ export const Hostels: React.FC = () => {
           };
         });
 
-        if (list.length === 0 && !snap.metadata.hasPendingWrites) {
-          const initialDorms: HostelDorm[] = [
-            { id: 'drm-1', name: 'Kilimanjaro House', gender: 'boys', housemaster: 'Mr. David Mutua', capacity: 64, occupied: 58, roomCount: 8, rollCallStatusToday: 'completed', lastRollCallDate: todayStr, prefectName: 'Victor Kiprono' },
-            { id: 'drm-2', name: 'Serengeti House', gender: 'girls', housemaster: 'Mrs. Florence Otieno', capacity: 64, occupied: 61, roomCount: 8, rollCallStatusToday: 'completed', lastRollCallDate: todayStr, prefectName: 'Amina Kariuki' },
-            { id: 'drm-3', name: 'Ruwenzori House', gender: 'boys', housemaster: 'Mr. Peter Kiprop', capacity: 48, occupied: 42, roomCount: 6, rollCallStatusToday: 'pending', prefectName: 'Brian Wambua' },
-            { id: 'drm-4', name: 'Aberdare Wing', gender: 'girls', housemaster: 'Ms. Beatrice Wairimu', capacity: 48, occupied: 39, roomCount: 6, rollCallStatusToday: 'pending', prefectName: 'Grace Muthoni' },
-          ];
-          setDorms(initialDorms);
-        } else {
-          setDorms(list);
-        }
+        setDorms(list);
         setLoadingDorms(false);
       },
       (err) => {
@@ -216,15 +206,7 @@ export const Hostels: React.FC = () => {
           };
         });
 
-        if (list.length === 0 && !snap.metadata.hasPendingWrites) {
-          const initialAlloc: BoardingAllocation[] = [
-            { id: 'alc-1', dormId: 'drm-1', dormName: 'Kilimanjaro House', studentId: 'st-1', studentName: 'Kevin Kiprono', admissionNo: 'ADM/2026/002', className: 'Grade 8', roomNumber: 'Room 2', bedNumber: 'Bed 3B (Top)', guardianPhone: '+254712345678', allocatedDate: '2026-01-10' },
-            { id: 'alc-2', dormId: 'drm-2', dormName: 'Serengeti House', studentId: 'st-2', studentName: 'Zawadi Achieng', admissionNo: 'ADM/2026/001', className: 'Grade 7', roomNumber: 'Room 1', bedNumber: 'Bed 1A (Lower)', guardianPhone: '+254798765432', allocatedDate: '2026-01-10' },
-          ];
-          setAllocations(initialAlloc);
-        } else {
-          setAllocations(list);
-        }
+        setAllocations(list);
         setLoadingAllocations(false);
       },
       (err) => {

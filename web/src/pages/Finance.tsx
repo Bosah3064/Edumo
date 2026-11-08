@@ -133,60 +133,8 @@ export const Finance: React.FC = () => {
   const [activeVoucherModal, setActiveVoucherModal] = useState<PaymentVoucher | null>(null);
   const [activeOrderModal, setActiveOrderModal] = useState<PurchaseOrder | null>(null);
 
-  // Parent Pledges State (Edumo Finance Commitment Tracking)
-  const [pledges, setPledges] = useState<ParentPledge[]>([
-    {
-      id: 'plg-01',
-      studentId: 'st-2',
-      studentName: 'Kevin Kiprono',
-      admissionNumber: 'ADM/2026/002',
-      guardianName: 'Dr. Joseph Cheruiyot',
-      guardianPhone: '+254722334455',
-      amountPledged: 13500,
-      currency,
-      dueDate: '2026-03-15',
-      status: 'pending',
-      amountFulfilled: 0,
-      balanceRemaining: 13500,
-      notes: 'Promised upon maize harvest sale on mid-month',
-      recordedBy: 'Accounts Clerk',
-      recordedAt: '2026-02-10T10:00:00Z',
-    },
-    {
-      id: 'plg-02',
-      studentId: 'st-3',
-      studentName: 'Faith Wanjiku',
-      admissionNumber: 'ADM/2026/003',
-      guardianName: 'Mary Wanjiku Mwangi',
-      guardianPhone: '+254733445566',
-      amountPledged: 20000,
-      currency,
-      dueDate: '2026-02-28',
-      status: 'partially_fulfilled',
-      amountFulfilled: 10000,
-      balanceRemaining: 10000,
-      notes: 'County bursary disbursement pending clearance',
-      recordedBy: 'Accounts Clerk',
-      recordedAt: '2026-01-20T14:30:00Z',
-    },
-    {
-      id: 'plg-03',
-      studentId: 'st-4',
-      studentName: 'Brian Omondi',
-      admissionNumber: 'ADM/2026/004',
-      guardianName: 'George Omondi Otieno',
-      guardianPhone: '+254744556677',
-      amountPledged: 12000,
-      currency,
-      dueDate: '2026-02-10',
-      status: 'fulfilled',
-      amountFulfilled: 12000,
-      balanceRemaining: 0,
-      notes: 'Fulfilled in full via M-Pesa Paybill',
-      recordedBy: 'Accounts Clerk',
-      recordedAt: '2026-01-15T09:15:00Z',
-    },
-  ]);
+  // Parent Pledges State (Edumo Finance Commitment Tracking) - Live Firestore
+  const [pledges, setPledges] = useState<ParentPledge[]>([]);
 
   const [isPledgeModalOpen, setIsPledgeModalOpen] = useState(false);
   const [pledgeLearnerName, setPledgeLearnerName] = useState('');
@@ -196,96 +144,11 @@ export const Finance: React.FC = () => {
   const [pledgeDueDate, setPledgeDueDate] = useState('2026-03-31');
   const [pledgeNotes, setPledgeNotes] = useState('');
 
-  // Suppliers & Procurement
-  const [suppliers, setSuppliers] = useState<Supplier[]>([
-    {
-      id: 'sup-01',
-      name: 'Mount Kenya Grain & Provisions Ltd',
-      category: 'food_provisions',
-      contactPerson: 'David Karanja',
-      phone: '+254711998877',
-      email: 'sales@mtkenyaprov.co.ke',
-      taxPin: 'P051283928X',
-      bankAccount: '0112839482910',
-      bankName: 'KCB Bank Kenya',
-      status: 'active',
-    },
-    {
-      id: 'sup-02',
-      name: 'Apex Educational & Lab Supplies',
-      category: 'lab_equipment',
-      contactPerson: 'Sarah Wambui',
-      phone: '+254722883311',
-      email: 'orders@apexedulab.com',
-      taxPin: 'P059918231Z',
-      bankAccount: '112993847291',
-      bankName: 'Equity Bank',
-      status: 'active',
-    },
-    {
-      id: 'sup-03',
-      name: 'Nairobi Uniform Depot & Tailors',
-      category: 'uniforms',
-      contactPerson: 'Samir Patel',
-      phone: '+254733441122',
-      email: 'uniforms@nbi-depot.ke',
-      taxPin: 'P054817293A',
-      bankAccount: '028193847291',
-      bankName: 'Co-operative Bank',
-      status: 'active',
-    },
-  ]);
+  // Suppliers & Procurement - Live Firestore
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
 
-  // Payment Vouchers (Edumo Expenditure Control)
-  const [vouchers, setVouchers] = useState<PaymentVoucher[]>([
-    {
-      id: 'pv-01',
-      voucherNumber: 'PV-2026-001',
-      payeeName: 'Mount Kenya Grain & Provisions Ltd',
-      category: 'provisions',
-      amount: 85000,
-      currency,
-      paymentMethod: 'bank_transfer',
-      referenceNumber: 'FT-99281726',
-      description: 'Term 1 boarding kitchen maize and beans supply (40 bags each)',
-      status: 'paid',
-      preparedBy: 'Faith Waweru (Accounts)',
-      preparedAt: '2026-02-01',
-      approvedBy: 'Dr. Kimani (Principal)',
-      approvedAt: '2026-02-02',
-      paidAt: '2026-02-03',
-    },
-    {
-      id: 'pv-02',
-      voucherNumber: 'PV-2026-002',
-      payeeName: 'Kenya Power & Lighting Co (KPLC)',
-      category: 'utilities',
-      amount: 34200,
-      currency,
-      paymentMethod: 'mpesa_paybill',
-      referenceNumber: 'QG88192837',
-      description: 'Monthly campus electricity charges for main campus & dormitories',
-      status: 'paid',
-      preparedBy: 'Faith Waweru (Accounts)',
-      preparedAt: '2026-02-05',
-      approvedBy: 'Dr. Kimani (Principal)',
-      approvedAt: '2026-02-05',
-      paidAt: '2026-02-05',
-    },
-    {
-      id: 'pv-03',
-      voucherNumber: 'PV-2026-003',
-      payeeName: 'Apex Educational & Lab Supplies',
-      category: 'stationery',
-      amount: 48000,
-      currency,
-      paymentMethod: 'bank_transfer',
-      description: 'CBC Integrated Science lab test tubes, beakers and safety goggles',
-      status: 'pending_approval',
-      preparedBy: 'Faith Waweru (Accounts)',
-      preparedAt: '2026-02-18',
-    },
-  ]);
+  // Payment Vouchers (Edumo Expenditure Control) - Live Firestore
+  const [vouchers, setVouchers] = useState<PaymentVoucher[]>([]);
 
   const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
   const [vPayee, setVPayee] = useState('');
@@ -295,56 +158,13 @@ export const Finance: React.FC = () => {
   const [vDescription, setVDescription] = useState('');
   const [vRef, setVRef] = useState('');
 
-  // Purchase Orders (LPOs)
-  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([
-    {
-      id: 'lpo-01',
-      orderNumber: 'LPO-2026-0012',
-      type: 'lpo',
-      supplierId: 'sup-01',
-      supplierName: 'Mount Kenya Grain & Provisions Ltd',
-      orderDate: '2026-01-28',
-      expectedDeliveryDate: '2026-02-03',
-      items: [
-        { description: 'Dry Maize (90kg bags)', quantity: 40, unitPrice: 3200, total: 128000 },
-        { description: 'Rosecoco Beans (90kg bags)', quantity: 20, unitPrice: 7500, total: 150000 },
-      ],
-      totalAmount: 278000,
-      currency,
-      status: 'delivered',
-      approvedBy: 'Dr. Kimani (Principal)',
-      approvedAt: '2026-01-29',
-    },
-    {
-      id: 'lpo-02',
-      orderNumber: 'LPO-2026-0013',
-      type: 'lpo',
-      supplierId: 'sup-02',
-      supplierName: 'Apex Educational & Lab Supplies',
-      orderDate: '2026-02-15',
-      expectedDeliveryDate: '2026-02-25',
-      items: [
-        { description: 'Science Lab Glass Beakers 250ml', quantity: 60, unitPrice: 450, total: 27000 },
-        { description: 'Chemical Reagents Grade Kit', quantity: 5, unitPrice: 4200, total: 21000 },
-      ],
-      totalAmount: 48000,
-      currency,
-      status: 'approved',
-      approvedBy: 'Dr. Kimani (Principal)',
-      approvedAt: '2026-02-16',
-    },
-  ]);
+  // Purchase Orders & LPOs (Edumo Institutional Procurement) - Live Firestore
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
 
-  // Cashbook Double-Entry Ledger (Inflows & Outflows)
-  const [cashbook, setCashbook] = useState<CashbookEntry[]>([
-    { id: 'cb-01', date: '2026-02-01', type: 'inflow', category: 'Tuition Fees', description: 'Fee payment receipt REC-2026-001 (Zawadi Achieng)', sourceDocType: 'payment_receipt', sourceDocRef: 'REC-2026-001', amount: 28500, runningBalance: 128500, currency, reconciled: true },
-    { id: 'cb-02', date: '2026-02-03', type: 'outflow', category: 'Kitchen Provisions', description: 'Payment Voucher PV-2026-001 (Mount Kenya Grain)', sourceDocType: 'payment_voucher', sourceDocRef: 'PV-2026-001', amount: 85000, runningBalance: 43500, currency, reconciled: true },
-    { id: 'cb-03', date: '2026-02-04', type: 'inflow', category: 'Tuition Fees', description: 'Fee payment receipt REC-2026-002 (Esther Mutua)', sourceDocType: 'payment_receipt', sourceDocRef: 'REC-2026-002', amount: 32000, runningBalance: 75500, currency, reconciled: true },
-    { id: 'cb-04', date: '2026-02-05', type: 'outflow', category: 'Utilities', description: 'Payment Voucher PV-2026-002 (KPLC Electricity)', sourceDocType: 'payment_voucher', sourceDocRef: 'PV-2026-002', amount: 34200, runningBalance: 41300, currency, reconciled: true },
-    { id: 'cb-05', date: '2026-02-12', type: 'inflow', category: 'Tuition Fees', description: 'Fee payment receipt REC-2026-004 (Kevin Kiprono)', sourceDocType: 'payment_receipt', sourceDocRef: 'REC-2026-004', amount: 15000, runningBalance: 56300, currency, reconciled: true },
-  ]);
+  // Cashbook Double-Entry Ledger (Inflows & Outflows) - Live Firestore
+  const [cashbook, setCashbook] = useState<CashbookEntry[]>([]);
 
-  // 1. Listen to real-time invoices
+  // 1. Listen to real-time financial collections from Firestore (NO mock fallback)
   useEffect(() => {
     if (!organization || !currentSchool) return;
 
@@ -378,23 +198,63 @@ export const Finance: React.FC = () => {
         };
       });
 
-      if (list.length === 0) {
-        const sampleInvoices: InvoiceItem[] = [
-          { id: 'inv-1', invoiceNumber: 'INV-2026-001', studentId: 'st-1', studentName: 'Zawadi Achieng', admissionNumber: 'ADM/2026/001', className: 'Grade 4', guardianPhone: '+254711223344', termId: 'Term 1', totalAmount: 28500, paidAmount: 28500, balance: 0, currency, status: 'paid', dueDate: '2026-02-15' },
-          { id: 'inv-2', invoiceNumber: 'INV-2026-002', studentId: 'st-2', studentName: 'Kevin Kiprono', admissionNumber: 'ADM/2026/002', className: 'Grade 4', guardianPhone: '+254722334455', termId: 'Term 1', totalAmount: 28500, paidAmount: 15000, balance: 13500, currency, status: 'partial', dueDate: '2026-02-15' },
-          { id: 'inv-3', invoiceNumber: 'INV-2026-003', studentId: 'st-3', studentName: 'Faith Wanjiku', admissionNumber: 'ADM/2026/003', className: 'Grade 4', guardianPhone: '+254733445566', termId: 'Term 1', totalAmount: 28500, paidAmount: 0, balance: 28500, currency, status: 'overdue', dueDate: '2026-01-30' },
-          { id: 'inv-4', invoiceNumber: 'INV-2026-004', studentId: 'st-4', studentName: 'Brian Omondi', admissionNumber: 'ADM/2026/004', className: 'Grade 5', guardianPhone: '+254744556677', termId: 'Term 1', totalAmount: 32000, paidAmount: 20000, balance: 12000, currency, status: 'partial', dueDate: '2026-02-15' },
-          { id: 'inv-5', invoiceNumber: 'INV-2026-005', studentId: 'st-5', studentName: 'Esther Mutua', admissionNumber: 'ADM/2026/005', className: 'Grade 5', guardianPhone: '+254755667788', termId: 'Term 1', totalAmount: 32000, paidAmount: 32000, balance: 0, currency, status: 'paid', dueDate: '2026-02-15' },
-          { id: 'inv-6', invoiceNumber: 'INV-2026-006', studentId: 'st-6', studentName: 'Felix Ouma', admissionNumber: 'ADM/2026/006', className: 'Grade 6', guardianPhone: '+254766778899', termId: 'Term 1', totalAmount: 35000, paidAmount: 0, balance: 35000, currency, status: 'overdue', dueDate: '2026-01-30' },
-        ];
-        setInvoices(sampleInvoices);
-      } else {
-        setInvoices(list);
-      }
+      setInvoices(list);
       setLoading(false);
     });
 
-    return () => unsubInvoices();
+    const pledgesRef = collection(db, 'organizations', organization.id, 'schools', currentSchool.id, 'pledges');
+    const unsubPledges = onSnapshot(pledgesRef, (snap) => {
+      const list: ParentPledge[] = snap.docs.map((d) => ({
+        id: d.id,
+        ...(d.data() as Omit<ParentPledge, 'id'>),
+      }));
+      setPledges(list);
+    });
+
+    const supRef = collection(db, 'organizations', organization.id, 'schools', currentSchool.id, 'suppliers');
+    const unsubSuppliers = onSnapshot(supRef, (snap) => {
+      const list: Supplier[] = snap.docs.map((d) => ({
+        id: d.id,
+        ...(d.data() as Omit<Supplier, 'id'>),
+      }));
+      setSuppliers(list);
+    });
+
+    const vouchRef = collection(db, 'organizations', organization.id, 'schools', currentSchool.id, 'vouchers');
+    const unsubVouchers = onSnapshot(vouchRef, (snap) => {
+      const list: PaymentVoucher[] = snap.docs.map((d) => ({
+        id: d.id,
+        ...(d.data() as Omit<PaymentVoucher, 'id'>),
+      }));
+      setVouchers(list);
+    });
+
+    const poRef = collection(db, 'organizations', organization.id, 'schools', currentSchool.id, 'purchase_orders');
+    const unsubPO = onSnapshot(poRef, (snap) => {
+      const list: PurchaseOrder[] = snap.docs.map((d) => ({
+        id: d.id,
+        ...(d.data() as Omit<PurchaseOrder, 'id'>),
+      }));
+      setPurchaseOrders(list);
+    });
+
+    const cbRef = collection(db, 'organizations', organization.id, 'schools', currentSchool.id, 'cashbook');
+    const unsubCashbook = onSnapshot(cbRef, (snap) => {
+      const list: CashbookEntry[] = snap.docs.map((d) => ({
+        id: d.id,
+        ...(d.data() as Omit<CashbookEntry, 'id'>),
+      }));
+      setCashbook(list);
+    });
+
+    return () => {
+      unsubInvoices();
+      unsubPledges();
+      unsubSuppliers();
+      unsubVouchers();
+      unsubPO();
+      unsubCashbook();
+    };
   }, [organization, currentSchool, currency]);
 
   // Aggregate Metrics
@@ -1607,7 +1467,7 @@ export const Finance: React.FC = () => {
         <form onSubmit={handleSavePledge} className="space-y-4 text-xs">
           <Input
             label="Learner Full Name"
-            placeholder="e.g. Kevin Kiprono"
+            placeholder="e.g. Student Full Name"
             value={pledgeLearnerName}
             onChange={(e) => setPledgeLearnerName(e.target.value)}
             required

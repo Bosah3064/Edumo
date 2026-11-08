@@ -159,131 +159,7 @@ export const Assignments: React.FC = () => {
     currentRole !== null &&
     ['orgOwner', 'principal', 'deputy', 'admin', 'teacher'].includes(currentRole);
 
-  // ==============================================================
-  // Authentic Seed Fallback Data (Guarantees Rich Content Always)
-  // ==============================================================
-  const fallbackAssignments: Assignment[] = useMemo(() => [
-    {
-      id: 'assign-cba-1',
-      title: 'CBC Junior Secondary: Plant Cell Structure & Photosynthesis Cycle',
-      subject: 'Integrated Science',
-      className: 'Grade 7 Alpha',
-      description: 'Design and construct an accurate 3D plant cell model displaying chloroplasts, cell wall, and vacuoles using recycled materials. Include a 1-page summary of the light and dark reaction phases.',
-      startsAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-      expiresAt: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString(),
-      maxScore: 50,
-      status: 'active',
-      teacherName: 'Mwalimu Kevin Mutua',
-      submittedCount: 38,
-      totalLearners: 42,
-      assessmentType: 'CBC Formative Project',
-    },
-    {
-      id: 'assign-math-2',
-      title: 'Fractions, Decimals & Practical Financial Budgeting',
-      subject: 'Mathematics',
-      className: 'Grade 6 East',
-      description: 'Calculate weekly family grocery shopping expenditure using percentage discounts and decimal multiplication. Complete Section B exercises 1 to 15 in the pupil coursebook.',
-      startsAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-      expiresAt: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
-      maxScore: 40,
-      status: 'active',
-      teacherName: 'David Kibet',
-      submittedCount: 36,
-      totalLearners: 40,
-      assessmentType: 'Continuous Assessment',
-    },
-    {
-      id: 'assign-eng-3',
-      title: 'Oral Literature: Kenyan Folktales & Narrative Performance',
-      subject: 'English & Literature',
-      className: 'Grade 8 Alpha',
-      description: 'Transcribe a traditional folk narrative told in your community. Identify the trickster motif, moral lesson, and perform a 3-minute oral presentation in class.',
-      startsAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-      expiresAt: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString(),
-      maxScore: 30,
-      status: 'active',
-      teacherName: 'Sharon Chebet',
-      submittedCount: 29,
-      totalLearners: 38,
-      assessmentType: 'Oral & Performance Task',
-    },
-    {
-      id: 'assign-sst-4',
-      title: 'Physical Features, Drainage & Climate of Eastern Africa',
-      subject: 'Social Studies',
-      className: 'Grade 5 West',
-      description: 'Draw an outline map of Eastern Africa showing the Great Rift Valley lakes (Lake Victoria, Turkana, Tanganyika) and label major climatic zones with a neat key.',
-      startsAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-      expiresAt: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString(),
-      maxScore: 25,
-      status: 'active',
-      teacherName: 'Beatrice Odhiambo',
-      submittedCount: 35,
-      totalLearners: 38,
-      assessmentType: 'Practical Mapwork',
-    },
-    {
-      id: 'assign-kisw-5',
-      title: 'Insha ya Kubuni: Athari za Mitandao ya Kijamii kwa Maadili',
-      subject: 'Kiswahili',
-      className: 'Grade 7 Beta',
-      description: 'Andika insha ya kurasa mbili yenye mada "Umuhimu na Athari za Mitandao ya Kijamii kwa Maadili ya Wanafunzi". Zingatia tahajia, muundo wa insha, na msamiati teule.',
-      startsAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-      expiresAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
-      maxScore: 40,
-      status: 'active',
-      teacherName: 'Sharon Chebet',
-      submittedCount: 31,
-      totalLearners: 42,
-      assessmentType: 'Insha & Fasihi',
-    },
-    {
-      id: 'assign-agri-6',
-      title: 'Indigenous Crop Propagation & Kitchen Garden Journal',
-      subject: 'Agriculture & Nutrition',
-      className: 'Grade 4 East',
-      description: 'Plant indigenous vegetable seeds (managu or terere) in a container garden. Record daily watering observations and seedling emergence over a 7-day period with photos.',
-      startsAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      maxScore: 30,
-      status: 'active',
-      teacherName: 'Mwalimu Kevin Mutua',
-      submittedCount: 22,
-      totalLearners: 39,
-      assessmentType: 'CBC Field Practical',
-    },
-    {
-      id: 'assign-chem-7',
-      title: 'Volumetric Analysis & Acid-Base Titration Lab Report',
-      subject: 'Chemistry',
-      className: 'Form 3 Science',
-      description: 'Standardize 0.1M sodium hydroxide solution against ethanedioic acid. Determine the concentration of unknown solution X and submit calculation steps.',
-      startsAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-      expiresAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
-      maxScore: 50,
-      status: 'active',
-      teacherName: 'Dr. Kamau',
-      submittedCount: 28,
-      totalLearners: 34,
-      assessmentType: 'Laboratory Practical',
-    },
-    {
-      id: 'assign-tech-8',
-      title: 'Simple Machines & Orthographic Technical Projection',
-      subject: 'Pre-Technical Studies',
-      className: 'Grade 7 Alpha',
-      description: 'Produce first-angle orthographic projections (front, side, plan view) of a stepped block with standard dimensioning conventions using drawing instruments.',
-      startsAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-      expiresAt: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString(),
-      maxScore: 35,
-      status: 'active',
-      teacherName: 'David Kibet',
-      submittedCount: 33,
-      totalLearners: 42,
-      assessmentType: 'Technical Sketching',
-    },
-  ], []);
+
 
   // Helper for Vibrant Subject Theme
   const getSubjectTheme = (subjectName: string = '') => {
@@ -419,155 +295,37 @@ export const Assignments: React.FC = () => {
     };
   };
 
-  // 1. Initial Resources & Quizzes
+  // 1. Live Resources & Quizzes from Firestore
   useEffect(() => {
-    const seedResources: LearningResource[] = [
-      {
-        id: 'res-vid-01',
-        title: 'CBC Grade 7 Science: Photosynthesis & Plant Transport',
-        subject: 'Integrated Science',
-        grade: 'Grade 7',
-        topic: 'Plant Physiology',
-        category: 'video_lesson',
-        description: 'Comprehensive video breakdown of xylem, phloem, and light-dependent reactions.',
-        videoEmbedUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-        durationMinutes: 24,
-        isLicensed: true,
-        downloadCount: 142,
-        uploadedBy: 'staff-1',
-        uploadedByName: 'Mwalimu Kevin Mutua',
-        createdAt: '2026-03-01T10:00:00Z',
-      },
-      {
-        id: 'res-doc-02',
-        title: 'Form 3 Mathematics: Quadratic Equations & Formula Revision',
-        subject: 'Mathematics',
-        grade: 'Form 3',
-        topic: 'Algebra',
-        category: 'notes',
-        description: 'Illustrated step-by-step notes covering completing the square and quadratic graphs.',
-        fileSize: '2.8 MB',
-        isLicensed: true,
-        downloadCount: 310,
-        uploadedBy: 'staff-2',
-        uploadedByName: 'David Kibet',
-        createdAt: '2026-02-20T08:30:00Z',
-      },
-      {
-        id: 'res-exam-03',
-        title: 'KNEC KCSE Official Chemistry Paper 1 (With Marking Scheme)',
-        subject: 'Chemistry',
-        grade: 'Form 4',
-        topic: 'National Revision',
-        category: 'past_paper',
-        description: 'Official national examination past paper complete with Chief Examiner marking schemes.',
-        fileSize: '4.5 MB',
-        isLicensed: true,
-        downloadCount: 520,
-        uploadedBy: 'staff-3',
-        uploadedByName: 'Dr. Kamau',
-        createdAt: '2026-01-15T12:00:00Z',
-      },
-      {
-        id: 'res-sim-04',
-        title: 'Interactive Physics Simulation: Electric Circuits & Ohm’s Law',
-        subject: 'Physics',
-        grade: 'Form 2',
-        topic: 'Electricity',
-        category: 'simulation',
-        description: 'Virtual lab allowing learners to connect ammeters, voltmeters and test circuit resistors.',
-        isLicensed: true,
-        downloadCount: 88,
-        uploadedBy: 'staff-1',
-        uploadedByName: 'Mwalimu Kevin Mutua',
-        createdAt: '2026-03-02T14:00:00Z',
-      },
-    ];
+    if (!organization || !currentSchool) {
+      setResources([]);
+      setQuizzes([]);
+      return;
+    }
 
-    const seedQuizzes: Quiz[] = [
-      {
-        id: 'quiz-cba-01',
-        title: 'CBC Grade 7 Science: Ecosystems & Environmental Sustainability',
-        subject: 'Integrated Science',
-        grade: 'Grade 7',
-        topic: 'Ecology & Environment',
-        timeLimitMinutes: 10,
-        maxAttempts: 2,
-        passingPercentage: 60,
-        isRandomized: true,
-        status: 'published',
-        keysReleased: true,
-        createdBy: 'teacher-1',
-        createdByName: 'Kevin Mutua',
-        createdAt: '2026-03-01T09:00:00Z',
-        questions: [
-          {
-            id: 'q1',
-            question: 'Which of the following organisms acts as a primary producer in an African savanna ecosystem?',
-            type: 'mcq',
-            options: ['Red-billed oxpecker', 'Acacia tortilis tree', 'Striped hyena', 'Dung beetle'],
-            maxScore: 2,
-            topicTag: 'Ecosystem Producers',
-            explanation: 'Acacia trees perform photosynthesis to manufacture energy.',
-          },
-          {
-            id: 'q2',
-            question: 'Deforestation leads to an increase in soil erosion and atmospheric carbon dioxide levels.',
-            type: 'true_false',
-            maxScore: 1,
-            topicTag: 'Environmental Conservation',
-            explanation: 'True. Tree roots bind topsoil, and canopies sequester atmospheric carbon.',
-          },
-          {
-            id: 'q3',
-            question: 'Name the ecological process by which nitrogen gas is converted into nitrates by root nodule bacteria:',
-            type: 'short_answer',
-            maxScore: 2,
-            topicTag: 'Biogeochemical Cycles',
-            explanation: 'Nitrogen fixation is performed by Rhizobium bacteria.',
-          },
-        ],
-      },
-      {
-        id: 'quiz-math-02',
-        title: 'Form 2 Mathematics: Linear Inequalities & Graphing',
-        subject: 'Mathematics',
-        grade: 'Form 2',
-        topic: 'Algebra & Geometry',
-        timeLimitMinutes: 15,
-        maxAttempts: 3,
-        passingPercentage: 50,
-        isRandomized: true,
-        status: 'published',
-        keysReleased: true,
-        createdBy: 'teacher-2',
-        createdByName: 'David Kibet',
-        createdAt: '2026-02-25T11:00:00Z',
-        questions: [
-          {
-            id: 'mq1',
-            question: 'If 3x - 5 <= 10, what is the maximum integer value of x?',
-            type: 'mcq',
-            options: ['4', '5', '6', '15'],
-            maxScore: 2,
-            topicTag: 'Linear Inequalities',
-            explanation: '3x <= 15 implies x <= 5. The maximum integer value is 5.',
-          },
-          {
-            id: 'mq2',
-            question: 'A dotted boundary line on an inequality graph signifies that the inequality is strict (< or >).',
-            type: 'true_false',
-            maxScore: 1,
-            topicTag: 'Inequality Graphing',
-            explanation: 'True. Strict inequalities do not include boundary points.',
-          },
-        ],
-      },
-    ];
+    const resRef = collection(db, 'organizations', organization.id, 'schools', currentSchool.id, 'learning_resources');
+    const unsubRes = onSnapshot(resRef, (snap) => {
+      const items = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<LearningResource, 'id'>) }));
+      setResources(items);
+    }, (err) => {
+      console.warn('Error fetching learning resources:', err);
+      setResources([]);
+    });
 
-    setResources(seedResources);
-    setQuizzes(seedQuizzes);
-  }, []);
+    const quizRef = collection(db, 'organizations', organization.id, 'schools', currentSchool.id, 'quizzes');
+    const unsubQuiz = onSnapshot(quizRef, (snap) => {
+      const items = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Quiz, 'id'>) }));
+      setQuizzes(items);
+    }, (err) => {
+      console.warn('Error fetching quizzes:', err);
+      setQuizzes([]);
+    });
+
+    return () => {
+      unsubRes();
+      unsubQuiz();
+    };
+  }, [organization, currentSchool]);
 
   // 2. Fetch live classes for dropdowns
   useEffect(() => {
@@ -601,10 +359,10 @@ export const Assignments: React.FC = () => {
     return () => unsub();
   }, [organization, currentSchool]);
 
-  // 3. Fetch live assignments with guaranteed fallback
+  // 3. Fetch live assignments from Firestore
   useEffect(() => {
     if (!organization || !currentSchool) {
-      setAssignments(fallbackAssignments);
+      setAssignments([]);
       setLoadingAssignments(false);
       return;
     }
@@ -623,25 +381,22 @@ export const Assignments: React.FC = () => {
     const unsub = onSnapshot(
       q,
       (snap) => {
-        if (!snap.empty) {
-          const items = snap.docs.map((d) => ({
-            id: d.id,
-            ...(d.data() as Omit<Assignment, 'id'>),
-          }));
-          setAssignments(items);
-        } else {
-          setAssignments(fallbackAssignments);
-        }
+        const items = snap.docs.map((d) => ({
+          id: d.id,
+          ...(d.data() as Omit<Assignment, 'id'>),
+        }));
+        setAssignments(items);
         setLoadingAssignments(false);
       },
-      () => {
-        setAssignments(fallbackAssignments);
+      (err) => {
+        console.warn('Error reading assignments:', err);
+        setAssignments([]);
         setLoadingAssignments(false);
       }
     );
 
     return () => unsub();
-  }, [organization, currentSchool, fallbackAssignments]);
+  }, [organization, currentSchool]);
 
   // Quiz live countdown timer
   useEffect(() => {
@@ -736,6 +491,19 @@ export const Assignments: React.FC = () => {
       };
 
       setResources((prev) => [newRes, ...prev]);
+
+      if (organization?.id && currentSchool?.id) {
+        try {
+          const resDoc = doc(collection(db, 'organizations', organization.id, 'schools', currentSchool.id, 'learning_resources'), newRes.id);
+          await setDoc(resDoc, {
+            ...newRes,
+            createdAt: serverTimestamp(),
+          });
+        } catch (err) {
+          console.warn('Error persisting resource to Firestore:', err);
+        }
+      }
+
       toast.success('Resource published to school library!', { id: toastId });
       setUploadResourceOpen(false);
 
@@ -1000,7 +768,7 @@ export const Assignments: React.FC = () => {
             </div>
           </div>
           <div className="mt-3">
-            <p className="text-2xl sm:text-3xl font-black">{resources.length + 12}</p>
+            <p className="text-2xl sm:text-3xl font-black">{resources.length}</p>
             <p className="text-2xs text-amber-100 font-medium mt-0.5">Video lessons &amp; KNEC past papers</p>
           </div>
         </div>
@@ -1273,7 +1041,14 @@ export const Assignments: React.FC = () => {
         <div className="space-y-4">
           {!activeQuiz ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {quizzes.map((quiz) => (
+              {quizzes.length === 0 ? (
+                <div className="col-span-full text-center py-12 bg-white rounded-2xl border border-slate-200 p-8 space-y-2">
+                  <Timer className="w-10 h-10 text-slate-300 mx-auto" />
+                  <p className="text-xs font-bold text-slate-700">No online quizzes published yet</p>
+                  <p className="text-2xs text-slate-400">Educators can build interactive auto-graded quizzes for continuous learner assessment.</p>
+                </div>
+              ) : (
+                quizzes.map((quiz) => (
                 <div
                   key={quiz.id}
                   className="rounded-2xl border-2 border-purple-200 bg-white p-6 space-y-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
@@ -1329,7 +1104,7 @@ export const Assignments: React.FC = () => {
                     </Button>
                   </div>
                 </div>
-              ))}
+              )))}
             </div>
           ) : (
             <Card className="p-6 space-y-6 border-2 border-purple-300 bg-white shadow-lg">
@@ -1512,7 +1287,14 @@ export const Assignments: React.FC = () => {
           </Card>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {filteredResources.map((res) => (
+            {filteredResources.length === 0 ? (
+              <div className="col-span-full text-center py-12 bg-white rounded-2xl border border-slate-200 p-8 space-y-2">
+                <BookOpen className="w-10 h-10 text-slate-300 mx-auto" />
+                <p className="text-xs font-bold text-slate-700">No learning resources in repository</p>
+                <p className="text-2xs text-slate-400">Upload revision notes, video lessons, and past papers for pupils and teachers.</p>
+              </div>
+            ) : (
+              filteredResources.map((res) => (
               <Card
                 key={res.id}
                 className="flex flex-col justify-between hover:border-blue-300 transition-all border border-slate-200 p-5 rounded-2xl shadow-sm"
@@ -1592,7 +1374,7 @@ export const Assignments: React.FC = () => {
                   )}
                 </div>
               </Card>
-            ))}
+            )))}
           </div>
         </div>
       )}
