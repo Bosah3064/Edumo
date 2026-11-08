@@ -764,7 +764,7 @@ export const Admissions: React.FC = () => {
             />
             <Input
               label="Last Name"
-              placeholder="e.g. Kiprono"
+              placeholder="e.g. Barasa"
               value={formData.lastName}
               onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
               required
@@ -812,7 +812,7 @@ export const Admissions: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input
               label="Guardian Full Name"
-              placeholder="e.g. Sarah Kiprono"
+              placeholder="e.g. Mary Barasa"
               value={formData.guardianName}
               onChange={(e) => setFormData({ ...formData, guardianName: e.target.value })}
               required

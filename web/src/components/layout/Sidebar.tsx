@@ -46,11 +46,10 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   const { signOut, currentUser, isPlatformAdmin } = useAuth();
-  const { currentRole, currentSchool, organization, hasPermission, setRoleOverride, previewRole } = useTenant();
+  const { currentRole, currentSchool, organization, hasPermission } = useTenant();
   const { unreadCount } = useNotifications();
   const { canInstall, isIOS, isAndroid } = usePWAInstall();
   const navigate = useNavigate();
-  const [roleMenuOpen, setRoleMenuOpen] = useState(false);
   const [sidebarLanguage, setSidebarLanguage] = useState<'en' | 'sw'>(() =>
     localStorage.getItem('edumo_sidebar_language') === 'sw' ? 'sw' : 'en'
   );
@@ -307,7 +306,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
           </div>
         )}
 
-        {/* Active Role Indicator & Switcher */}
+        {/* Active Role Indicator (Pure Authenticated Role) */}
         <div
           className="px-4 py-1.5 flex items-center justify-between shrink-0 border-b relative"
           style={{
@@ -324,60 +323,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
               {roleLabel}
             </span>
           </div>
-
-          <button
-            type="button"
-            onClick={() => setRoleMenuOpen((prev) => !prev)}
-            className="text-[9px] font-black uppercase px-2 py-0.5 rounded bg-white text-slate-700 hover:text-[#1d5f99] border border-slate-200 shadow-2xs cursor-pointer transition-colors"
-            title="Switch demo preview role"
-          >
-            {previewRole ? 'Reset' : 'Switch'}
-          </button>
-
-          {/* Quick Role Switcher Popup */}
-          {roleMenuOpen && (
-            <div className="absolute left-2 right-2 top-full mt-1 bg-white rounded-2xl border border-slate-200 shadow-xl p-2 z-50 space-y-1 text-xs">
-              <div className="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
-                <span>Preview As Role:</span>
-                {previewRole && (
-                  <button
-                    onClick={() => {
-                      setRoleOverride(null);
-                      setRoleMenuOpen(false);
-                    }}
-                    className="text-rose-600 hover:underline cursor-pointer"
-                  >
-                    Reset
-                  </button>
-                )}
-              </div>
-              {[
-                { id: 'principal', label: 'Principal (Admin)' },
-                { id: 'exam_officer', label: 'Exams Officer' },
-                { id: 'it_admin', label: 'IT Administrator' },
-                { id: 'teacher', label: 'Teacher (Educator)' },
-                { id: 'bursar', label: 'Bursar (Finance)' },
-                { id: 'guardian', label: 'Parent (Guardian)' },
-                { id: 'student', label: 'Student (Learner)' },
-              ].map((r) => (
-                <button
-                  key={r.id}
-                  onClick={() => {
-                    setRoleOverride(r.id);
-                    setRoleMenuOpen(false);
-                  }}
-                  className={`w-full text-left px-2.5 py-1.5 rounded-xl font-semibold transition-all cursor-pointer flex items-center justify-between ${
-                    role === r.id
-                      ? 'bg-blue-50 text-[#1d5f99] font-bold'
-                      : 'hover:bg-slate-50 text-slate-700'
-                  }`}
-                >
-                  <span>{r.label}</span>
-                  {role === r.id && <Check className="w-3.5 h-3.5 text-[#1d5f99]" />}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* Navigation List — Comfortable text-sm font size with smooth scrolling */}

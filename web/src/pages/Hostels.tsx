@@ -1034,7 +1034,7 @@ export const Hostels: React.FC = () => {
 
           <Input
             label="House Prefect / Captain"
-            placeholder="e.g. Brian Kiprono (Head of House)"
+            placeholder="e.g. Student Prefect (Head of House)"
             value={dormPrefect}
             onChange={(e) => setDormPrefect(e.target.value)}
           />

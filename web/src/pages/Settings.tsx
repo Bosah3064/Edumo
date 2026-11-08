@@ -382,7 +382,7 @@ const MiniatureExamCardPreview: React.FC<{
           </div>
           <div className="my-0.5 space-y-0.5 text-[6.5px]">
             <div className="flex justify-between bg-slate-50 px-1 py-0.5 font-mono text-slate-700 rounded-[2px]">
-              <span>CANDIDATE: <strong>E. Kiprono</strong></span>
+              <span>CANDIDATE: <strong>Sample Candidate</strong></span>
               <span>INDEX: <strong>2026/042</strong></span>
             </div>
             <div className="flex justify-between text-white font-bold px-1 py-0.2 rounded-[2px]" style={{ backgroundColor: primaryColor }}>
@@ -430,7 +430,7 @@ const MiniatureExamCardPreview: React.FC<{
           </div>
           <div className="text-[6px] space-y-0.5 text-slate-700">
             <div className="flex justify-between px-1 bg-white rounded border border-slate-100">
-              <span>Candidate: Emmanuel Kiprono</span>
+              <span>Candidate: Sample Learner</span>
               <span className="font-mono font-bold">Grade 7W</span>
             </div>
             <div className="flex justify-between px-1 font-mono text-[5.5px] text-slate-400">
@@ -452,7 +452,7 @@ const MiniatureExamCardPreview: React.FC<{
           </div>
           <div className="my-0.5 space-y-0.5 text-[6.5px]">
             <div className="border border-amber-200 bg-amber-50/50 rounded px-1 py-0.5 flex justify-between font-mono">
-              <span className="font-bold text-amber-900">Emmanuel Kiprono</span>
+              <span className="font-bold text-amber-900">Sample Learner</span>
               <span className="text-amber-800">CANDIDATE #042</span>
             </div>
             <div className="grid grid-cols-2 gap-1 text-[6px] text-slate-600">
@@ -475,7 +475,7 @@ const MiniatureExamCardPreview: React.FC<{
           </div>
           <div className="space-y-0.5 text-slate-700">
             <div className="flex justify-between">
-              <span>NAME: E. Kiprono</span>
+              <span>NAME: Sample Candidate</span>
               <span>ADM: 2026/042</span>
             </div>
             <div className="flex justify-between text-[6px] bg-white p-0.5 rounded border border-slate-200">
@@ -532,7 +532,7 @@ const MiniatureExamCardPreview: React.FC<{
           </div>
           <div className="text-[6.5px] space-y-0.5 text-slate-700 my-0.5">
             <div className="flex justify-between bg-white px-1 py-0.5 rounded border border-purple-100 font-mono">
-              <span className="font-bold">E. Kiprono Kosgei</span>
+              <span className="font-bold">Sample Candidate</span>
               <span>Grade 7</span>
             </div>
             <div className="text-[5.5px] text-purple-900 italic bg-purple-50 p-0.5 rounded border border-purple-100">
@@ -3391,7 +3391,7 @@ export const Settings: React.FC = () => {
           attendanceTotal={70}
           reportData={{
             studentId: 'sample-preview-learner',
-            studentName: 'Emmanuel Kiprono Kosgei',
+            studentName: 'Sample Learner Profile',
             admissionNumber: '2026/0042',
             className: 'Grade 4 West',
             academicYearId: '2026',
@@ -4118,7 +4118,7 @@ export const Settings: React.FC = () => {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs mb-3">
                 <div>
                   <span className="text-[10px] font-bold text-slate-500 uppercase block">Candidate Name</span>
-                  <span className="font-extrabold text-slate-900">Emmanuel Kiprono Kosgei</span>
+                  <span className="font-extrabold text-slate-900">Sample Learner Profile</span>
                 </div>
                 <div>
                   <span className="text-[10px] font-bold text-slate-500 uppercase block">Admission / UPI Index</span>
@@ -4206,7 +4206,7 @@ export const Settings: React.FC = () => {
                     "I affirm that I will uphold absolute integrity, arrive at the examination room 15 minutes prior, and abide by all institutional rules. Unauthorized materials will result in immediate disqualification."
                   </p>
                   <div className="mt-2 pt-1 border-t border-slate-200 flex justify-between text-[10px]">
-                    <span>Candidate Signature: <strong>E. Kiprono</strong></span>
+                    <span>Candidate Signature: <strong>Sample Candidate</strong></span>
                     <span>Date: <strong>10/11/2026</strong></span>
                   </div>
                 </div>

@@ -115,16 +115,7 @@ export const ParentPortal: React.FC = () => {
         const hasPhoneMatch = Boolean(userPhone && (guardianPhone === userPhone || contacts.some((c: any) => c.phone === userPhone)));
         const hasEmailMatch = Boolean(userEmail && (guardianEmail === userEmail || data.schoolEmail?.toLowerCase() === userEmail || contacts.some((c: any) => c.email?.toLowerCase() === userEmail)));
 
-        // Demo account pairing: if demo parent 'parent@family.org' is testing, match the demo children
-        const isDemoParent = userEmail === 'parent@family.org';
-        const isDemoChild = isDemoParent && (
-          (data.firstName || '').toLowerCase().includes('kevin') ||
-          (data.firstName || '').toLowerCase().includes('zawadi') ||
-          (data.admissionNumber || '').includes('001') ||
-          (data.admissionNumber || '').includes('002')
-        );
-
-        return hasPhoneMatch || hasEmailMatch || isDemoChild;
+        return hasPhoneMatch || hasEmailMatch;
       });
 
       const childList: LinkedChild[] = matchedStudents.map((d) => {
@@ -137,8 +128,8 @@ export const ParentPortal: React.FC = () => {
           schoolName: currentSchool.name || 'Campus',
           statusToday: 'not marked',
           teacherName: 'Assigned Class Educator',
-          feeBalance: Number(data.feeBalance ?? 13500),
-          feeTotal: Number(data.feeTotal ?? 28500),
+          feeBalance: Number(data.feeBalance ?? 0),
+          feeTotal: Number(data.feeTotal ?? 0),
         };
       });
 

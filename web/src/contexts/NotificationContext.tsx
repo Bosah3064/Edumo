@@ -38,6 +38,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const { organization, currentSchool } = useTenant();
 
   const [rawAnnouncements, setRawAnnouncements] = useState<AppNotification[]>([]);
+  const [rawNotifications, setRawNotifications] = useState<AppNotification[]>([]);
   const [readIds, setReadIds] = useState<Set<string>>(() => {
     if (typeof window === 'undefined') return new Set();
     try {
@@ -96,6 +97,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   useEffect(() => {
     if (!organization?.id || !currentSchool?.id) {
       setRawAnnouncements([]);
+      setRawNotifications([]);
       return;
     }
 
@@ -108,10 +110,10 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         currentSchool.id,
         'announcements'
       );
-      const q = query(annRef, orderBy('createdAt', 'desc'), limit(20));
+      const qAnn = query(annRef, orderBy('createdAt', 'desc'), limit(25));
 
-      const unsub = onSnapshot(
-        q,
+      const unsubAnn = onSnapshot(
+        qAnn,
         (snap) => {
           const list: AppNotification[] = snap.docs.map((d) => {
             const data = d.data();
@@ -132,83 +134,68 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           setRawAnnouncements(list);
         },
         () => {
-          // Fallback gracefully on permissions
           setRawAnnouncements([]);
         }
       );
 
-      return () => unsub();
+      // Real-time notifications collection (academic, attendance, finance, system alerts)
+      const notifRef = collection(
+        db,
+        'organizations',
+        organization.id,
+        'schools',
+        currentSchool.id,
+        'notifications'
+      );
+      const qNotif = query(notifRef, orderBy('createdAt', 'desc'), limit(25));
+
+      const unsubNotif = onSnapshot(
+        qNotif,
+        (snap) => {
+          const list: AppNotification[] = snap.docs.map((d) => {
+            const data = d.data();
+            const ts = data.createdAt?.toDate ? data.createdAt.toDate() : new Date();
+            return {
+              id: `notif-${d.id}`,
+              title: data.title || 'Notification',
+              message: data.message || data.body || '',
+              type: data.type || 'system',
+              priority: data.priority === 'urgent' ? 'urgent' : 'normal',
+              timestamp: ts,
+              read: Boolean(data.read),
+              link: data.link || '/dashboard',
+              actionLabel: data.actionLabel || 'View Details',
+              senderName: data.senderName || 'School Notice',
+            };
+          });
+          setRawNotifications(list);
+        },
+        () => {
+          setRawNotifications([]);
+        }
+      );
+
+      return () => {
+        unsubAnn();
+        unsubNotif();
+      };
     } catch {
       setRawAnnouncements([]);
+      setRawNotifications([]);
     }
   }, [organization?.id, currentSchool?.id]);
 
-  // Baseline contextual notifications (Operational, Academics, Attendance, System)
-  const baseNotifications = useMemo<AppNotification[]>(() => {
-    const now = Date.now();
-    return [
-      {
-        id: 'sys-welcome',
-        title: 'Institutional Workspace Ready',
-        message: `${currentSchool?.name || 'Edumo School'} is connected. Multi-branch attendance, marks recording, and PWA offline sync are active.`,
-        type: 'system',
-        priority: 'normal',
-        timestamp: new Date(now - 1000 * 60 * 15), // 15 mins ago
-        read: false,
-        link: '/dashboard',
-        actionLabel: 'Open Dashboard',
-        senderName: 'System Core',
-      },
-      {
-        id: 'acad-cbc-grading',
-        title: 'CBC Rubric & Marks Recording',
-        message: 'Summative & Formative evaluation rubrics are enabled. Enter learner strand performance per learning area.',
-        type: 'academic',
-        priority: 'normal',
-        timestamp: new Date(now - 1000 * 60 * 60 * 2), // 2 hours ago
-        link: '/academics',
-        actionLabel: 'Record Marks',
-        senderName: 'Academic Directorate',
-        read: false,
-      },
-      {
-        id: 'att-morning-register',
-        title: 'Daily Class Attendance Register',
-        message: 'Morning roll-call register is open. Quickly mark learner presence or absence in 1-tap.',
-        type: 'attendance',
-        priority: 'normal',
-        timestamp: new Date(now - 1000 * 60 * 60 * 4), // 4 hours ago
-        link: '/attendance',
-        actionLabel: 'Take Attendance',
-        senderName: 'Roll-Call Monitor',
-        read: false,
-      },
-      {
-        id: 'msg-guardian-portal',
-        title: 'Two-Way Guardian Messaging',
-        message: 'Parents can receive term circulars, permission slips, and SMS alerts during designated educator office hours.',
-        type: 'message',
-        priority: 'normal',
-        timestamp: new Date(now - 1000 * 60 * 60 * 24), // 1 day ago
-        link: '/messaging',
-        actionLabel: 'Open Messages',
-        senderName: 'Communication Desk',
-        read: false,
-      },
-    ];
-  }, [currentSchool?.name]);
-
-  // Merged and deduplicated notifications
+  // Merged and deduplicated 100% real live notifications
   const notifications = useMemo(() => {
-    const combined = [...rawAnnouncements, ...baseNotifications];
+    const combined = [...rawAnnouncements, ...rawNotifications];
     return combined
       .filter((n) => !deletedIds.has(n.id))
       .map((n) => ({
         ...n,
-        read: readIds.has(n.id),
+        read: readIds.has(n.id) || n.read,
       }))
       .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-  }, [rawAnnouncements, baseNotifications, readIds, deletedIds]);
+  }, [rawAnnouncements, rawNotifications, readIds, deletedIds]);
 
   const unreadCount = useMemo(() => {
     return notifications.filter((n) => !n.read).length;

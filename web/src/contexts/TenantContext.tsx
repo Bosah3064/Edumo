@@ -16,7 +16,6 @@ import type {
   Permission,
 } from '@edumo/shared';
 import { DEFAULT_ROLE_PERMISSIONS } from '@edumo/shared';
-import { initializeSchoolTables } from '../utils/databaseInitializer';
 
 interface TenantContextType {
   organization: Organization | null;
@@ -154,21 +153,6 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return schools.find((s) => s.id === currentSchoolId) || schools[0] || null;
   }, [schools, currentSchoolId]);
 
-  // Ensure all core school database collections/tables are initialized in Firestore
-  useEffect(() => {
-    if (!organization || !currentSchool) return;
-    initializeSchoolTables(
-      db,
-      organization.id,
-      currentSchool.id,
-      currentSchool.name,
-      currentSchool.curriculumType,
-      currentSchool.country || organization.country
-    ).catch((err) => {
-      console.warn('Auto table initialization deferred:', err);
-    });
-  }, [organization?.id, currentSchool?.id]);
-
   // Apply school custom branding colors dynamically to CSS custom properties
   // Guarantees each school/branch has its own visual identity without affecting other schools
   useEffect(() => {
@@ -232,26 +216,19 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const [previewRole, setPreviewRole] = useState<string | null>(() => {
     if (typeof window === 'undefined') return null;
-    return localStorage.getItem('edumo_preview_role') || null;
+    localStorage.removeItem('edumo_preview_role');
+    return null;
   });
 
-  const setRoleOverride = (role: string | null) => {
-    if (role) {
-      localStorage.setItem('edumo_preview_role', role);
-      setPreviewRole(role);
-    } else {
+  const setRoleOverride = (_role: string | null) => {
+    if (typeof window !== 'undefined') {
       localStorage.removeItem('edumo_preview_role');
-      setPreviewRole(null);
     }
+    setPreviewRole(null);
   };
 
-  // Determine current user's role in this school accurately
+  // Determine current user's role in this school accurately from authenticated claims and profile
   const currentRole = useMemo<UserRole | null>(() => {
-    // 0. Manual preview role (useful for instant demo inspection & testing)
-    if (previewRole) {
-      return previewRole as UserRole;
-    }
-
     // 1. Explicit per-school role from token claims
     if (currentSchoolId && claims?.schoolRoles?.[currentSchoolId]) {
       return claims.schoolRoles[currentSchoolId] as UserRole;
@@ -280,7 +257,7 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
     // 6. Default for educators/members: 'teacher'
     return 'teacher';
-  }, [previewRole, claims, currentSchoolId, userProfileRole, currentUser?.email, organization?.ownerId, currentUser?.uid]);
+  }, [claims, currentSchoolId, userProfileRole, currentUser?.email, organization?.ownerId, currentUser?.uid]);
 
   // Compute permissions for current role
   const userPermissions = useMemo<Permission[]>(() => {

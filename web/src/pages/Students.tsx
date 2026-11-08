@@ -5,6 +5,7 @@ import {
   onSnapshot,
   doc,
   setDoc,
+  deleteDoc,
   serverTimestamp,
   runTransaction,
   DocumentData,
@@ -30,6 +31,8 @@ import {
   Download,
   Printer,
   ArrowRightLeft,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
@@ -39,6 +42,11 @@ import {
   getSchoolEmailDomain,
   getSchoolEmailForAdmission,
 } from '../utils/admission';
+import {
+  isSampleLearner,
+  purgeMockSchoolData,
+  wipeAllSchoolStudents,
+} from '../utils/databaseInitializer';
 import { exportLearnerMasterList } from '../utils/excelExport';
 import { ExamCardModal } from '../components/students/ExamCardModal';
 import { TransferStudentModal } from '../components/students/TransferStudentModal';
@@ -71,6 +79,11 @@ export const Students: React.FC = () => {
   const [examCardStudent, setExamCardStudent] = useState<StudentRecord | null>(null);
   const [transferStudent, setTransferStudent] = useState<StudentRecord | null>(null);
   const [exportingExcel, setExportingExcel] = useState(false);
+  const [isPurging, setIsPurging] = useState(false);
+  const [studentToDelete, setStudentToDelete] = useState<StudentRecord | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isWipeAllModalOpen, setIsWipeAllModalOpen] = useState(false);
+  const [isWipingAll, setIsWipingAll] = useState(false);
 
   // Form State
   const [admissionNo, setAdmissionNo] = useState('');
@@ -267,6 +280,72 @@ export const Students: React.FC = () => {
     }
   };
 
+  const hasSampleLearners = students.some(isSampleLearner);
+
+  const handlePurgeSampleData = async () => {
+    if (!organization?.id || !currentSchool?.id) return;
+    setIsPurging(true);
+    const toastId = toast.loading('Purging mock demonstration learners and records...');
+    try {
+      const res = await purgeMockSchoolData(db, organization.id, currentSchool.id);
+      toast.success(
+        `Wiped ${res.studentsPurged} sample learners and associated mock records!`,
+        { id: toastId }
+      );
+    } catch (err) {
+      console.error('Failed to purge sample records:', err);
+      toast.error('Failed to purge sample records. Please check permissions.', { id: toastId });
+    } finally {
+      setIsPurging(false);
+    }
+  };
+
+  const handleDeleteStudent = async () => {
+    if (!organization?.id || !currentSchool?.id || !studentToDelete) return;
+    const toastId = toast.loading(`Deleting ${studentToDelete.firstName}...`);
+    try {
+      await deleteDoc(
+        doc(
+          db,
+          'organizations',
+          organization.id,
+          'schools',
+          currentSchool.id,
+          'students',
+          studentToDelete.id
+        )
+      );
+      toast.success(
+        `${studentToDelete.firstName} ${studentToDelete.lastName} deleted successfully.`,
+        { id: toastId }
+      );
+      setIsDeleteModalOpen(false);
+      setStudentToDelete(null);
+    } catch (err) {
+      console.error('Failed to delete student:', err);
+      toast.error('Failed to delete learner record.', { id: toastId });
+    }
+  };
+
+  const handleWipeAllLearners = async () => {
+    if (!organization?.id || !currentSchool?.id) return;
+    setIsWipingAll(true);
+    const toastId = toast.loading('Wiping all learners for this school...');
+    try {
+      const res = await wipeAllSchoolStudents(db, organization.id, currentSchool.id);
+      toast.success(
+        `Successfully wiped all ${res.deletedCount} learners. Clean slate ready!`,
+        { id: toastId }
+      );
+      setIsWipeAllModalOpen(false);
+    } catch (err) {
+      console.error('Failed to wipe learners:', err);
+      toast.error('Failed to wipe learners.', { id: toastId });
+    } finally {
+      setIsWipingAll(false);
+    }
+  };
+
   const filteredStudents = students.filter((s) => {
     const q = (searchQuery || '').toLowerCase().trim();
     const fullName = `${s.firstName || ''} ${s.lastName || ''} ${s.admissionNumber || ''}`.toLowerCase();
@@ -299,6 +378,17 @@ export const Students: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 shrink-0">
+          {totalLearners > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsWipeAllModalOpen(true)}
+              leftIcon={<Trash2 className="w-4 h-4 text-rose-500" />}
+              className="font-bold text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200"
+            >
+              Wipe All Learners
+            </Button>
+          )}
           <Button
             variant="secondary"
             size="sm"
@@ -323,6 +413,37 @@ export const Students: React.FC = () => {
           </Button>
         </div>
       </div>
+
+      {/* Sample demonstration data detection banner with 1-click purge */}
+      {hasSampleLearners && (
+        <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-amber-900 animate-fade-in">
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-xl bg-amber-200/80 text-amber-900 shrink-0 mt-0.5">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="font-black text-sm text-amber-950">
+                Sample Demonstration Learners Detected
+              </p>
+              <p className="text-xs text-amber-800 mt-0.5">
+                Demonstration records (e.g. Emmanuel Kiprono, Zawadi Achieng, Faith Muthoni) are detected in this school branch. Click to wipe all mock learners and keep only real school data.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={handlePurgeSampleData}
+              isLoading={isPurging}
+              leftIcon={<Trash2 className="w-4 h-4" />}
+              className="font-bold whitespace-nowrap shadow-xs"
+            >
+              Wipe Sample Data
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Top Colorful Metric Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -472,6 +593,17 @@ export const Students: React.FC = () => {
                         <ArrowRightLeft className="w-4 h-4" />
                       </button>
                     )}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setStudentToDelete(student);
+                        setIsDeleteModalOpen(true);
+                      }}
+                      className="p-2 rounded-xl text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                      title="Delete Learner Record"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               ))}
@@ -564,6 +696,17 @@ export const Students: React.FC = () => {
                             title="View Learner Profile"
                           >
                             <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setStudentToDelete(student);
+                              setIsDeleteModalOpen(true);
+                            }}
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                            title="Delete Learner Record"
+                          >
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       </td>
@@ -830,6 +973,86 @@ export const Students: React.FC = () => {
         currentSchoolId={currentSchool?.id || ''}
         availableSchools={schools}
       />
+
+      {/* Delete Single Learner Modal */}
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setStudentToDelete(null);
+        }}
+        title="Delete Learner Record"
+        description="Permanently remove this student from your school branch database"
+        maxWidth="md"
+      >
+        <div className="space-y-4 pt-2">
+          <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs">
+            <p className="font-bold">Are you sure you want to permanently delete this learner?</p>
+            <p className="mt-1 font-semibold text-rose-800">
+              {studentToDelete?.firstName} {studentToDelete?.lastName} ({studentToDelete?.admissionNumber})
+            </p>
+            <p className="mt-1 text-slate-500">
+              This action cannot be undone. Their admission profile and records will be deleted from the database.
+            </p>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setIsDeleteModalOpen(false);
+                setStudentToDelete(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleDeleteStudent}
+              leftIcon={<Trash2 className="w-4 h-4" />}
+            >
+              Confirm Delete
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Wipe All Learners Confirmation Modal */}
+      <Modal
+        isOpen={isWipeAllModalOpen}
+        onClose={() => setIsWipeAllModalOpen(false)}
+        title="Wipe All Learners"
+        description="Clear all enrolled learners to start with a 100% clean slate"
+        maxWidth="md"
+      >
+        <div className="space-y-4 pt-2">
+          <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs">
+            <p className="font-black text-rose-950">⚠️ WARNING: Irreversible Operation</p>
+            <p className="mt-1 text-slate-700">
+              This will permanently delete <strong>all {totalLearners} learner records</strong> in{' '}
+              <strong>{currentSchool?.name || 'this school branch'}</strong>.
+            </p>
+            <p className="mt-1 text-slate-500">
+              Use this when you want to wipe demo/test students and enroll or import your real school master roster from Excel (.xlsx).
+            </p>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              variant="secondary"
+              onClick={() => setIsWipeAllModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleWipeAllLearners}
+              isLoading={isWipingAll}
+              leftIcon={<Trash2 className="w-4 h-4" />}
+            >
+              Wipe All {totalLearners} Learners
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

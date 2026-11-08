@@ -8,7 +8,6 @@ import { db } from '../firebase';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
-import { initializeSchoolTables } from '../utils/databaseInitializer';
 import toast from 'react-hot-toast';
 import {
   Users,
@@ -78,7 +77,6 @@ export const Dashboard: React.FC = () => {
   const [recentAnnouncements, setRecentAnnouncements] = useState<
     Array<{ id: string; title: string; body: string; targetRole: string; authorName?: string; pinned?: boolean }>
   >([]);
-  const [seedingData, setSeedingData] = useState(false);
 
   useEffect(() => {
     if (!organization || !currentSchool) return;
@@ -263,27 +261,6 @@ export const Dashboard: React.FC = () => {
     };
   }, [organization, currentSchool]);
 
-  const handleQuickSeed = async () => {
-    if (!organization || !currentSchool) return;
-    setSeedingData(true);
-    try {
-      await initializeSchoolTables(
-        db,
-        organization.id,
-        currentSchool.id,
-        currentSchool.name,
-        currentSchool.curriculumType || 'CBC',
-        currentSchool.country || organization.country || 'KE'
-      );
-      toast.success('Real school educational records populated successfully!');
-    } catch (err) {
-      console.error('Error seeding data:', err);
-      toast.error('Failed to populate records. Please check permissions.');
-    } finally {
-      setSeedingData(false);
-    }
-  };
-
   const curriculumLabels: Record<string, string> = {
     CBC: '🇰🇪 Kenya CBC (Competency-Based)',
     '8-4-4': '🇰🇪 Kenya 8-4-4 Classic',
@@ -371,11 +348,10 @@ export const Dashboard: React.FC = () => {
                 variant="outline"
                 size="sm"
                 className="col-span-2 sm:col-span-1 w-full sm:w-auto justify-center text-xs sm:text-sm !py-2.5 sm:!py-2 bg-white/20 hover:bg-white/30 text-white border-white/30 font-bold active:scale-98 transition-transform cursor-pointer"
-                onClick={handleQuickSeed}
-                disabled={seedingData}
-                leftIcon={<Sparkles className="w-3.5 h-3.5 text-amber-300 shrink-0" />}
+                onClick={() => navigate('/students')}
+                leftIcon={<Users className="w-3.5 h-3.5 text-white shrink-0" />}
               >
-                {seedingData ? 'Populating...' : 'Seed Real Data'}
+                Learner Directory
               </Button>
             )}
           </div>
