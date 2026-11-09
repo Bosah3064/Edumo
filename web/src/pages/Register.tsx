@@ -27,6 +27,7 @@ import {
   BookOpen,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { sanitizeSchoolEmailDomain, deriveSchoolDomainFromName } from '../utils/admission';
 
 export const Register: React.FC = () => {
   const { t } = useTranslation();
@@ -396,7 +397,7 @@ export const Register: React.FC = () => {
           },
           settings: {
             boardingType,
-            emailDomain: emailDomain.trim().toLowerCase(),
+            emailDomain: sanitizeSchoolEmailDomain(emailDomain) || deriveSchoolDomainFromName(orgName || branchName || 'school'),
           },
           status: 'active',
           createdAt: now,
@@ -443,7 +444,7 @@ export const Register: React.FC = () => {
             },
             settings: {
               boardingType,
-              emailDomain: emailDomain.trim().toLowerCase(),
+              emailDomain: sanitizeSchoolEmailDomain(emailDomain) || deriveSchoolDomainFromName(orgName || branchName || 'school'),
             },
           });
         } catch {
@@ -874,11 +875,41 @@ export const Register: React.FC = () => {
                 />
                 <Input
                   label="School Email Domain (Optional)"
-                  placeholder="nyambaria.ac.ke"
+                  placeholder="e.g. kcau.ac or alliancehigh.sc.ke"
                   value={emailDomain}
                   onChange={(e) => setEmailDomain(e.target.value)}
-                  helperText="Used for automated learner emails"
+                  helperText="Leave blank to auto-generate from school name"
                 />
+
+                <div className="col-span-1 md:col-span-2 p-3.5 rounded-2xl bg-blue-50/70 border border-blue-200 text-2xs space-y-1.5 mt-1">
+                  <span className="font-extrabold text-[#1d5f99] uppercase tracking-wider block flex items-center gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-[#1d5f99]" />
+                    Automated Institutional Accounts Preview:
+                  </span>
+                  <div className="space-y-1 text-slate-700">
+                    <p>
+                      • <strong>Students:</strong>{' '}
+                      <span className="font-mono font-bold text-slate-900">
+                        2205688@students.{sanitizeSchoolEmailDomain(emailDomain) || deriveSchoolDomainFromName(orgName || branchName || 'school')}
+                      </span>
+                    </p>
+                    <p>
+                      • <strong>Teachers:</strong>{' '}
+                      <span className="font-mono font-bold text-slate-900">
+                        name@teacher.{sanitizeSchoolEmailDomain(emailDomain) || deriveSchoolDomainFromName(orgName || branchName || 'school')}
+                      </span>
+                    </p>
+                    <p>
+                      • <strong>Staff / Bursar:</strong>{' '}
+                      <span className="font-mono font-bold text-slate-900">
+                        bursar@staff.{sanitizeSchoolEmailDomain(emailDomain) || deriveSchoolDomainFromName(orgName || branchName || 'school')}
+                      </span>
+                    </p>
+                  </div>
+                  <p className="text-[11px] text-emerald-800 font-semibold pt-1">
+                    ✓ Students do not need to register. They are pre-provisioned on enrollment with initial password <span className="font-mono">Edumo@[admission]</span>.
+                  </p>
+                </div>
               </div>
 
               <div className="pt-4 flex items-center justify-between">

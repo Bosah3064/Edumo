@@ -7,15 +7,28 @@ import {
   signOut as fbSignOut,
   updateProfile,
 } from 'firebase/auth';
-import { doc, getDoc, collection, query, where, limit, getDocs } from 'firebase/firestore';
+import {
+  doc,
+  getDoc,
+  collection,
+  collectionGroup,
+  query,
+  where,
+  limit,
+  getDocs,
+  setDoc,
+  updateDoc,
+  serverTimestamp,
+} from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import type { UserClaims, UserRole } from '@edumo/shared';
+import { generateDefaultStudentPassword, getCleanAdmissionNumber } from '../utils/admission';
 
 interface AuthContextType {
   currentUser: User | null;
   claims: UserClaims | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (emailOrIdentifier: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, name: string) => Promise<User>;
   signOut: () => Promise<void>;
   refreshClaims: () => Promise<UserClaims | null>;
@@ -108,8 +121,150 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return updatedClaims;
   };
 
-  const signIn = async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email, password);
+  /**
+   * Universal Institutional Sign-In:
+   * 1. Signs in existing accounts via Firebase Auth.
+   * 2. If account does not exist in Firebase Auth yet, automatically checks if user is an enrolled
+   *    student or staff member in Firestore with pre-provisioned credentials.
+   *    If matching credentials found, auto-creates their Firebase Auth account and signs them in!
+   */
+  const signIn = async (emailOrIdentifier: string, password: string) => {
+    const rawInput = (emailOrIdentifier || '').trim();
+    const normalizedInput = rawInput.toLowerCase();
+
+    // Step 1: Direct Firebase Auth Attempt
+    try {
+      await signInWithEmailAndPassword(auth, normalizedInput, password);
+      return;
+    } catch (fbErr: any) {
+      const isAuthMiss =
+        fbErr?.code === 'auth/user-not-found' ||
+        fbErr?.code === 'auth/invalid-credential' ||
+        fbErr?.code === 'auth/wrong-password' ||
+        fbErr?.code === 'auth/invalid-email';
+
+      if (!isAuthMiss) {
+        throw fbErr;
+      }
+    }
+
+    // Step 2: Automated Student & Staff Institutional Account Provisioning
+    try {
+      let matchedDoc: any = null;
+      let matchedData: any = null;
+
+      // Look up by schoolEmail or institutionalEmail
+      if (normalizedInput.includes('@')) {
+        const qEmail = query(collectionGroup(db, 'students'), where('schoolEmail', '==', normalizedInput), limit(1));
+        const snap = await getDocs(qEmail);
+        if (!snap.empty) {
+          matchedDoc = snap.docs[0];
+          matchedData = snap.docs[0].data();
+        } else {
+          const qInst = query(collectionGroup(db, 'students'), where('institutionalEmail', '==', normalizedInput), limit(1));
+          const snapInst = await getDocs(qInst);
+          if (!snapInst.empty) {
+            matchedDoc = snapInst.docs[0];
+            matchedData = snapInst.docs[0].data();
+          }
+        }
+      }
+
+      // Look up by admissionNumber or cleanAdmissionNumber (e.g. 22/05688 or 2205688)
+      if (!matchedDoc) {
+        const qAdm = query(collectionGroup(db, 'students'), where('admissionNumber', '==', rawInput), limit(1));
+        const snapAdm = await getDocs(qAdm);
+        if (!snapAdm.empty) {
+          matchedDoc = snapAdm.docs[0];
+          matchedData = snapAdm.docs[0].data();
+        } else {
+          const cleanAdm = getCleanAdmissionNumber(rawInput);
+          if (cleanAdm) {
+            const qClean = query(collectionGroup(db, 'students'), where('cleanAdmissionNumber', '==', cleanAdm), limit(1));
+            const snapClean = await getDocs(qClean);
+            if (!snapClean.empty) {
+              matchedDoc = snapClean.docs[0];
+              matchedData = snapClean.docs[0].data();
+            }
+          }
+        }
+      }
+
+      if (matchedDoc && matchedData) {
+        const studentAdm = matchedData.admissionNumber || '';
+        const cleanAdm = getCleanAdmissionNumber(studentAdm);
+        const expectedDefaultPass = matchedData.defaultPassword || generateDefaultStudentPassword(studentAdm);
+
+        const isPasswordCorrect =
+          password === expectedDefaultPass ||
+          password === `Edumo@${cleanAdm}` ||
+          password === matchedData.defaultPassword;
+
+        if (isPasswordCorrect) {
+          const studentEmail =
+            matchedData.schoolEmail ||
+            matchedData.institutionalEmail ||
+            `${cleanAdm}@students.${matchedData.schoolDomain || 'edumo.school'}`;
+
+          const studentName =
+            matchedData.fullName ||
+            `${matchedData.firstName || 'Student'} ${matchedData.lastName || ''}`.trim();
+
+          const segments = matchedDoc.ref.path.split('/');
+          const orgId = segments[1] || matchedData.orgId || '';
+          const schoolId = segments[3] || matchedData.schoolId || '';
+
+          // Provision the Firebase Auth user on the spot!
+          const userCredential = await createUserWithEmailAndPassword(auth, studentEmail, password);
+          await updateProfile(userCredential.user, { displayName: studentName });
+
+          // Write user profile to /users/{uid}
+          await setDoc(
+            doc(db, 'users', userCredential.user.uid),
+            {
+              email: studentEmail,
+              displayName: studentName,
+              role: 'student',
+              studentId: matchedDoc.id,
+              admissionNumber: studentAdm,
+              schoolId: schoolId,
+              orgId: orgId,
+              memberships: [
+                {
+                  orgId: orgId,
+                  schoolId: schoolId,
+                  role: 'student',
+                },
+              ],
+              createdAt: serverTimestamp(),
+              activatedAt: serverTimestamp(),
+            },
+            { merge: true }
+          );
+
+          // Update student document in Firestore
+          await updateDoc(matchedDoc.ref, {
+            authUid: userCredential.user.uid,
+            accountStatus: 'active',
+            activatedAt: serverTimestamp(),
+          });
+
+          if (orgId) {
+            setUserProfileOrgId(orgId);
+            localStorage.setItem('edumo_active_org_id', orgId);
+          }
+          if (schoolId) {
+            localStorage.setItem('edumo_active_school_id', schoolId);
+          }
+          setUserProfileRole('student');
+          return;
+        }
+      }
+    } catch (provisionErr) {
+      console.warn('Auto student provisioning attempt error:', provisionErr);
+    }
+
+    throw new Error('Invalid login credentials. Please verify your institutional email or admission number and password.');
   };
 
   const signUp = async (email: string, password: string, name: string): Promise<User> => {

@@ -65,7 +65,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { db, storage } from '../firebase';
-import { sanitizeSchoolEmailDomain } from '../utils/admission';
+import { sanitizeSchoolEmailDomain, deriveSchoolDomainFromName } from '../utils/admission';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { ReportCardModal, type ReportTemplateId } from '../components/academics/ReportCardModal';
 import type { Subject } from '@edumo/shared';
@@ -2700,11 +2700,40 @@ export const Settings: React.FC = () => {
                 />
                 <Input
                   label="School Email Domain"
-                  placeholder="nyambaria.co.ke"
+                  placeholder="e.g. kcau.ac or nyambaria.co.ke"
                   value={emailDomain}
                   onChange={(e) => setEmailDomain(e.target.value)}
-                  helperText="Used for auto-generated learner emails"
+                  helperText="Used for auto-generating institutional learner & staff emails"
                 />
+
+                <div className="col-span-1 md:col-span-2 p-3.5 rounded-2xl bg-blue-50/70 border border-blue-200 text-2xs space-y-1.5 mt-2">
+                  <span className="font-extrabold text-[#1d5f99] uppercase tracking-wider block">
+                    Institutional Email Schema:
+                  </span>
+                  <div className="space-y-1 text-slate-700">
+                    <p>
+                      • <strong>Students:</strong>{' '}
+                      <span className="font-mono font-bold text-slate-900">
+                        2205688@students.{sanitizeSchoolEmailDomain(emailDomain) || deriveSchoolDomainFromName(currentSchool?.name || orgName || 'school')}
+                      </span>
+                    </p>
+                    <p>
+                      • <strong>Teachers:</strong>{' '}
+                      <span className="font-mono font-bold text-slate-900">
+                        username@teacher.{sanitizeSchoolEmailDomain(emailDomain) || deriveSchoolDomainFromName(currentSchool?.name || orgName || 'school')}
+                      </span>
+                    </p>
+                    <p>
+                      • <strong>Staff / Bursar:</strong>{' '}
+                      <span className="font-mono font-bold text-slate-900">
+                        username@staff.{sanitizeSchoolEmailDomain(emailDomain) || deriveSchoolDomainFromName(currentSchool?.name || orgName || 'school')}
+                      </span>
+                    </p>
+                  </div>
+                  <p className="text-[11px] text-emerald-800 font-semibold pt-1">
+                    ✓ Zero Student Sign-Up: Students are pre-provisioned on enrollment with initial credentials <span className="font-mono">Edumo@[admission]</span>.
+                  </p>
+                </div>
               </div>
             </div>
           )}

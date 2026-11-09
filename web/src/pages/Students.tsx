@@ -33,6 +33,7 @@ import {
   ArrowRightLeft,
   Trash2,
   AlertTriangle,
+  ShieldCheck,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
@@ -41,6 +42,8 @@ import {
   getNextAdmissionNumber,
   getSchoolEmailDomain,
   getSchoolEmailForAdmission,
+  generateDefaultStudentPassword,
+  getCleanAdmissionNumber,
 } from '../utils/admission';
 import {
   isSampleLearner,
@@ -199,6 +202,8 @@ export const Students: React.FC = () => {
 
       const schoolEmailDomain = getSchoolEmailDomain(currentSchool);
       const schoolEmail = getSchoolEmailForAdmission(generatedAdmission, schoolEmailDomain);
+      const defaultPassword = generateDefaultStudentPassword(generatedAdmission);
+      const cleanAdmission = getCleanAdmissionNumber(generatedAdmission);
       const studentDocRef = doc(
         collection(
           db,
@@ -213,9 +218,18 @@ export const Students: React.FC = () => {
       // Save Student Document
       await setDoc(studentDocRef, {
         admissionNumber: generatedAdmission,
+        cleanAdmissionNumber: cleanAdmission,
         schoolEmail: schoolEmail || null,
+        institutionalEmail: schoolEmail || null,
+        defaultPassword: defaultPassword,
+        accountStatus: 'provisioned',
+        schoolId: currentSchool.id,
+        schoolName: currentSchool.name,
+        schoolDomain: schoolEmailDomain,
+        orgId: organization.id,
         firstName: firstName.trim(),
         lastName: lastName.trim(),
+        fullName: `${firstName.trim()} ${lastName.trim()}`,
         currentClassId: className,
         gender,
         boardingStatus,
@@ -239,7 +253,7 @@ export const Students: React.FC = () => {
         });
       }
 
-      toast.success(`${firstName} enrolled successfully!`, { id: toastId });
+      toast.success(`Enrolled! Email: ${schoolEmail} | Password: ${defaultPassword}`, { id: toastId, duration: 8000 });
       setIsEnrollModalOpen(false);
 
       // Reset form
@@ -998,6 +1012,35 @@ export const Students: React.FC = () => {
                 <span className="font-medium text-gray-700">
                   {currentSchool?.name}
                 </span>
+              </div>
+            </div>
+
+            {/* Student Institutional Login Credentials */}
+            <div className="p-3.5 rounded-2xl bg-blue-50/70 border border-blue-200 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-2xs font-extrabold text-[#1d5f99] uppercase tracking-wider flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#1d5f99]" />
+                  Learner Portal Credentials
+                </span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold">
+                  Pre-Provisioned (No Sign-Up Needed)
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-2xs pt-0.5">
+                <div>
+                  <span className="text-slate-500 block">Institutional Email:</span>
+                  <span className="font-mono font-bold text-slate-900 select-all">
+                    {selectedStudent.schoolEmail ||
+                      (selectedStudent as any).institutionalEmail ||
+                      getSchoolEmailForAdmission(selectedStudent.admissionNumber, getSchoolEmailDomain(currentSchool))}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block">Initial Default Password:</span>
+                  <span className="font-mono font-bold text-slate-900 select-all">
+                    {(selectedStudent as any).defaultPassword || generateDefaultStudentPassword(selectedStudent.admissionNumber)}
+                  </span>
+                </div>
               </div>
             </div>
 
